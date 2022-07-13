@@ -39,11 +39,12 @@ export function getStackFrames<E extends { stack?: string } = Error>(
   return stackFrames
 }
 
-export function getCurrentStackFrame<E extends { stack?: string } = Error>(
-  error: E = new Error() as unknown as E,
+export function getCurrentStackFrame(
   // eslint-disable-next-line @typescript-eslint/ban-types
   targetObject?: Function,
 ): Maybe<StackFrame> {
+  const error = new Error()
+
   if (Error.captureStackTrace) {
     Error.captureStackTrace(error, targetObject)
   }

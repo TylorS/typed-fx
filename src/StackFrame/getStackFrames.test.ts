@@ -9,18 +9,17 @@ const root = dirname(dirname(__dirname)) + '/'
 describe(__filename, () => {
   describe(getStackFrames.name, () => {
     it('returns stack frames from an error', () => {
-      const error = new Error()
-      const frame = getCurrentStackFrame(error)
+      const frame = getCurrentStackFrame(this)
 
       ok(isJust(frame))
 
       deepStrictEqual(
         { ...frame.value, file: frame.value.file.replace(root, '') },
         {
-          file: 'src/StackTrace/getStackFrames.test.ts',
-          method: 'Context.<anonymous>',
-          line: 9,
-          column: 21,
+          file: 'src/StackFrame/getStackFrames.ts',
+          method: 'getCurrentStackFrame',
+          column: 11,
+          line: 48,
         },
       )
     })
