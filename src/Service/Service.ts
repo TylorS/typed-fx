@@ -1,5 +1,5 @@
 import { Fx } from '@/Fx/Fx'
-import { ask, asks, provideService } from '@/Fx/InstructionSet/Access'
+import { access, ask, asks, provideService } from '@/Fx/InstructionSet/Access'
 import { success } from '@/Fx/InstructionSet/FromExit'
 import { Layer, make as makeLayer } from '@/Layer/Layer'
 import { ServiceId } from '@/ServiceId/index'
@@ -29,6 +29,19 @@ export class Service {
     serviceIds.set(this, id)
 
     return id
+  }
+
+  static access<S extends ServiceConstructor, R, E, A>(
+    this: S,
+    f: (s: InstanceOf<S>) => Fx<R, E, A>,
+  ): Fx<InstanceOf<S> | R, E, A> {
+    return access((env) => {
+      const get = env.get(this)
+
+      return Fx(function* () {
+        return yield* f(yield* get)
+      })
+    })
   }
 
   static ask<S extends ServiceConstructor>(this: S): Fx<InstanceOf<S>, never, InstanceOf<S>> {

@@ -1,7 +1,11 @@
 import { pipe } from 'hkt-ts'
 import * as Either from 'hkt-ts/Either'
+import { Just, Maybe } from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Associative'
 import { Strict } from 'hkt-ts/Typeclass/Eq'
+import { NonNegativeInteger } from 'hkt-ts/number'
+
+import { fromFiberRuntime } from './fromFiberRuntime'
 
 import { Atomic } from '@/Atomic/Atomic'
 import { Env } from '@/Env/Env'
@@ -13,7 +17,7 @@ import { FiberStatus } from '@/FiberStatus/FiberStatus'
 import { Access } from '@/Fx/InstructionSet/Access'
 import { Async } from '@/Fx/InstructionSet/Async'
 import { Fork } from '@/Fx/InstructionSet/Fork'
-import { fromExit, FromExit, unit } from '@/Fx/InstructionSet/FromExit'
+import { FromExit, fromExit, unit } from '@/Fx/InstructionSet/FromExit'
 import { LazyFx, fromLazy } from '@/Fx/InstructionSet/FromLazy'
 import { GetFiberScope } from '@/Fx/InstructionSet/GetFiberScope'
 import { Join } from '@/Fx/InstructionSet/Join'
@@ -27,14 +31,11 @@ import {
   SetInterruptible,
   WithConcurrency,
 } from '@/Fx/index'
+import { Platform } from '@/Platform/Platform'
+import { Scheduler } from '@/Scheduler/Scheduler'
 import { Closeable, Finalizer } from '@/Scope/index'
 import { Stack } from '@/Stack/index'
 import * as Supervisor from '@/Supervisor/index'
-import { NonNegativeInteger } from 'hkt-ts/number'
-import { Platform } from '@/Platform/Platform'
-import { Just, Maybe } from 'hkt-ts/Maybe'
-import { fromFiberRuntime } from './fromFiberRuntime'
-import { Scheduler } from '@/Scheduler/Scheduler'
 
 export interface FiberRuntimeParams<R, E, A> {
   readonly fiberId: FiberId
@@ -79,9 +80,9 @@ export class FiberRuntime<R, E, A> {
   protected concurrencyLevel: Stack<NonNegativeInteger> = new Stack(
     this.params.platform.maxConcurrency,
   )
-  protected instructionCount: number = 0
-  protected exiting: boolean = false
-  protected exited: boolean = false
+  protected instructionCount = 0
+  protected exiting = false
+  protected exited = false
 
   /**
    * The Current Status of this FiberRuntime
@@ -223,6 +224,7 @@ export class FiberRuntime<R, E, A> {
    * Processes each of the instructions
    */
   protected processInstruction(node: RuntimeInstructionNode) {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this
     const instr = node.instruction
     const prev = node.previous
@@ -282,23 +284,31 @@ export class FiberRuntime<R, E, A> {
     if (instr.is(Fork)) {
       const [fx, params] = instr.input
 
-      return this.current = new RuntimeGeneratorNode(toGen(Fx(function* () {
-        const fiberId = FiberId(that.params.platform.sequenceNumber.increment, that.params.scheduler.currentTime())
-        const runtime = new FiberRuntime({
-          fiberId,
-          fx,
-          environment: that.environment.value,
-          scheduler: that.params.scheduler,
-          supervisor: Supervisor.None,
-          fiberRefs: params.fiberRefs ?? (yield* that.scope.fiberRefs.fork),
-          scope: params.scope ?? (yield* that.scope.fork),
-          platform: that.params.platform,
-          parent: Just(that),
-          ...params,
-        })
+      return (this.current = new RuntimeGeneratorNode(
+        toGen(
+          Fx(function* () {
+            const fiberId = FiberId(
+              that.params.platform.sequenceNumber.increment,
+              that.params.scheduler.currentTime(),
+            )
+            const runtime = new FiberRuntime({
+              fiberId,
+              fx,
+              environment: that.environment.value,
+              scheduler: that.params.scheduler,
+              supervisor: Supervisor.None,
+              fiberRefs: params.fiberRefs ?? (yield* that.scope.fiberRefs.fork),
+              scope: params.scope ?? (yield* that.scope.fork),
+              platform: that.params.platform,
+              parent: Just(that),
+              ...params,
+            })
 
-        return fromFiberRuntime(runtime)
-      })), prev)
+            return fromFiberRuntime(runtime)
+          }),
+        ),
+        prev,
+      ))
     }
 
     if (instr.is(FromExit)) {

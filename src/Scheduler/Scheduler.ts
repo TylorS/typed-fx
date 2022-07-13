@@ -13,6 +13,6 @@ export class Scheduler extends Clock {
       schedule: Schedule,
     ) => Fiber<E, A>,
   ) {
-    super(clock.currentTime)
+    super(clock.startTime, clock.currentTime)
   }
 }

@@ -1,7 +1,7 @@
 import { Maybe } from 'hkt-ts/Maybe'
 
 import { Exit } from '@/Exit/Exit'
-import { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
+import type { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
 import { Fx, Of } from '@/Fx/Fx'
 import { Instruction, unit } from '@/Fx/index'
 
@@ -21,11 +21,7 @@ export class Supervisor {
       runtime: FiberRuntime<R, E, A>,
       instruction: Instruction<R, E, A>,
     ) => Of<unknown> = () => unit,
-    readonly onSuspend: <R, E, A>(
-      runtime: FiberRuntime<R, E, A>,
-    ) => Of<unknown> = () => unit,
-    readonly onRunning: <R, E, A>(
-      runtime: FiberRuntime<R, E, A>,
-    ) => Of<unknown> = () => unit,
+    readonly onSuspend: <R, E, A>(runtime: FiberRuntime<R, E, A>) => Of<unknown> = () => unit,
+    readonly onRunning: <R, E, A>(runtime: FiberRuntime<R, E, A>) => Of<unknown> = () => unit,
   ) {}
 }
