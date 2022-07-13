@@ -12,17 +12,13 @@ export const Time = Branded<Time>()
 /**
  * A Clock is an abstraction for retrieving a monotonic form of the current time
  */
-export class Clock extends Service<ClockApi> {
+export class Clock extends Service {
   /**
    * Retrieve the current Time
    */
   constructor(readonly currentTime: Lazy<Time>) {
-    super({ currentTime })
+    super()
   }
-}
-
-export interface ClockApi {
-  readonly currentTime: Lazy<Time>
 }
 
 export function relative(clock: Clock): Clock {

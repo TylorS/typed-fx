@@ -6,9 +6,8 @@ import { Fx } from '@/Fx/Fx'
 import { async } from '@/Fx/InstructionSet/Async'
 import { fromLazy } from '@/Fx/InstructionSet/FromLazy'
 import { getFiberScope } from '@/Fx/InstructionSet/GetFiberScope'
-import { Service } from '@/Service/Service'
 
-export function wait<R extends Service<any>, E, A>(future: Future<R, E, A>): Fx<R, E, A> {
+export function wait<R, E, A>(future: Future<R, E, A>): Fx<R, E, A> {
   return Fx(function* () {
     const { fiberId } = yield* getFiberScope
 
@@ -28,7 +27,7 @@ export function wait<R extends Service<any>, E, A>(future: Future<R, E, A>): Fx<
   })
 }
 
-function removeObserver<R extends Service<any>, E, A>(
+function removeObserver<R, E, A>(
   future: Future<R, E, A>,
   cb: (fx: Fx<R, E, A>) => void,
 ) {

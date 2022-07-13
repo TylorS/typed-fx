@@ -8,21 +8,19 @@ import { fork } from '@/Fx/InstructionSet/Fork'
 import { fromLazy, lazy } from '@/Fx/InstructionSet/FromLazy'
 import { join } from '@/Fx/InstructionSet/Join'
 import { fromExit, success } from '@/Fx/index'
-import { ExtractErrors, ExtractOutput, ExtractResources } from '@/Ref/Ref'
+import * as Ref from '@/Ref/Ref'
 
 export class FiberRefs {
   #fibers = new Map<AnyFiberRef, Fiber<any, any>>()
 
   constructor(readonly references: Map<AnyFiberRef, any>) {}
 
-  readonly getMaybe: <R extends AnyFiberRef>(ref: R) => Of<Maybe<ExtractOutput<R>>> = (ref) =>
+  readonly getMaybe: <R extends AnyFiberRef>(ref: R) => Of<Maybe<Ref.OutputOf<R>>> = (ref) =>
     fromLazy(() => (this.references.has(ref) ? Just(this.references.get(ref)) : Nothing))
 
   readonly get: <R extends AnyFiberRef>(
     ref: R,
-  ) => Fx<ExtractResources<R>, ExtractErrors<R>, ExtractOutput<R>> = <R extends AnyFiberRef>(
-    ref: R,
-  ) =>
+  ) => Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, Ref.OutputOf<R>> = <R extends AnyFiberRef>(ref: R) =>
     lazy(() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this
@@ -35,14 +33,14 @@ export class FiberRefs {
         }
 
         if (self.#fibers.has(ref)) {
-          const fiber = self.#fibers.get(ref) as Fiber<ExtractErrors<R>, ExtractOutput<R>>
+          const fiber = self.#fibers.get(ref) as Fiber<Ref.ErrorsOf<R>, Ref.OutputOf<R>>
           const exit = yield* fiber.exit
 
           return yield* fromExit(exit)
         }
 
         const fiber = yield* fork(
-          ref.initial as unknown as Fx<ExtractResources<R>, ExtractErrors<R>, ExtractOutput<R>>,
+          ref.initial as Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, Ref.OutputOf<R>>,
         )
 
         self.#fibers.set(ref, fiber)
@@ -57,8 +55,8 @@ export class FiberRefs {
 
   readonly modify: <R extends AnyFiberRef, B>(
     ref: R,
-    f: (a: ExtractOutput<R>) => readonly [B, ExtractOutput<R>],
-  ) => Fx<ExtractResources<R>, ExtractErrors<R>, readonly [B, ExtractOutput<R>]> = (ref, f) =>
+    f: (a: Ref.OutputOf<R>) => readonly [B, Ref.OutputOf<R>],
+  ) => Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, readonly [B, Ref.OutputOf<R>]> = (ref, f) =>
     lazy(() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this
@@ -70,7 +68,7 @@ export class FiberRefs {
 
         return updated
       })
-    }) as any
+    })
 
   /**
    * Fork

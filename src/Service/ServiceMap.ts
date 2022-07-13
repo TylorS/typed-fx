@@ -1,6 +1,6 @@
 import { Just, Nothing } from 'hkt-ts/Maybe'
 
-import { ServiceId } from './Service'
+import { ServiceId } from '@/ServiceId'
 
 export class ServiceMap<A> {
   constructor(readonly services = new Map<ServiceId<any>, A>()) {}

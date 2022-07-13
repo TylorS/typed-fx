@@ -2,14 +2,15 @@ import { pipe } from 'hkt-ts'
 import { Branded } from 'hkt-ts/Branded'
 import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
 
-import { FinalizationStrategy, Finalizer } from './Scope'
+import { FinalizationStrategy, Finalizer } from './Finalizer'
+import { finalizationStrategyToConcurrency } from './finalizeStrategyToConcurrency'
 
 import { Exit } from '@/Exit/Exit'
 import { Fx, Of } from '@/Fx/Fx'
 import { success, unit } from '@/Fx/InstructionSet/FromExit'
 import { fromLazy, lazy } from '@/Fx/InstructionSet/FromLazy'
-import { tuple } from '@/Fx/InstructionSet/FromTuple'
 import { withConcurrency } from '@/Fx/InstructionSet/WithConcurrency'
+import { tuple } from '@/Fx/tuple'
 
 const noOpFinalizer: Finalizer = () => unit
 
@@ -29,7 +30,7 @@ export class ReleaseMap {
           yield* finalizer(exit.value)
 
           return noOpFinalizer
-        })
+        }) as Of<Finalizer>
       }
 
       return fromLazy(() => {
@@ -38,7 +39,7 @@ export class ReleaseMap {
         keys.unshift(key)
         finalizers.set(key, finalizer)
 
-        const remove: Finalizer = (exit) => this.release(key, exit)
+        const remove: Finalizer = (exit: Exit<any, any>) => this.release(key, exit)
 
         return remove
       })
@@ -66,7 +67,7 @@ export class ReleaseMap {
       this.#finalizers.has(key) ? Just(this.#finalizers.get(key) as Finalizer) : Nothing,
     )
 
-  readonly release = (key: FinalizerKey, exit: Exit<any, any>): Of<Maybe<unknown>> =>
+  protected release = (key: FinalizerKey, exit: Exit<any, any>): Of<Maybe<unknown>> =>
     lazy(() => {
       if (!this.#finalizers.has(key)) {
         return success(Nothing)
@@ -79,10 +80,10 @@ export class ReleaseMap {
       return Fx(function* () {
         return Just(yield* finalizer(exit))
       })
-    })
+    }) as Of<Maybe<unknown>>
 
-  readonly releaseAll = (exit: Exit<any, any>, strategy: FinalizationStrategy) =>
-    lazy(() => {
+  readonly releaseAll = (exit: Exit<any, any>, strategy: FinalizationStrategy): Of<void> =>
+    lazy<Of<void>>(() => {
       const { remove } = this
       this.#exit = Just(exit)
       const removeAll = pipe(
@@ -102,7 +103,7 @@ export class ReleaseMap {
 
       return Fx(function* () {
         yield* removeAll
-      })
+      }) as Of<void>
     })
 
   readonly remove = (
@@ -139,15 +140,3 @@ export class ReleaseMap {
 
 export type FinalizerKey = Branded<{ readonly FinalizerKey: FinalizerKey }, symbol>
 export const FinalizerKey = Branded<FinalizerKey>()
-
-export function finalizationStrategyToConcurrency(strategy: FinalizationStrategy) {
-  if (strategy.strategy === 'Sequential') {
-    return 1
-  }
-
-  if (strategy.strategy === 'Concurrent') {
-    return Infinity
-  }
-
-  return strategy.concurrency
-}

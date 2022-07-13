@@ -1,17 +1,16 @@
 import { LocalScope } from './LocalScope'
-import { Closeable, FinalizationStrategy, Finalizer } from './Scope'
+import { Closeable } from './Scope'
 
-import { Exit } from '@/Exit/Exit'
-import { Of } from '@/Fx/Fx'
-import { fromLazy, success } from '@/Fx/index'
-
-const unit = success<void>(undefined)
+import { fromLazy, success, unit } from '@/Fx/index'
 
 export class GlobalScope extends Closeable {
-  readonly addFinalizer: (finalizer: Finalizer) => Of<Finalizer> = () => success(() => unit)
-  readonly forkWith: (strategy: FinalizationStrategy) => Of<Closeable> = (s) =>
-    fromLazy(() => new LocalScope(s))
-  readonly close: (exit: Exit<any, any>) => Of<void> = () => unit
+  constructor() {
+    super(
+      () => success(() => unit),
+      (s) => fromLazy(() => new LocalScope(s)),
+      () => unit,
+    )
+  }
 }
 
 /**

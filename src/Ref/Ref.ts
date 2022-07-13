@@ -1,61 +1,57 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 
 import { Fx } from '@/Fx/Fx'
-import { withService } from '@/Fx/InstructionSet/Access'
-import { fromLazy } from '@/Fx/index'
-import { OutputOf, Service, ServiceId } from '@/Service/Service'
+import { Service } from '@/Service/Service'
 import { InstanceOf } from '@/internal'
 
-export type RefApi<R extends Service<any>, E, A> = {
-  readonly modify: <B>(f: (a: A) => readonly [B, A]) => Fx<R, E, B>
+export type Ref<R, E, A> = ReturnType<typeof make<R, E, A>>
+
+export function make<R, E, A>(initial: Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
+  return class Ref extends Service {
+    static initial: Fx<R, E, A> = initial
+    static Eq: Eq<A> = Eq
+
+    constructor(readonly modify: ModifyReference<R, E, A>) {
+      super()
+    }
+
+    static make<REF extends AnyRef>(this: REF, modify: ModifyReference<R, E, A>): InstanceOf<REF> {
+      return new this(modify as any) as InstanceOf<REF>
+    }
+
+    static modify<REF extends AnyRef, B>(
+      this: REF,
+      f: (a: A) => readonly [B, A],
+    ): Fx<R | InstanceOf<REF>, E, B> {
+      const get = this.ask()
+
+      return Fx(function* () {
+        const ref = yield* get
+
+        return yield* ref.modify(f)
+      })
+    }
+
+    static get<REF extends AnyRef>(this: REF): Fx<R | InstanceOf<REF>, E, A> {
+      return this.modify((s) => [s, s])
+    }
+  }
 }
 
-export type AnyRefApi = RefApi<any, any, any>
+export type ModifyReference<R, E, A> = <B>(f: (a: A) => readonly [B, A]) => Fx<R, E, B>
 
-export type ExtractRefApi<S> = OutputOf<S> extends AnyRefApi ? OutputOf<S> : never
+export type AnyRef<A = any> =
+  | Ref<any, any, A>
+  | Ref<never, never, A>
+  | Ref<never, any, A>
+  | Ref<any, never, A>
 
-export type ExtractResources<S> = [OutputOf<S>] extends [RefApi<infer _R, infer _E, infer _A>]
+/* eslint-disable @typescript-eslint/no-unused-vars */
+export type ResourcesOf<T> = [InstanceOf<T>] extends [Ref<infer _R, infer _E, infer _A>]
   ? _R
   : never
 
-export type ExtractErrors<S> = [OutputOf<S>] extends [RefApi<infer _R, infer _E, infer _A>]
-  ? _E
-  : never
+export type ErrorsOf<T> = [InstanceOf<T>] extends [Ref<infer _R, infer _E, infer _A>] ? _E : never
 
-export type ExtractOutput<S> = [OutputOf<S>] extends [RefApi<infer _R, infer _E, infer _A>]
-  ? _A
-  : never
-
-export interface Ref<R extends Service<any>, E, A> extends ReturnType<make<R, E, A>> {}
-
-export type AnyRef =
-  | Ref<Service<any>, any, any>
-  | Ref<Service<never>, never, any>
-  | Ref<Service<never>, any, any>
-  | Ref<Service<any>, never, any>
-
-export const make = <R extends Service<any>, E, A>(initial: Fx<R, E, A>, Eq: Eq<A> = DeepEquals) =>
-  class Ref extends Service<RefApi<R, E, A>> {
-    static initial = initial
-    static Eq = Eq
-
-    static make<S extends AnyRef>(this: S, api: RefApi<R, E, A>) {
-      return new this(api)
-    }
-
-    static modify<S extends AnyRef, B>(
-      this: S,
-      f: (a: A) => readonly [B, A],
-    ): Fx<InstanceOf<S>, E, B> {
-      return withService(this)((api) => api.modify(f))
-    }
-
-    static get<S extends AnyRef>(this: S): Fx<InstanceOf<S>, E, A> {
-      return this.modify((s) => [s, s])
-    }
-
-    static set<S extends AnyRef>(this: S, a: A): Fx<InstanceOf<S>, E, A> {
-      return this.modify(() => [a, a])
-    }
-  }
+export type OutputOf<T> = [InstanceOf<T>] extends [Ref<infer _R, infer _E, infer _A>] ? _A : never
+/* eslint-enable @typescript-eslint/no-unused-vars */

@@ -1,25 +1,18 @@
-import { Environment } from '@/Environment/Environment'
+import { Clock } from '@/Clock/Clock'
+import { Env } from '@/Env/Env'
 import { Fiber } from '@/Fiber/Fiber'
 import { Fx } from '@/Fx/Fx'
 import { Schedule } from '@/Schedule/Schedule'
-import { Service } from '@/Service/Service'
 
-export class Scheduler extends Service<SchedulerApi> {
+export class Scheduler extends Clock {
   constructor(
-    readonly schedule: <R extends Service<any>, E, A>(
+    readonly clock: Clock,
+    readonly schedule: <R, E, A>(
       fx: Fx<R, E, A>,
-      environment: Environment<R>,
+      environment: Env<R>,
       schedule: Schedule,
     ) => Fiber<E, A>,
   ) {
-    super({ schedule })
+    super(clock.currentTime)
   }
-}
-
-export interface SchedulerApi {
-  readonly schedule: <R extends Service<any>, E, A>(
-    fx: Fx<R, E, A>,
-    environment: Environment<R>,
-    schedule: Schedule,
-  ) => Fiber<E, A>
 }

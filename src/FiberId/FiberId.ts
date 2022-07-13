@@ -1,4 +1,6 @@
-import { Time } from '@/Clock/Clock'
+import { unsafeCoerce } from 'hkt-ts/function'
+
+import type { Time } from '@/Clock/Clock'
 
 // TODO: Add a TraceLocation ?
 export interface FiberId {
@@ -20,6 +22,6 @@ export function FiberId(sequenceNumber: number, startTime: Time): FiberId {
   }
 }
 
-export const None = FiberId(-1, Time(-1))
+export const None = FiberId(-1, unsafeCoerce(-1))
 
 export const isNone = (id: FiberId): boolean => id.sequenceNumber === -1

@@ -27,7 +27,7 @@ export class Died {
 }
 
 export class Failed<out E> {
-  constructor(readonly error: E, readonly optional: boolean, readonly trace: Trace = EmptyTrace) {}
+  constructor(readonly error: E, readonly trace: Trace = EmptyTrace) {}
 }
 
 export class Sequential<out E1, out E2> {

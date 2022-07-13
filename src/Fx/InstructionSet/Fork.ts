@@ -2,15 +2,21 @@ import { Fx } from '../Fx'
 
 import { FxInstruction } from './FxInstruction'
 
-import { Fiber } from '@/Fiber/Fiber'
-import { Service } from '@/Service/Service'
+import type { Fiber } from '@/Fiber/Fiber'
+import type { FiberRuntimeParams } from '@/FiberRuntime/FiberRuntime'
 
-export class Fork<R extends Service<any>, E, A> extends FxInstruction<
-  Fx<R, E, A>,
+export class Fork<R, E, A> extends FxInstruction<
+  readonly [Fx<R, E, A>, ForkParams<R>],
   R,
   never,
   Fiber<E, A>
 > {}
 
-export const fork = <R extends Service<any>, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber<E, A>> =>
-  new Fork(fx)
+export type ForkParams<R> = Partial<
+  Omit<FiberRuntimeParams<R, any, any> | FiberRuntimeParams<R, never, any>, 'fiberId' | 'fx'>
+>
+
+export const fork = <R, E, A>(
+  fx: Fx<R, E, A>,
+  params: ForkParams<R> = {},
+): Fx<R, never, Fiber<E, A>> => new Fork([fx, params])

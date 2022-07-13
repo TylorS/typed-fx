@@ -6,9 +6,7 @@ import type {
   ResourcesFromInstruction,
 } from './InstructionSet/FxInstruction'
 
-import type { Service } from '@/Service/Service'
-
-export interface Fx<out R extends Service<any>, out E, out A> {
+export interface Fx<out R, out E, out A> {
   readonly [Symbol.iterator]: () => Generator<BaseFxInstruction<R, E, any>, A>
 }
 
@@ -32,7 +30,13 @@ export function Fx<G extends AnyFxGenerator>(
   }
 }
 
-export type AnyFxGenerator<R = any> = Generator<BaseFxInstruction<any, any, any>, R>
+export type AnyFxGenerator<R = any> = Generator<
+  | BaseFxInstruction<any, any, any>
+  | BaseFxInstruction<never, never, any>
+  | BaseFxInstruction<never, any, any>
+  | BaseFxInstruction<any, never, any>,
+  R
+>
 
 export type ResourcesFromGenerator<T extends AnyFxGenerator> = T extends Generator<
   infer Y,

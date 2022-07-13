@@ -1,39 +1,62 @@
-import { Branded } from 'hkt-ts/Branded'
-
+import { Fx } from '@/Fx/Fx'
+import { ask, asks, provideService } from '@/Fx/InstructionSet/Access'
+import { Layer, make as makeLayer } from '@/Layer/Layer'
+import { ServiceId } from '@/ServiceId/index'
 import { InstanceOf } from '@/internal'
 
 // A WeakMap is used to allow ServiceIds to be garbage collected when no longer useful.
-const serviceIds = new WeakMap<typeof Service<any>, ServiceId<any>>()
+const serviceIds = new WeakMap<object, ServiceId<any>>()
 
-export type ServiceId<S> = Branded<{ readonly ServiceId: S }, symbol>
-export const ServiceId = <S>(name: string) => Branded<ServiceId<S>>()(Symbol(name))
+export class Service {
+  readonly name: string
+  readonly id: ServiceId<this> = (this.constructor as typeof Service).id() as ServiceId<this>
 
-export abstract class Service<A> {
+  constructor() {
+    this.name = this.constructor.name
+  }
+
   // Lazy getter for creating unique ID's for each of your services.
-  static id<S extends typeof Service<any>>(this: S): ServiceId<InstanceType<S>> {
+  static id<S extends object>(this: S): ServiceId<InstanceOf<S>> {
     const s = serviceIds.get(this)
 
     if (s !== undefined) {
       return s
     }
 
-    const id = ServiceId<InstanceOf<S>>(this.name)
+    const id = ServiceId<InstanceOf<S>>((this as typeof Service).name)
 
     serviceIds.set(this, id)
 
     return id
   }
 
-  readonly name: string
-  readonly id: ServiceId<this> = (this.constructor as typeof Service<A>).id()
+  static ask<S extends ServiceConstructor>(this: S): Fx<InstanceOf<S>, never, InstanceOf<S>> {
+    return ask(this)
+  }
 
-  constructor(public implementation: A) {
-    this.name = this.constructor.name
+  static asks<S extends ServiceConstructor, A>(
+    this: S,
+    f: (a: InstanceOf<S>) => A,
+  ): Fx<InstanceOf<S>, never, A> {
+    return asks(this)(f)
+  }
+
+  static layer<S extends ServiceConstructor, R = never, E = never>(
+    this: S,
+    provider: Fx<R, E, InstanceOf<S>>,
+  ): Layer<S, R, E> {
+    return makeLayer<S, R, E>(this, provider)
+  }
+
+  static provide<S extends ServiceConstructor, B extends InstanceOf<S>>(this: S, instance: B) {
+    return provideService(this, instance)
   }
 }
 
-export type OutputOf<T> = InstanceOf<T> extends Service<infer R>
-  ? R
-  : T extends Service<infer R>
-  ? R
-  : never
+/**
+ * ServiceConstructor type, primarily useful for constraining function/type parameters.
+ */
+export type ServiceConstructor<A = any> = {
+  readonly id: () => ServiceId<A>
+  readonly name: string
+}

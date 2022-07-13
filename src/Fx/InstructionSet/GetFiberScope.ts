@@ -1,6 +1,6 @@
 import { FxInstruction } from './FxInstruction'
 
-import { FiberScope } from '@/FiberScope/index'
+import type { FiberScope } from '@/FiberScope/index'
 
 export class GetFiberScope extends FxInstruction<void, never, never, FiberScope> {}
 

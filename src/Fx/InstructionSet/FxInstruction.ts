@@ -1,15 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Fx } from '@/Fx/Fx'
-import type { Service } from '@/Service/Service'
 import type { InstanceOf } from '@/internal'
 
-export abstract class BaseFxInstruction<R, E, A> {
+export abstract class BaseFxInstruction<R = never, E = never, A = never> {
   readonly _R!: () => R
   readonly _E!: () => E
   readonly _A!: () => A
 }
 
-export abstract class FxInstruction<I, R extends Service<any>, E, A>
+export abstract class FxInstruction<I, R, E, A>
   extends BaseFxInstruction<R, E, A>
   implements Fx<R, E, A>
 {
