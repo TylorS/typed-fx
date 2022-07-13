@@ -17,7 +17,7 @@ export const getScope = ask(Scope)
  * Run a Scoped-Fx and immediate release resources after usage of that resource
  * has been able to produce an Exit value.
  */
-export function scoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<R, E, A> {
+export function scoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, E, A> {
   return Fx(function* () {
     const fiberScope = yield* getFiberScope
     const scope = yield* fiberScope.fork // Fork the scope, will be closed in event of failure.
@@ -45,11 +45,13 @@ export interface Reservation<R, E, A> {
  * Fx.reserve is a lower-level primitive for running Scoped-Fx with explicit acquisition and
  * release mechanism. When acquiring a resource
  */
-export function reserve<R, E, A>(scoped: Fx<R | Scope, E, A>): Of<Reservation<R, E, A>> {
+export function reserve<R, E, A>(
+  scoped: Fx<R | Scope, E, A>,
+): Of<Reservation<Exclude<R, Scope>, E, A>> {
   return Fx(function* () {
     const fiberScope = yield* getFiberScope
     const scope = yield* fiberScope.fork // Fork the scope, will be closed in event of failure.
-    const reservation: Reservation<R, E, A> = {
+    const reservation: Reservation<Exclude<R, Scope>, E, A> = {
       acquire: pipe(scoped, provideService(Scope, scope), result, uninterruptable),
       release: scope.close,
     }

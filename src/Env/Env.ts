@@ -24,24 +24,27 @@ export class Env<in out R> {
     const id = service.id()
 
     return Fx(function* () {
+      // Attempt to retrieve memoized instance of Serivce
       const maybeService = services.get(id)
-
       if (isJust(maybeService)) {
         return maybeService.value
       }
 
+      // Attempt to retrieve a running Fiber for Layer of a Service
       const maybeFiber = fibers.get(id)
-
       if (isJust(maybeFiber)) {
         return yield* fromExit(yield* maybeFiber.value.exit)
       }
 
+      // Attempt to find the Layer
       const maybeLayer = layers.get(id)
 
+      // This should be pretty much impossible, but if you ask for an unknown Service, fail immediately.
       if (isNothing(maybeLayer)) {
         return yield* die(new Error(`Unable to find Layer for Service: ${service.name}`))
       }
 
+      // Fork a Fiber for sharing with other instances
       const fiber = yield* fork(maybeLayer.value.provider)
 
       fibers.set(id, fiber)
@@ -56,7 +59,11 @@ export class Env<in out R> {
   }
 
   readonly addService = <S extends Service>(service: S): Env<R | S> =>
-    new Env(this.services.extend(service.id, service), this.layers as any, this.fibers)
+    new Env(
+      this.services.extend(service.id, service),
+      this.layers as ServiceMap<Layer.AnyLayer<R | S>>,
+      this.fibers,
+    )
 
   readonly addLayer = <S extends Layer.AnyLayer>(layer: S): Env<R | Layer.ServiceOf<S>> =>
     new Env(this.services, this.layers.extend(layer.service.id, layer), this.fibers)

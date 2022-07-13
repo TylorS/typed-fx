@@ -1,2 +1,2 @@
 export * from './Ref'
-export * from './provideAtomic'
+export * from './atomic'

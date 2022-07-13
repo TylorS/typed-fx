@@ -1,5 +1,6 @@
 import { Fx } from '@/Fx/Fx'
 import { ask, asks, provideService } from '@/Fx/InstructionSet/Access'
+import { success } from '@/Fx/InstructionSet/FromExit'
 import { Layer, make as makeLayer } from '@/Layer/Layer'
 import { ServiceId } from '@/ServiceId/index'
 import { InstanceOf } from '@/internal'
@@ -46,6 +47,13 @@ export class Service {
     provider: Fx<R, E, InstanceOf<S>>,
   ): Layer<S, R, E> {
     return makeLayer<S, R, E>(this, provider)
+  }
+
+  static layerOf<S extends ServiceConstructor, B extends InstanceOf<S>>(
+    this: S,
+    instance: B,
+  ): Layer<S> {
+    return makeLayer<S>(this, success<InstanceOf<S>>(instance))
   }
 
   static provide<S extends ServiceConstructor, B extends InstanceOf<S>>(this: S, instance: B) {

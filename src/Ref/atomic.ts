@@ -4,18 +4,18 @@ import { Atomic } from '@/Atomic/Atomic'
 import { Fx } from '@/Fx/Fx'
 import { fromLazy } from '@/Fx/InstructionSet/index'
 import * as Layer from '@/Layer/Layer'
-import { InstanceOf } from '@/internal'
+import * as Semaphore from '@/Semaphore/Semaphore'
 
-export function provideAtomic<R extends Ref.AnyRef>(
+export function atomic<R extends Ref.AnyRef>(
   ref: R,
 ): Layer.Layer<R, Ref.ResourcesOf<R>, Ref.ErrorsOf<R>> {
-  return Layer.make(
-    ref,
+  return (ref as R).layer(
     Fx(function* () {
       const initial = yield* ref.initial
       const atomic = new Atomic(initial, ref.Eq)
+      const acquire = Semaphore.acquire(new Semaphore.Lock())
 
-      return ref.make((f) => fromLazy(() => atomic.modify(f))) as InstanceOf<R>
+      return (ref as R).make((f) => acquire(fromLazy(() => atomic.modify(f))))
     }),
   )
 }
