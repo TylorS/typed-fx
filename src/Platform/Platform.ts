@@ -13,4 +13,10 @@ export class Platform {
       APPROXIMATE_MAX_STACK_TRACE,
     ),
   ) {}
+
+  readonly updateConcurrency = (concurrency: NonNegativeInteger) =>
+    new Platform(this.sequenceNumber, concurrency, this.maxInstructionCount)
+
+  readonly updateInstructionCount = (instructionCount: NonNegativeInteger) =>
+    new Platform(this.sequenceNumber, this.maxConcurrency, instructionCount)
 }

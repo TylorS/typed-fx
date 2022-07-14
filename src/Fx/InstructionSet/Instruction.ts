@@ -10,23 +10,25 @@ import { Async } from './Async'
 import { Fork } from './Fork'
 import type { FromExit } from './FromExit'
 import type { LazyFx } from './FromLazy'
-import { GetFiberScope } from './GetFiberScope'
+import { GetFiberContext } from './GetFiberContext'
 import { Join } from './Join'
 import { Provide } from './Provide'
 import { SetInterruptible } from './SetInterruptable'
 import { WithConcurrency } from './WithConcurrency'
+import { ZipAll } from './ZipAll'
 
 export type Instruction<R = never, E = never, A = never> =
   | Access<R, R, E, A>
   | Async<R, E, A>
   | Fork<R, E, A>
   | FromExit<E, A>
-  | GetFiberScope
+  | GetFiberContext
   | Join<E, A>
   | LazyFx<Fx<R, E, A>>
   | Provide<never, E, A>
   | SetInterruptible<Fx<R, E, A>>
   | WithConcurrency<Fx<R, E, A>>
+  | ZipAll<ReadonlyArray<Fx<R, E, any>>>
 
 export type AnyInstruction =
   | Instruction<any, any, any>

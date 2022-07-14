@@ -1,8 +1,8 @@
-import { Maybe } from 'hkt-ts/Maybe'
+import { NonEmptyArray } from 'hkt-ts/NonEmptyArray'
 
 import { StackFrame } from '@/StackFrame/StackFrame'
 
-export type Trace = EmptyTrace | SourceLocationTrace
+export type Trace = EmptyTrace | StackFrameTrace
 
 export const EmptyTrace = {
   tag: 'EmptyTrace',
@@ -13,8 +13,8 @@ export type EmptyTrace = typeof EmptyTrace
 /**
  * TODO: Add the ability to parse locations from a string?
  */
-export class SourceLocationTrace {
-  readonly tag = 'SourceLocationTrace'
+export class StackFrameTrace {
+  readonly tag = 'StackFrameTrace'
 
-  constructor(readonly location: Maybe<StackFrame>, readonly trace?: string) {}
+  constructor(readonly frames: NonEmptyArray<StackFrame>) {}
 }

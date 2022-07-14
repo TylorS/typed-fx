@@ -3,7 +3,7 @@ import { Right } from 'hkt-ts/Either'
 
 import { Fx, Of } from './Fx'
 import { ask, getEnv, provideService } from './InstructionSet/Access'
-import { getFiberScope } from './InstructionSet/GetFiberScope'
+import { getFiberContext } from './InstructionSet/GetFiberContext'
 import { provide } from './InstructionSet/Provide'
 import { uninterruptable } from './InstructionSet/SetInterruptable'
 import { result } from './result'
@@ -19,7 +19,7 @@ export const getScope = ask(Scope)
  */
 export function scoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, E, A> {
   return Fx(function* () {
-    const fiberScope = yield* getFiberScope
+    const { scope: fiberScope } = yield* getFiberContext
     const scope = yield* fiberScope.fork // Fork the scope, will be closed in event of failure.
 
     // Run effect with a specific Scope
@@ -49,7 +49,7 @@ export function reserve<R, E, A>(
   scoped: Fx<R | Scope, E, A>,
 ): Of<Reservation<Exclude<R, Scope>, E, A>> {
   return Fx(function* () {
-    const fiberScope = yield* getFiberScope
+    const { scope: fiberScope } = yield* getFiberContext
     const scope = yield* fiberScope.fork // Fork the scope, will be closed in event of failure.
     const reservation: Reservation<Exclude<R, Scope>, E, A> = {
       acquire: pipe(scoped, provideService(Scope, scope), result, uninterruptable),

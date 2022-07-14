@@ -17,7 +17,9 @@ export class Atomic<A> {
     return b
   }
 
-  readonly get = this.modify((a) => [a, a])
+  get get() {
+    return this.modify((a) => [a, a])
+  }
 
   readonly getAndSet = (updated: A) => this.modify((a) => [a, updated])
 

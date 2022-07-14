@@ -10,7 +10,7 @@ import { Fx, Of } from '@/Fx/Fx'
 import { success, unit } from '@/Fx/InstructionSet/FromExit'
 import { fromLazy, lazy } from '@/Fx/InstructionSet/FromLazy'
 import { withConcurrency } from '@/Fx/InstructionSet/WithConcurrency'
-import { tuple } from '@/Fx/tuple'
+import { zipAll } from '@/Fx/InstructionSet/ZipAll'
 
 const noOpFinalizer: Finalizer = () => unit
 
@@ -87,7 +87,7 @@ export class ReleaseMap {
       const { remove } = this
       this.#exit = Just(exit)
       const removeAll = pipe(
-        tuple(
+        zipAll(
           ...this.#keys.map((key) =>
             Fx(function* () {
               const finalizer = yield* remove(key)

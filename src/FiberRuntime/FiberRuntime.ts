@@ -1,6 +1,6 @@
 import { pipe } from 'hkt-ts'
 import * as Either from 'hkt-ts/Either'
-import { Just, Maybe } from 'hkt-ts/Maybe'
+import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Associative'
 import { Strict } from 'hkt-ts/Typeclass/Eq'
 import { NonNegativeInteger } from 'hkt-ts/number'
@@ -10,20 +10,27 @@ import { fromFiberRuntime } from './fromFiberRuntime'
 import { Atomic } from '@/Atomic/Atomic'
 import { Env } from '@/Env/Env'
 import * as Exit from '@/Exit/Exit'
+import { Fiber } from '@/Fiber/Fiber'
+import { FiberContext } from '@/FiberContext/index'
 import { FiberId } from '@/FiberId/FiberId'
 import { FiberRefs } from '@/FiberRefs/FiberRefs'
 import { FiberScope } from '@/FiberScope/index'
 import { FiberStatus } from '@/FiberStatus/FiberStatus'
+import { Future, pending } from '@/Future/Future'
+import { complete } from '@/Future/complete'
+import { wait } from '@/Future/wait'
 import { Access } from '@/Fx/InstructionSet/Access'
 import { Async } from '@/Fx/InstructionSet/Async'
 import { Fork } from '@/Fx/InstructionSet/Fork'
-import { FromExit, fromExit, unit } from '@/Fx/InstructionSet/FromExit'
+import { FromExit, fromExit, success, unit } from '@/Fx/InstructionSet/FromExit'
 import { LazyFx, fromLazy } from '@/Fx/InstructionSet/FromLazy'
-import { GetFiberScope } from '@/Fx/InstructionSet/GetFiberScope'
+import { GetFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
 import { Join } from '@/Fx/InstructionSet/Join'
+import { ZipAll } from '@/Fx/InstructionSet/ZipAll'
 import {
   AnyFx,
   AnyInstruction,
+  ForkParams,
   Fx,
   Instruction,
   Of,
@@ -33,28 +40,33 @@ import {
 } from '@/Fx/index'
 import { Platform } from '@/Platform/Platform'
 import { Scheduler } from '@/Scheduler/Scheduler'
-import { Closeable, Finalizer } from '@/Scope/index'
+import { Finalizer } from '@/Scope/Finalizer'
+import type { Closeable } from '@/Scope/Scope'
+import { settable } from '@/Scope/settable'
+import { Semaphore, acquire } from '@/Semaphore/Semaphore'
 import { Stack } from '@/Stack/index'
+import { StackTrace, captureTrace } from '@/StackTrace/StackTrace'
 import * as Supervisor from '@/Supervisor/index'
+import { EmptyTrace, StackFrameTrace, Trace } from '@/Trace/Trace'
 
 export interface FiberRuntimeParams<R, E, A> {
   readonly fiberId: FiberId
   readonly fx: Fx<R, E, A>
-  readonly environment: Env<R>
+  readonly env: Env<R>
   readonly scheduler: Scheduler
   readonly supervisor: Supervisor.Supervisor
   readonly fiberRefs: FiberRefs
   readonly scope: Closeable
   readonly platform: Platform
-  readonly parent: Maybe<FiberRuntime<any, any, any>>
+  readonly parent: Maybe<FiberContext>
 }
 
-// Track Children/Parent
-// Supervisor
+const concatExitSeq = Exit.makeSequentialAssociative<any, any>(First).concat
+const concatExitPar = Exit.makeParallelAssociative<any, any>(First).concat
+
 // Logging
 // Metrics
 // Tracing
-// Layers
 // Streams
 export class FiberRuntime<R, E, A> {
   get status(): FiberStatus<E, A> {
@@ -71,65 +83,79 @@ export class FiberRuntime<R, E, A> {
   )
 
   /**
-   * The Current FiberRuntimeNode to process
+   * All of the running Fibers
    */
-  protected current: FiberRuntimeNode | undefined
-  // Stacks
-  protected environment: Stack<Env<any>> = new Stack(this.params.environment)
-  protected interruptStatus: Stack<boolean> = new Stack(true)
-  protected concurrencyLevel: Stack<NonNegativeInteger> = new Stack(
-    this.params.platform.maxConcurrency,
+  get children(): ReadonlySet<Fiber<any, any>> {
+    return new Set(this._children.values())
+  }
+
+  readonly stackTrace = fromLazy(() => this._stackTrace)
+  readonly exit: Future<never, never, Exit.Exit<E, A>> = pending()
+
+  // State
+  protected currentNode: FiberRuntimeNode | undefined
+  protected _environment: Stack<Env<any>> = new Stack(this.params.env)
+  protected _interruptStatus: Stack<boolean> = new Stack(true)
+  protected _concurrencyLevel: Stack<Semaphore> = new Stack(
+    new Semaphore(this.params.platform.maxConcurrency),
   )
-  protected instructionCount = 0
-  protected exiting = false
-  protected exited = false
+  protected _instructionCount = 0
+  protected _exiting = false
+  protected _interruptedBy: Array<FiberId> = []
+  protected _stackTrace = new StackTrace(this.scope.fiberId, new Stack<Trace>(EmptyTrace))
+  protected _children = new Map<FiberId, Fiber<any, any>>()
 
   /**
    * The Current Status of this FiberRuntime
    */
-  protected fiberStatus = new Atomic<FiberStatus<E, A>>(
-    new FiberStatus.Suspended(this.params.fiberId, new Set()),
-    Strict,
-  )
+  protected fiberStatus: Atomic<FiberStatus<E, A>>
 
   constructor(readonly params: FiberRuntimeParams<R, E, A>) {
-    this.current = new RuntimeInitialNode(params.fx)
+    this.currentNode = new RuntimeInitialNode(params.fx)
+    this.fiberStatus = new Atomic<FiberStatus<E, A>>(
+      new FiberStatus.Suspended(this.params.fiberId, new Set()),
+      Strict,
+    )
   }
 
-  readonly addObserver = (observer: FiberStatus.Observer<E, A>): Of<Finalizer> => {
-    const status = pipe(this.fiberStatus.get, FiberStatus.addObserver(observer))
+  readonly addObserver = (observer: FiberStatus.Observer<E, A>): Finalizer => {
+    const status = this.fiberStatus.update(FiberStatus.addObserver(observer))
 
     switch (status.tag) {
       case FiberStatus.Exited.tag:
-        return fromLazy(() => {
-          observer(status.exit)
+        observer(status.exit)
 
-          return () => unit
-        })
+        return () => unit
       default:
-        return fromLazy(() => {
-          this.fiberStatus.set(status)
+        this.fiberStatus.set(status)
 
-          return () =>
-            fromLazy(() =>
-              pipe(
-                this.fiberStatus.get,
-                FiberStatus.removeObserver(observer),
-                this.fiberStatus.set,
-              ),
-            )
-        })
+        return () => fromLazy(() => this.fiberStatus.update(FiberStatus.removeObserver(observer)))
     }
   }
 
   readonly start = () => {
     this.running()
 
-    while (this.current && !this.exited) {
-      this.processNode(this.current)
+    while (this.currentNode && this.exit.state.get.tag === 'Pending') {
+      this.processNode(this.currentNode)
     }
 
     this.suspended()
+  }
+
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  readonly startLater = (targetObject?: Function) => {
+    this.yieldNow(targetObject)
+  }
+
+  readonly interrupt = (fiberId: FiberId) => {
+    this._interruptedBy.push(fiberId)
+
+    if (this._interruptStatus.value) {
+      this.finalized(Exit.interrupt(fiberId))
+    }
+
+    return wait(this.exit)
   }
 
   /**
@@ -141,18 +167,22 @@ export class FiberRuntime<R, E, A> {
         case 'Generator':
           return this.processGenerator(node)
         case 'Instruction':
-          return this.processInstruction(node)
+          return this.pushInstruction(node)
         case 'Initial':
           return this.processInitial(node)
         case 'Exit':
           return this.processExitNode(node)
+        case 'InterruptStatus':
+          return this.pushInterruptStatus(node)
+        case 'ConcurrencyLevel':
+          return this.pushConcurrencyLevel(node)
       }
     } catch (e) {
-      if (this.exiting) {
+      if (this._exiting) {
         throw e
       }
 
-      this.current = new RuntimeExitNode(Exit.die(e))
+      this.currentNode = new RuntimeExitNode(Exit.die(e), node)
     }
   }
 
@@ -162,29 +192,36 @@ export class FiberRuntime<R, E, A> {
    */
   protected processGenerator(node: RuntimeGeneratorNode) {
     try {
-      this.processIteratorResult(node, node.iterate())
+      return this.processIteratorResult(node, node.iterate())
     } catch (e) {
-      // Our finalizers criticall failed, nothing else to do but notify any observers.
+      // Our finalizers critically failed, nothing else to do but notify any observers.
       if (!node.previous || node.previous.tag === 'Exit') {
-        this.current = undefined
-
         return this.finalized(
-          node.previous
-            ? Exit.makeParallelAssociative<any, any>(First).concat(node.previous.exit, Exit.die(e))
-            : Exit.die(e),
+          node.previous ? concatExitSeq(node.previous.exit, Exit.die(e)) : Exit.die(e),
         )
       }
 
       // Critical Failure, Allow the program to Finalize
+      if (node.previous.tag === 'Instruction') {
+        return this.popPrevious(node.previous.previous, e, true)
+      }
+
+      // Critical Failure, Allow the program to Finalize
       if (node.previous.tag === 'Initial') {
-        return (this.current = new RuntimeExitNode(Exit.die(e)))
+        return (this.currentNode = new RuntimeExitNode(Exit.die(e), node))
+      }
+
+      // If we've reached an InterruptStatusNode we know to pop off a status
+      if (node.previous.tag === 'InterruptStatus') {
+        return this.popInterruptStatus(node.previous, e, true)
+      }
+
+      if (node.previous.tag === 'ConcurrencyLevel') {
+        return this.popConcurrencyLevel(node.previous, e, true)
       }
 
       // Unwind the generator stack to allow for any try/catch handlers to run
-      node.previous.method.set('throw')
-      node.previous.next.set(e)
-
-      this.current = node.previous
+      return this.popPrevious(node.previous, e, true)
     }
   }
 
@@ -197,198 +234,258 @@ export class FiberRuntime<R, E, A> {
   ) {
     // Continue processing instructions
     if (!result.done) {
-      return (this.current = new RuntimeInstructionNode(result.value, node))
+      return (this.currentNode = new RuntimeInstructionNode(result.value, node))
     }
+
+    const prev = node.previous
 
     // We're just running a one-off instruction that should otherwise suspend the Fiber
-    if (!node.previous) {
-      return (this.current = undefined)
+    if (!prev) {
+      return (this.currentNode = undefined)
     }
 
-    // We've already finalized the Scope, lets just end here
-    if (node.previous.tag === 'Exit') {
-      return this.finalized(node.previous.exit)
+    if (prev.tag === 'Instruction') {
+      return this.popPrevious(prev.previous, result.value, false)
+    }
+
+    if (prev.tag === 'Generator') {
+      return this.popPrevious(prev, result.value, false)
     }
 
     // We've completed this Fx, now lets close the Scope
-    if (node.previous.tag === 'Initial') {
-      return (this.current = new RuntimeExitNode(Exit.success(result.value)))
+    if (prev.tag === 'Initial') {
+      return (this.currentNode = new RuntimeExitNode(Exit.success(result.value), node))
     }
 
-    // Continue processing the generators
-    node.previous.next.set(result.value)
-    this.current = node.previous
+    if (prev.tag === 'InterruptStatus') {
+      return this.popInterruptStatus(prev, result.value, false)
+    }
+
+    if (prev.tag === 'ConcurrencyLevel') {
+      return this.popConcurrencyLevel(prev, result.value, false)
+    }
+
+    // We've already finalized the Scope, lets just end here
+    return this.finalized(prev.exit)
   }
 
   /**
    * Processes each of the instructions
    */
-  protected processInstruction(node: RuntimeInstructionNode) {
+  protected pushInstruction(node: RuntimeInstructionNode) {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this
     const instr = node.instruction
-    const prev = node.previous
 
     // Don't let any synchronous workflows hog up the entire thread
-    if (this.instructionCount++ > this.params.platform.maxInstructionCount) {
-      this.instructionCount = 0
+    if (this._instructionCount++ > this.params.platform.maxInstructionCount) {
+      this._instructionCount = 0
       return this.yieldNow()
     }
 
+    this.withSuperisor((s) => s.onInstruction(this, instr as Instruction<any, any, any>))
+
+    // Add a Trace when it is available
+    // TODO: Improve parsing of the trace
+    if (instr.trace) {
+      const [file, method, line, column] = instr.trace.split(/:/g)
+
+      this.pushTrace(
+        new StackFrameTrace([
+          {
+            file,
+            method,
+            line: parseFloat(line),
+            column: parseFloat(column),
+          },
+        ]),
+      )
+    }
+
+    // Access the environment
     if (instr.is(Access)) {
-      return (this.current = new RuntimeGeneratorNode(
-        toGen(instr.input(this.environment.value)),
-        prev,
+      return (this.currentNode = new RuntimeGeneratorNode(
+        toGen(instr.input(this._environment.value)),
+        node,
       ))
     }
 
+    // Provide the Environment
+    if (instr.is(Provide)) {
+      const [fx, env] = instr.input
+
+      return (this.currentNode = new RuntimeGeneratorNode(
+        (function* () {
+          that._environment = that._environment.push(env) // Add current Env to the
+
+          const x = yield* fx
+
+          that._environment = that._environment.pop() || that._environment
+
+          return x
+        })() as Generator<AnyInstruction, any>,
+        node,
+      ))
+    }
+
+    // Access FiberContext
+    if (instr.is(GetFiberContext)) {
+      return this.popPrevious(node.previous, this.getFiberContext(), false)
+    }
+
+    // Run Sync Effects
+    if (instr.is(FromExit)) {
+      return pipe(
+        instr.input as Exit.Exit<any, any>,
+        Either.match(
+          (cause) => (this.currentNode = new RuntimeExitNode(Either.Left(cause), node)),
+          (a) => this.popPrevious(node.previous, a, false),
+        ),
+      )
+    }
+
+    // Run Async Effects
     if (instr.is(Async)) {
       const { scope } = this
-      const [finalizer, addFinalizer] = Finalizer.settable()
+      const [finalizer, addFinalizer] = settable()
 
-      this.current = pipe(
-        instr.input.register((fx) => {
-          this.current = new RuntimeGeneratorNode(
-            toGen(
-              Fx(function* () {
-                const x = yield* fx
+      // Keep track of race condition between callback is called synchronously.
+      let addedFinalizer = false // Track if the finalizer has been registered already
+      let needsStart: (() => void) | null = null // Track if the next node needs to be added to the stack
 
-                yield* finalizer(Either.Right(x))
+      this.currentNode = pipe(
+        instr.input((fx) => {
+          const next = new RuntimeGeneratorNode(
+            (function* () {
+              const x = yield* fx
 
-                return x
-              }),
-            ),
-            prev,
+              yield* finalizer(Either.Right(x))
+
+              return x
+            })() as Generator<AnyInstruction, void>,
+            node,
           )
-          this.start()
+
+          const start = () => {
+            this.currentNode = next
+            this.start()
+          }
+
+          if (addedFinalizer) {
+            start()
+          } else {
+            needsStart = start
+          }
         }),
         Either.match(
           // Register
           (fx) =>
             new RuntimeGeneratorNode(
-              toGen(
-                Fx(function* () {
-                  addFinalizer(yield* scope.ensuring(fx as Of<any>))
-                }),
-              ),
+              (function* () {
+                addFinalizer(yield* scope.ensuring(fx as Of<any>))
+                addedFinalizer = true
+
+                if (needsStart) {
+                  needsStart()
+                }
+              })() as Generator<AnyInstruction, void>,
               undefined,
             ),
           // Resume Immediately
-          (fx) => new RuntimeGeneratorNode(toGen(fx), prev),
+          (fx) => new RuntimeGeneratorNode(toGen(fx), node),
         ),
       )
 
       return
     }
 
+    if (instr.is(ZipAll)) {
+      const fx = instr.input
+      this.currentNode = new RuntimeGeneratorNode(
+        (function* () {
+          if (fx.length === 0) {
+            return []
+          }
+
+          const [future, onExit] = zipAllFuture(fx.length)
+          const runtimes: Array<FiberRuntime<any, any, any>> = Array(fx.length)
+
+          for (let i = 0; i < fx.length; ++i) {
+            const runtime = (runtimes[i] = yield* that.forkRuntime(fx[i], {}, (exit) =>
+              onExit(exit, i),
+            ))
+
+            // Track Child relationship while the Scope is open
+            that._children.set(runtime.scope.fiberId, fromFiberRuntime(runtime))
+          }
+
+          // Start all the Fibers
+          runtimes.forEach((r) => r.start())
+
+          return yield* fromExit(yield* wait(future))
+        })() as Generator<AnyInstruction, any>,
+        node,
+      )
+
+      return
+    }
+
+    // Fork a separate process from the current
     if (instr.is(Fork)) {
       const [fx, params] = instr.input
 
-      return (this.current = new RuntimeGeneratorNode(
-        toGen(
-          Fx(function* () {
-            const fiberId = FiberId(
-              that.params.platform.sequenceNumber.increment,
-              that.params.scheduler.currentTime(),
-            )
-            const runtime = new FiberRuntime({
-              fiberId,
-              fx,
-              environment: that.environment.value,
-              scheduler: that.params.scheduler,
-              supervisor: Supervisor.None,
-              fiberRefs: params.fiberRefs ?? (yield* that.scope.fiberRefs.fork),
-              scope: params.scope ?? (yield* that.scope.fork),
-              platform: that.params.platform,
-              parent: Just(that),
-              ...params,
-            })
+      return (this.currentNode = new RuntimeGeneratorNode(
+        (function* () {
+          const runtime = yield* that.forkRuntime(fx, params)
+          const fiber = fromFiberRuntime(runtime)
 
-            return fromFiberRuntime(runtime)
-          }),
-        ),
-        prev,
+          // Track Child relationship while the Scope is open
+          that._children.set(runtime.scope.fiberId, fiber)
+
+          runtime.startLater()
+
+          return fiber
+        })() as Generator<AnyInstruction, any>,
+        node,
       ))
     }
 
-    if (instr.is(FromExit)) {
-      return (this.current = pipe(
-        instr.input as Exit.Exit<any, any>,
-        Either.match(
-          (cause) => new RuntimeExitNode(Either.Left(cause)),
-          (a) => {
-            prev.next.set(a)
-            return prev
-          },
-        ),
-      ))
-    }
-
-    if (instr.is(LazyFx)) {
-      return (this.current = new RuntimeGeneratorNode(toGen(instr.input()), prev))
-    }
-
-    if (instr.is(GetFiberScope)) {
-      prev.next.set(this.scope)
-
-      return (this.current = prev)
-    }
-
+    // Join a process into the current
     if (instr.is(Join)) {
-      this.current = new RuntimeGeneratorNode(
-        toGen(
-          Fx(function* () {
-            const exit = yield* instr.input.exit
+      this.currentNode = new RuntimeGeneratorNode(
+        (function* () {
+          const fiber = instr.input
 
-            yield* instr.input.inheritFiberRefs
+          // Remove Child as it is being merged into the Parent
+          that._children.delete(fiber.id)
 
-            return yield* fromExit(exit)
-          }),
-        ),
-        prev,
+          const exit = yield* fiber.exit
+
+          yield* fiber.inheritFiberRefs
+
+          return yield* fromExit(exit)
+        })() as Generator<AnyInstruction, any>,
+        node,
       )
     }
 
-    if (instr.is(Provide)) {
-      const [fx, env] = instr.input
-
-      return (this.current = new RuntimeGeneratorNode(
-        toGen(
-          Fx(function* () {
-            that.environment = that.environment.push(env) // Add current Env to the
-
-            const x = yield* fx
-
-            that.environment = that.environment.pop() || that.environment
-
-            return x
-          }),
-        ),
-        prev,
-      ))
+    // Lazily-defined Fx
+    if (instr.is(LazyFx)) {
+      return (this.currentNode = new RuntimeGeneratorNode(toGen(instr.input()), node))
     }
 
+    // Change InterruptStatus
     if (instr.is(SetInterruptible)) {
-      const [fx, interruptable] = instr.input
+      const [fx, interruptible] = instr.input
 
-      return (this.current = new RuntimeGeneratorNode(
-        toGen(
-          Fx(function* () {
-            that.interruptStatus = that.interruptStatus.push(interruptable)
-
-            const x = yield* fx
-
-            that.interruptStatus = that.interruptStatus.pop() || that.interruptStatus
-
-            return x
-          }),
-        ),
-        prev,
-      ))
+      return (this.currentNode = new InterruptStatusNode(fx, interruptible, node))
     }
 
+    // Change Concurrency Level
     if (instr.is(WithConcurrency)) {
-      // TODO
+      const [fx, level] = instr.input
+
+      return (this.currentNode = new ConcurrencyLevelNode(fx, level, node))
     }
 
     throw new Error(`Unknown Instruction ecountered: ${JSON.stringify(instr)}`)
@@ -398,56 +495,176 @@ export class FiberRuntime<R, E, A> {
    * Turn our Fx into a Generator for iteration
    */
   protected processInitial(node: RuntimeInitialNode) {
-    this.current = new RuntimeGeneratorNode(toGen(node.fx), node)
-
-    if (this.params.supervisor !== Supervisor.None) {
-      this.params.supervisor.onStart(this, node.fx, this.params.parent)
-    }
+    this.currentNode = new RuntimeGeneratorNode(toGen(node.fx), node)
+    this.withSuperisor((s) => s.onStart(this, node.fx as any, this.params.parent))
   }
 
   /**
    * Start closing our Scope.
    */
   protected processExitNode(node: RuntimeExitNode) {
-    this.exiting = true
-    this.current = new RuntimeGeneratorNode(toGen(this.scope.close(node.exit)), node)
+    this._exiting = true
+    this.currentNode = new RuntimeGeneratorNode(toGen(this.scope.close(node.exit)), node)
+  }
+
+  protected pushInterruptStatus(node: InterruptStatusNode) {
+    this._interruptStatus = this._interruptStatus.push(node.interruptStatus)
+    this.currentNode = new RuntimeGeneratorNode(toGen(node.fx), node)
+  }
+
+  protected popInterruptStatus(node: InterruptStatusNode, value: any, error: boolean) {
+    this._interruptStatus = this._interruptStatus.pop() || this._interruptStatus
+
+    // If we are interrupting, and we can interrupt now lets finalize things now.
+    if (this._interruptedBy.length > 0 && this._interruptStatus.value) {
+      this.currentNode = new RuntimeExitNode(Exit.interrupt(this._interruptedBy[0]), node.previous)
+    } else {
+      this.popPrevious(
+        node.previous.tag === 'Generator' ? node.previous : node.previous.previous,
+        value,
+        error,
+      )
+    }
+  }
+
+  protected pushConcurrencyLevel(node: ConcurrencyLevelNode) {
+    this._concurrencyLevel = this._concurrencyLevel.push(new Semaphore(node.concurrencyLevel))
+    this.currentNode = new RuntimeGeneratorNode(toGen(node.fx), node)
+  }
+
+  protected popConcurrencyLevel(node: ConcurrencyLevelNode, value: any, error: boolean) {
+    this._concurrencyLevel = this._concurrencyLevel.pop() || this._concurrencyLevel
+    this.popPrevious(
+      node.previous.tag === 'Generator' ? node.previous : node.previous.previous,
+      value,
+      error,
+    )
+  }
+
+  protected popPrevious(node: RuntimeGeneratorNode, value: any, error: boolean) {
+    if (error) {
+      node.method.set('throw')
+    }
+
+    node.next.set(value)
+    this.currentNode = node
   }
 
   /**
    * If Suspended, update the status to Running
    */
   protected running() {
-    this.fiberStatus.update((s) => (s.tag === 'Suspended' ? s.running() : s))
+    const current = this.fiberStatus.get
+
+    console.log(this.fiberStatus)
+
+    if (current.tag === 'Suspended') {
+      this.fiberStatus.set(current.running())
+      this.withSuperisor((s) => s.onRunning(this))
+    }
   }
 
   /**
    * If Running, update the status to Suspended
    */
   protected suspended() {
-    this.fiberStatus.update((s) => (s.tag === 'Running' ? s.suspended() : s))
+    const current = this.fiberStatus.get
+
+    if (current.tag === 'Running') {
+      this.fiberStatus.set(current.suspended())
+      this.withSuperisor((s) => s.onSuspend(this))
+    }
   }
 
   /**
    * The Fiber has completely finished
    */
   protected finalized(exit: Exit.Exit<E, A>) {
-    this.exited = true
+    this.currentNode = undefined
     const currentStatus = this.fiberStatus.getAndSet(
       new FiberStatus.Exited(this.params.fiberId, exit),
     )
 
     if (currentStatus.tag !== 'Exited') {
       currentStatus.observers.forEach((o) => o(exit))
+      this.withSuperisor((s) => s.onEnd(this, exit))
+      complete(success(exit))(this.exit)
     }
   }
 
-  protected yieldNow() {
-    const current = this.current
-    this.current = undefined
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  protected yieldNow(targetObject?: Function) {
+    const current = this.currentNode
+    this.currentNode = undefined
+
+    // Capture the Stack before yielding asynchronously
+    this.pushTrace(captureTrace(undefined, targetObject))
 
     Promise.resolve().then(() => {
-      this.current = current
+      this.currentNode = current
       this.start()
+    })
+  }
+
+  protected pushTrace = (trace: Trace) => (this._stackTrace = this._stackTrace.push(trace))
+  protected popTrace = () => (this._stackTrace = this._stackTrace.pop())
+
+  protected withSuperisor = <B>(f: (s: Supervisor.Supervisor) => B) => {
+    if (this.params.supervisor === Supervisor.None) {
+      return Nothing
+    }
+
+    return Just(f(this.params.supervisor))
+  }
+
+  protected getFiberContext = (): FiberContext =>
+    new FiberContext(
+      this.scope,
+      this.status,
+      this._stackTrace,
+      this.params.scheduler,
+      this.params.supervisor,
+      this.params.platform,
+      this.params.parent,
+      this.children,
+    )
+
+  protected forkRuntime = (
+    fx: AnyFx,
+    params: ForkParams<any>,
+    onExit?: (exit: Exit.Exit<any, any>) => void,
+  ) => {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const that = this
+
+    return Fx(function* () {
+      const fiberId = FiberId(
+        that.params.platform.sequenceNumber.increment,
+        that.params.scheduler.currentTime(),
+      )
+
+      const runtime = new FiberRuntime({
+        fiberId,
+        fx: acquire(that._concurrencyLevel.value)(fx),
+        env: that._environment.value,
+        scheduler: that.params.scheduler,
+        supervisor: Supervisor.None,
+        fiberRefs: params.fiberRefs ?? (yield* that.scope.fiberRefs.fork),
+        scope: params.scope ?? (yield* that.scope.fork),
+        platform: that.params.platform,
+        parent: Just(that.getFiberContext()),
+        ...params,
+      })
+
+      // Remove Child relationship when the Scope closes
+      yield* runtime.scope.addFinalizer((exit) =>
+        fromLazy(() => {
+          that._children.delete(fiberId)
+          onExit?.(exit)
+        }),
+      )
+
+      return runtime
     })
   }
 }
@@ -457,6 +674,8 @@ export type FiberRuntimeNode =
   | RuntimeGeneratorNode
   | RuntimeInstructionNode
   | RuntimeExitNode
+  | InterruptStatusNode
+  | ConcurrencyLevelNode
 
 export class RuntimeInitialNode {
   readonly tag = 'Initial'
@@ -469,7 +688,7 @@ export class RuntimeGeneratorNode {
 
   constructor(
     readonly generator: Generator<AnyInstruction, any>,
-    readonly previous: RuntimeInitialNode | RuntimeExitNode | RuntimeGeneratorNode | undefined,
+    readonly previous: FiberRuntimeNode | undefined,
     readonly next: Atomic<any> = new Atomic(undefined, Strict),
     readonly method = new Atomic<'next' | 'throw'>('next', Strict),
   ) {}
@@ -488,9 +707,45 @@ export class RuntimeInstructionNode {
 export class RuntimeExitNode {
   readonly tag = 'Exit'
 
-  constructor(readonly exit: Exit.Exit<any, any>) {}
+  constructor(readonly exit: Exit.Exit<any, any>, readonly previous: FiberRuntimeNode) {}
 }
 
-function toGen<R, E, A>(fx: Fx<R, E, A>): Generator<Instruction<R, E, any>, A> {
+export class InterruptStatusNode {
+  readonly tag = 'InterruptStatus'
+  constructor(
+    readonly fx: AnyFx,
+    readonly interruptStatus: boolean,
+    readonly previous: RuntimeGeneratorNode | RuntimeInstructionNode,
+  ) {}
+}
+
+export class ConcurrencyLevelNode {
+  readonly tag = 'ConcurrencyLevel'
+  constructor(
+    readonly fx: AnyFx,
+    readonly concurrencyLevel: NonNegativeInteger,
+    readonly previous: RuntimeGeneratorNode | RuntimeInstructionNode,
+  ) {}
+}
+
+function toGen<R, E, A>(fx: AnyFx): Generator<Instruction<R, E, any>, A> {
   return fx[Symbol.iterator]() as Generator<Instruction<R, E, any>, A>
+}
+
+function zipAllFuture(expected: number) {
+  const future = pending<Exit.Exit<any, ReadonlyArray<any>>>()
+  const exits = Array<Exit.Exit<any, ReadonlyArray<any>>>(expected)
+
+  function onExit(exit: Exit.Exit<any, any>, index: number) {
+    exits[index] = pipe(
+      exit,
+      Either.map((x) => [x]),
+    )
+
+    if (--expected === 0) {
+      complete(success(exits.reduce(concatExitPar)))(future)
+    }
+  }
+
+  return [future, onExit] as const
 }

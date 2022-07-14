@@ -19,7 +19,7 @@ import { InstanceOf } from '@/internal'
 /**
  * An Environment contains any number of Services that can be retrieved
  */
-export class Env<in out R> {
+export class Env<in out R = never> {
   constructor(
     readonly services = new ServiceMap<R>(),
     readonly layers = new ServiceMap<Layer.AnyLayer<R>>(),
@@ -54,7 +54,9 @@ export class Env<in out R> {
       }
 
       // Fork a Fiber for sharing with other instances
-      const fiber = yield* fork(trackDependencies(service.id(), that, maybeLayer.value.provider))
+      const fiber = yield* fork(
+        trackDependencies(service.id(), that, maybeLayer.value.provider as any),
+      )
 
       that.fibers.set(id, fiber)
 
@@ -64,7 +66,7 @@ export class Env<in out R> {
       that.fibers.delete(id)
 
       return a
-    }) as Of<InstanceOf<S>>
+    }) as any as Of<InstanceOf<S>>
   }
 
   readonly addService = <S extends Service>(service: S): Env<R | S> =>
@@ -84,7 +86,7 @@ export class Env<in out R> {
     )
 }
 
-export function make<Services extends ReadonlyArray<Service>>(
+export function make<Services extends ReadonlyArray<Service> = never>(
   ...services: Services
 ): Env<Services[number]> {
   return new Env<Services[number]>(new ServiceMap(new Map(services.map((s) => [s.id, s]))))

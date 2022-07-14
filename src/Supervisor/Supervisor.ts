@@ -1,6 +1,7 @@
 import { Maybe } from 'hkt-ts/Maybe'
 
 import { Exit } from '@/Exit/Exit'
+import type { FiberContext } from '@/FiberContext/index'
 import type { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
 import { Fx, Of } from '@/Fx/Fx'
 import { Instruction, unit } from '@/Fx/index'
@@ -11,7 +12,7 @@ export class Supervisor {
     readonly onStart: <R, E, A>(
       runtime: FiberRuntime<R, E, A>,
       fx: Fx<R, E, A>,
-      parent: Maybe<FiberRuntime<any, any, any>>,
+      parent: Maybe<FiberContext>,
     ) => Of<unknown> = () => unit,
     readonly onEnd: <R, E, A>(
       runtime: FiberRuntime<R, E, A>,

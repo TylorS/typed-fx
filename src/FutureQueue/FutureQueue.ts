@@ -2,8 +2,8 @@ import { pipe } from 'hkt-ts/function'
 
 import { FiberId } from '@/FiberId/FiberId'
 import { Future, pending } from '@/Future/Future'
-import { Fx } from '@/Fx/Fx'
 import { complete } from '@/Future/complete'
+import { Fx } from '@/Fx/Fx'
 import { interrupt } from '@/Fx/index'
 
 /**
@@ -24,6 +24,7 @@ export function make<R, E, A>(): FutureQueue<R, E, A> {
 
   function next(fx: Fx<R, E, A>): boolean {
     if (queue.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return pipe(queue.shift()!, complete(fx))
     }
 

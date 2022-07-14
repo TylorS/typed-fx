@@ -10,6 +10,7 @@ export interface Fiber<out E, out A> {
   readonly stack: Of<StackTrace>
   readonly exit: Of<Exit<E, A>>
   readonly inheritFiberRefs: Of<void>
+  readonly interrupt: (interruptingFiberId: FiberId) => Of<Exit<E, A>>
 }
 
 export type AnyFiber = Fiber<any, any> | Fiber<never, any> | Fiber<any, never> | Fiber<never, never>

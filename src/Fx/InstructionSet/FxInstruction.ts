@@ -2,7 +2,7 @@
 import type { Fx } from '@/Fx/Fx'
 import type { InstanceOf } from '@/internal'
 
-export abstract class BaseFxInstruction<R = never, E = never, A = never> {
+export abstract class BaseFxInstruction<out R = never, out E = never, out A = never> {
   readonly _R!: () => R
   readonly _E!: () => E
   readonly _A!: () => A
@@ -24,7 +24,7 @@ export abstract class FxInstruction<I, R, E, A>
   }
 
   readonly is = <S extends AnyInstructionConstructor>(s: S): this is InstanceOf<S> =>
-    this.constructor === s
+    this.constructor.name === s.name
 
   readonly log = () => {
     return `${this.name} at ${this.trace}`

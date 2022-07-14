@@ -50,7 +50,7 @@ export class FiberRefs {
         self.references.set(ref, value)
 
         return value
-      })
+      }) as Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, Ref.OutputOf<R>>
     })
 
   readonly modify: <R extends AnyFiberRef, B>(

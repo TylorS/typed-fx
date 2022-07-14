@@ -7,6 +7,12 @@ export interface Future<R, E, A> {
   readonly state: Atomic<FutureState<R, E, A>>
 }
 
+export type AnyFuture =
+  | Future<any, any, any>
+  | Future<never, never, any>
+  | Future<never, any, any>
+  | Future<any, never, any>
+
 export type FutureState<R, E, A> = Pending<R, E, A> | Resolved<R, E, A>
 
 export class Pending<R, E, A> {

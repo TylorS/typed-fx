@@ -3,7 +3,7 @@
 import { Fx } from '@/Fx/Fx'
 import { InstanceOf } from '@/internal'
 
-export class Layer<in out S, out R = never, out E = never> {
+export class Layer<in out S, in out R = never, out E = never> {
   constructor(readonly service: S, readonly provider: Fx<R, E, InstanceOf<S>>) {}
 }
 

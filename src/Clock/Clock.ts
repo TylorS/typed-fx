@@ -1,8 +1,6 @@
 import { Lazy } from 'hkt-ts'
 import { Branded } from 'hkt-ts/Branded'
 
-import { CurrentDate } from '@/CurrentDate/CurrentDate'
-import { Fx } from '@/Fx/Fx'
 import { Service } from '@/Service/Service'
 
 /**
@@ -22,15 +20,23 @@ export class Clock extends Service {
 
   readonly toDate = (time: Time): Date => new Date(this.startTime.getTime() + time)
 
-  static live = Clock.layer(
-    Fx(function* () {
-      const { currentDate } = yield* CurrentDate.ask()
-      const start = currentDate()
-      const offset = start.getTime()
+  readonly fork = (): Clock => {
+    const offset = this.currentTime()
 
-      return new Clock(start, () => Time(currentDate().getTime() - offset))
-    }),
-  )
+    return new Clock(new Date(this.startTime.getTime() + offset), () =>
+      Time(this.currentTime() - offset),
+    )
+  }
+}
+
+export class DateClock extends Clock {
+  constructor() {
+    const start = new Date()
+    const offset = start.getTime()
+
+    super(start, () => Time(new Date().getTime() - offset))
+  }
 }
 
 export const toDate = (time: Time) => Clock.asks((c) => c.toDate(time))
+export const relative = Clock.asks((c) => c.fork())

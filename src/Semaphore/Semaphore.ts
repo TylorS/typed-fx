@@ -1,11 +1,11 @@
+import { constant } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
+import { wait } from '@/Future/wait'
+import * as FutureQueue from '@/FutureQueue/index'
 import { Fx, Of } from '@/Fx/Fx'
 import { fromLazy, unit } from '@/Fx/index'
-import * as FutureQueue from '@/FutureQueue/index'
-import { wait } from '@/Future/wait'
 import { managed, scoped } from '@/Fx/scoped'
-import { constant } from 'hkt-ts/function'
 
 export class Semaphore {
   protected waiting = FutureQueue.make<never, never, void>()

@@ -10,7 +10,7 @@ export function finalizationStrategyToConcurrency(
   }
 
   if (strategy.strategy === 'Concurrent') {
-    return NonNegativeInteger(Infinity)
+    return NonNegativeInteger(Number.MAX_SAFE_INTEGER)
   }
 
   return strategy.concurrency
