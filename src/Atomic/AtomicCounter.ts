@@ -7,6 +7,11 @@ export class AtomicCounter extends Atomic<NonNegativeInteger> {
     super(initial, Eq)
   }
 
-  readonly increment = this.update((s) => NonNegativeInteger(s + 1))
-  readonly decrement = this.update((s) => NonNegativeInteger(Math.max(0, s - 1)))
+  get increment() {
+    return this.update((s) => NonNegativeInteger(s + 1))
+  }
+
+  get decrement() {
+    return this.update((s) => NonNegativeInteger(Math.max(0, s - 1)))
+  }
 }
