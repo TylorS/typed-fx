@@ -1,30 +1,54 @@
-import { constant } from 'hkt-ts'
+import { constant, flow, pipe } from 'hkt-ts'
+import { Right } from 'hkt-ts/Either'
 
-import { Cause } from '@/Cause/Cause'
-import { Of } from '@/Fx/Fx'
-import { success } from '@/Fx/index'
+import { Fx, IO } from '@/Fx/Fx'
+import { getEnv } from '@/Fx/InstructionSet/Access'
+import { unit } from '@/Fx/InstructionSet/FromExit'
+import { getFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
+import { provide } from '@/Fx/index'
 
-export abstract class Sink<E, A> {
-  abstract readonly event: (a: A) => Of<unknown>
-  abstract readonly error: (cause: Cause<E>) => Of<unknown>
-  abstract readonly end: Of<unknown>
+export abstract class Sink<out E, in A> {
+  abstract readonly event: (a: A) => IO<E, unknown>
+  abstract readonly end: IO<E, unknown>
 }
 
 const InternalSink = Sink
 
-const unit = success<void>(undefined)
 const lazyUnit = constant(unit)
 
 export type SinkEffects<E, A> = {
-  readonly event?: (a: A) => Of<unknown>
-  readonly error?: (cause: Cause<E>) => Of<unknown>
-  readonly end?: Of<unknown>
+  readonly event?: (a: A) => IO<E, unknown>
+  readonly end?: IO<E, unknown>
 }
 
 export function make<E, A>(effects: SinkEffects<E, A>) {
   return class Sink extends InternalSink<E, A> {
     readonly event = effects.event ?? lazyUnit
-    readonly error = effects.error ?? lazyUnit
     readonly end = effects.end ?? unit
   }
+}
+
+export const Drain = new (class Drain extends make({
+  end: Fx(function* () {
+    const context = yield* getFiberContext
+
+    yield* context.scope.close(Right(undefined))
+  }),
+}) {})()
+
+export type Drain = typeof Drain
+
+export function makeSink<A, R, E, R2 = never, E2 = never>(
+  event: (a: A) => Fx<R, E, any>,
+  end: Fx<R2, E2, any> = Drain.end,
+) {
+  return Fx(function* () {
+    const env = yield* getEnv<R | R2>()
+    const sink: Sink<E | E2, A> = {
+      event: flow(event, provide(env)),
+      end: pipe(end, provide(env)),
+    }
+
+    return sink
+  })
 }

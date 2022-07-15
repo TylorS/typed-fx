@@ -4,11 +4,11 @@ import { Exit } from '@/Exit/Exit'
 import type { FiberContext } from '@/FiberContext/index'
 import type { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
 import { Fx, Of } from '@/Fx/Fx'
-import { Instruction, unit } from '@/Fx/index'
+import { Instruction, unit } from '@/Fx/InstructionSet/index'
 
-export class Supervisor {
+export class Supervisor<T> {
   constructor(
-    readonly value: Of<ReadonlySet<FiberRuntime<any, any, any>>>,
+    readonly value: Of<T>,
     readonly onStart: <R, E, A>(
       runtime: FiberRuntime<R, E, A>,
       fx: Fx<R, E, A>,

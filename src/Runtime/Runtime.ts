@@ -1,13 +1,14 @@
-import { Either } from 'hkt-ts'
+import { Either, flow } from 'hkt-ts'
 import { fromNullable } from 'hkt-ts/Maybe'
 
+import { Cause } from '@/Cause/Cause'
 import { Env } from '@/Env/Env'
 import { Exit } from '@/Exit/Exit'
 import { FiberContext } from '@/FiberContext/index'
 import { FiberId } from '@/FiberId/FiberId'
 import { FiberRefs } from '@/FiberRefs/FiberRefs'
-import { FiberRuntime, FiberRuntimeParams } from '@/FiberRuntime/FiberRuntime'
-import { fromFiberRuntime } from '@/FiberRuntime/fromFiberRuntime'
+import { FiberRuntime, FiberRuntimeParams } from '@/FiberRuntime/index'
+import { fromFiberRuntime } from '@/FiberRuntime/processors/Fork'
 import { Fx } from '@/Fx/Fx'
 import { getEnv } from '@/Fx/InstructionSet/Access'
 import { getFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
@@ -23,13 +24,13 @@ export type RuntimeParams<R> = {
   readonly platform: Platform
   readonly scheduler: Scheduler
 
-  readonly supervisor?: Supervisor
+  readonly supervisor?: Supervisor<any>
   readonly fiberRefs?: FiberRefs
   readonly parent?: FiberContext
 }
 
 export type RuntimeFiberParams = [
-  Partial<Omit<FiberRuntimeParams<any, any, any>, 'fx' | 'fiberId' | 'env' | 'parent'>>,
+  Partial<Omit<FiberRuntimeParams<any>, 'env' | 'parent'>>,
 ] extends [infer R]
   ? { readonly [K in keyof R]: R[K] }
   : never
@@ -39,7 +40,7 @@ export class Runtime<R> {
 
   readonly runExit = <E, A>(fx: Fx<R, E, A>, params?: RuntimeFiberParams) =>
     new Promise<Exit<E, A>>((resolve) => {
-      const runtime = this.makeFiberRuntime(fx, params)
+      const runtime = this.makeFiberRuntime<E, A>(fx, params)
 
       runtime.addObserver(resolve)
       runtime.start()
@@ -49,14 +50,14 @@ export class Runtime<R> {
     new Promise<A>((resolve, reject) => {
       const runtime = this.makeFiberRuntime(fx, params)
 
-      runtime.addObserver(Either.match(reject, resolve))
+      runtime.addObserver(Either.match(flow(toCauseError, reject), resolve))
       runtime.start()
     })
 
   readonly runFiber = <E, A>(fx: Fx<R, E, A>, params?: RuntimeFiberParams) => {
     const runtime = this.makeFiberRuntime(fx, params)
 
-    Promise.resolve().then(runtime.start)
+    runtime.start()
 
     return fromFiberRuntime(runtime)
   }
@@ -67,12 +68,11 @@ export class Runtime<R> {
       ...params,
     }
 
-    return new FiberRuntime({
+    return new FiberRuntime(fx, {
       fiberId: FiberId(
         this.params.platform.sequenceNumber.increment,
         this.params.scheduler.currentTime(),
       ),
-      fx,
       scope: merged.scope ?? new LocalScope(SequentialStrategy),
       ...merged,
       parent: fromNullable(merged.parent),
@@ -94,4 +94,14 @@ export function getRuntime<R>() {
       parent: context,
     })
   })
+}
+
+export function toCauseError<E>(cause: Cause<E>) {
+  return new CauseError(cause)
+}
+
+export class CauseError<E> extends Error {
+  constructor(readonly causedBy: Cause<E>) {
+    super(`TODO: Print the Cause : ${causedBy}`)
+  }
 }

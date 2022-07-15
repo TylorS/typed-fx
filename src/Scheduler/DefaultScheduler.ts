@@ -7,7 +7,7 @@ import { complete } from '@/Future/complete'
 import { wait } from '@/Future/wait'
 import { Fx } from '@/Fx/Fx'
 import { success } from '@/Fx/index'
-import { getRuntime } from '@/Runtime/Runtime'
+import { RuntimeFiberParams, getRuntime } from '@/Runtime/Runtime'
 import { Schedule } from '@/Schedule/Schedule'
 import { ScheduleState } from '@/Schedule/ScheduleState'
 
@@ -18,10 +18,10 @@ export class DefaultScheduler extends Scheduler {
   protected timer: ReturnType<typeof setTimeout> | null = null
   protected nextArrival: Time | null = null
 
-  constructor(readonly clock: Clock) {
+  constructor(readonly clock: Clock, timeline?: Timeline<Future<never, never, void>>) {
     // Create a Future which is inserted at a specific time in the Timeline
 
-    super(clock, <R, E, A>(fx: Fx<R, E, A>, schedule: Schedule) => {
+    super(clock, <R, E, A>(fx: Fx<R, E, A>, schedule: Schedule, params?: RuntimeFiberParams) => {
       const { addTask, scheduleNextRun } = this
       const scheduledFx = scheduled(fx, schedule, clock, addTask, scheduleNextRun)
 
@@ -29,12 +29,14 @@ export class DefaultScheduler extends Scheduler {
         // We need to create a Fiber
         const runtime = yield* getRuntime<R>()
 
-        return runtime.runFiber(scheduledFx)
+        return runtime.runFiber(scheduledFx, params)
       })
     })
 
-    this.timeline = new Timeline(this.scheduleNextRun)
+    this.timeline = timeline ?? new Timeline(this.scheduleNextRun)
   }
+
+  readonly fork: () => Scheduler = () => new DefaultScheduler(this.clock.fork(), this.timeline)
 
   /**
    * If the Timeline is non-empty, schedules the next scheduled Fx

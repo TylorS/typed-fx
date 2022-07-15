@@ -8,7 +8,7 @@ export class GlobalScope extends Closeable {
     super(
       () => success(() => unit),
       (s) => fromLazy(() => new LocalScope(s)),
-      () => unit,
+      () => success(false),
     )
   }
 }

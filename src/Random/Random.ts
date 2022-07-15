@@ -1,5 +1,5 @@
 import { Of } from '@/Fx/Fx'
-import { fromLazy } from '@/Fx/InstructionSet/FromLazy'
+import { fromLazy } from '@/Fx/lazy'
 import { Service } from '@/Service/Service'
 
 export class Random extends Service {

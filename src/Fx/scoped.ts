@@ -38,7 +38,7 @@ export function scoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scop
  */
 export interface Reservation<R, E, A> {
   readonly acquire: Fx<R, never, Exit<E, A>>
-  readonly release: (exit: Exit<any, any>) => Of<void>
+  readonly release: (exit: Exit<any, any>) => Of<boolean>
 }
 
 /**

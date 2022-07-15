@@ -4,7 +4,7 @@ import { Future } from './Future'
 
 import { Fx } from '@/Fx/Fx'
 import { async } from '@/Fx/InstructionSet/Async'
-import { fromLazy } from '@/Fx/InstructionSet/FromLazy'
+import { fromLazy } from '@/Fx/lazy'
 
 export function wait<R, E, A>(future: Future<R, E, A>): Fx<R, E, A> {
   return async<R, E, A>((cb) => {

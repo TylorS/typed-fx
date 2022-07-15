@@ -5,9 +5,9 @@ import { Fiber } from '@/Fiber/Fiber'
 import { AnyFiberRef } from '@/FiberRef/index'
 import { Fx, Of } from '@/Fx/Fx'
 import { fork } from '@/Fx/InstructionSet/Fork'
-import { fromLazy, lazy } from '@/Fx/InstructionSet/FromLazy'
 import { join } from '@/Fx/InstructionSet/Join'
 import { fromExit, success } from '@/Fx/index'
+import { fromLazy, lazy } from '@/Fx/lazy'
 import * as Ref from '@/Ref/Ref'
 
 export class FiberRefs {

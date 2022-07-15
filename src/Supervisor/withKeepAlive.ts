@@ -1,13 +1,16 @@
 import { Supervisor } from './Supervisor'
 import { keepAlive } from './keepAlive'
 
-import { Fx } from '@/Fx/index'
+import type { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
+import { Fx } from '@/Fx/Fx'
 
 /**
  * Creates a Supervisor intended for usage with the your Root Fibers, intended to keep the process alive while
  * while fibers are still executing.
  */
-export function withKeepAlive(supervisor: Supervisor): Supervisor {
+export function withKeepAlive(
+  supervisor: Supervisor<ReadonlySet<FiberRuntime<any, any, any>>>,
+): Supervisor<ReadonlySet<FiberRuntime<any, any, any>>> {
   const [ping, clear] = keepAlive()
 
   return new Supervisor(

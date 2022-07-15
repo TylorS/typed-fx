@@ -42,6 +42,5 @@ export class FilterMapSink<E, A, B> extends Sink<E, A> {
     })
   }
 
-  readonly error = this.sink.error
   readonly end = this.sink.end
 }

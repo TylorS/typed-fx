@@ -39,4 +39,3 @@ export class DateClock extends Clock {
 }
 
 export const toDate = (time: Time) => Clock.asks((c) => c.toDate(time))
-export const relative = Clock.asks((c) => c.fork())

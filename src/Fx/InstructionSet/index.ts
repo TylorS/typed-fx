@@ -1,7 +1,6 @@
 export * from './Access'
 export * from './Fork'
 export * from './FromExit'
-export * from './FromLazy'
 export * from './Instruction'
 export * from './Join'
 export * from './Provide'

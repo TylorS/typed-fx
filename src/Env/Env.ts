@@ -19,18 +19,63 @@ import { InstanceOf } from '@/internal'
 /**
  * An Environment contains any number of Services that can be retrieved
  */
-export class Env<in out R = never> {
+export class Env<out R = never> {
   constructor(
-    readonly services = new ServiceMap<R>(),
-    readonly layers = new ServiceMap<Layer.AnyLayer<R>>(),
+    readonly services = new ServiceMap<any>(),
+    readonly layers = new ServiceMap<Layer.AnyLayer<any>>(),
     readonly fibers = new ServiceMap<AnyFiber>(),
     readonly dependencyGraph = new Atomic(DiGraph.make<ServiceId<any>>([]), Strict),
   ) {}
 
-  readonly get = <S extends ServiceConstructor>(service: S): Of<InstanceOf<S>> => {
+  readonly get = <S extends ServiceConstructor>(service: S): Of<InstanceOf<S>> =>
+    this.getById<InstanceOf<S>>(service.id(), service.name)
+
+  readonly addService = <S extends ServiceConstructor, B extends InstanceOf<S>>(
+    service: S,
+    implementation: B,
+  ): Env<R | InstanceOf<S> | B> =>
+    new Env(
+      this.services
+        .extend<S, InstanceOf<S>>(service.id(), implementation)
+        .extend((implementation as Service).id, implementation),
+      this.layers as ServiceMap<Layer.AnyLayer<R | InstanceOf<S>>>,
+      this.fibers,
+      this.dependencyGraph,
+    )
+
+  readonly addLayer = <S extends Layer.AnyLayer>(layer: S): Env<R | Layer.ServiceOf<S>> =>
+    new Env(
+      this.services,
+      this.layers.extend(layer.service.id(), layer),
+      this.fibers,
+      this.dependencyGraph,
+    )
+
+  readonly refreshLayer = <S extends Layer.AnyLayer>(layer: S): Of<InstanceOf<S>> => {
+    return lazy(() => {
+      const id = layer.service.id()
+      const current = this.layers.get(id)
+      const refresh = this.getById<InstanceOf<S>>(id, layer.service.name)
+
+      if (isJust(current)) {
+        this.services.delete(id)
+      }
+
+      if (isNothing(current)) {
+        return die(
+          new Error(
+            `Layer Refresh Error: Unable to refresh Layer for ${id.description} as it has not been provided to this Env before.`,
+          ),
+        )
+      }
+
+      return refresh
+    })
+  }
+
+  readonly getById = <A>(id: ServiceId<A>, name: string): Of<A> => {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this
-    const id = service.id()
 
     return Fx(function* () {
       // Attempt to retrieve memoized instance of Serivce
@@ -50,13 +95,11 @@ export class Env<in out R = never> {
 
       // This should be pretty much impossible, but if you ask for an unknown Service, fail immediately.
       if (isNothing(maybeLayer)) {
-        return yield* die(new Error(`Unable to find Layer for Service: ${service.name}`))
+        return yield* die(new Error(`Unable to find Layer for Service: ${name}`))
       }
 
       // Fork a Fiber for sharing with other instances
-      const fiber = yield* fork(
-        trackDependencies(service.id(), that, maybeLayer.value.provider as any),
-      )
+      const fiber = yield* fork(trackDependencies(id, that, maybeLayer.value.provider))
 
       that.fibers.set(id, fiber)
 
@@ -66,24 +109,8 @@ export class Env<in out R = never> {
       that.fibers.delete(id)
 
       return a
-    }) as any as Of<InstanceOf<S>>
+    }) as Of<A>
   }
-
-  readonly addService = <S extends Service>(service: S): Env<R | S> =>
-    new Env(
-      this.services.extend(service.id, service),
-      this.layers as ServiceMap<Layer.AnyLayer<R | S>>,
-      this.fibers,
-      this.dependencyGraph,
-    )
-
-  readonly addLayer = <S extends Layer.AnyLayer>(layer: S): Env<R | Layer.ServiceOf<S>> =>
-    new Env(
-      this.services,
-      this.layers.extend(layer.service.id, layer),
-      this.fibers,
-      this.dependencyGraph,
-    )
 }
 
 export function make<Services extends ReadonlyArray<Service> = never>(

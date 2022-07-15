@@ -18,8 +18,9 @@ export class Access<in out R, in out R2, out E, out A> extends FxInstruction<
   A
 > {}
 
-export const access = <R, R2, E, A>(f: (env: Env<R>) => Fx<R2, E, A>): Fx<R | R2, E, A> =>
-  new Access(f)
+export const access = <R = never, R2 = never, E = never, A = any>(
+  f: (env: Env<R>) => Fx<R2, E, A>,
+): Fx<R | R2, E, A> => new Access(f)
 
 export const getEnv = <R>(): Fx<R, never, Env<R>> => access((r: Env<R>) => success(r))
 
@@ -46,9 +47,11 @@ export const withService =
     })
 
 export const provideService =
-  <C extends ServiceConstructor, S extends InstanceOf<C>>(_Service: C, implementation: S) =>
+  <C extends ServiceConstructor, S extends InstanceOf<C>>(Service: C, implementation: S) =>
   <R, E, A>(fx: Fx<R | InstanceOf<C>, E, A>): Fx<Exclude<R, InstanceOf<C>>, E, A> =>
-    access((environment) => pipe(fx, provide(environment.addService<any>(implementation))))
+    access((environment) =>
+      pipe(fx, provide(environment.addService(Service, implementation) as Env<R | InstanceOf<C>>)),
+    )
 
 export const provideLayer =
   <L extends Layer.AnyLayer>(layer: L) =>
@@ -70,3 +73,6 @@ export const provideLayers =
         ),
       ),
     )
+
+export const refreshLayer = <L extends Layer.AnyLayer>(layer: L) =>
+  access((env) => env.refreshLayer(layer.service))

@@ -1,13 +1,13 @@
 import { Fiber } from '@/Fiber/Fiber'
+import { FiberContext } from '@/FiberContext/index'
 import { Fx } from '@/Fx/Fx'
-import { Scheduler } from '@/Scheduler/Scheduler'
 import * as Sink from '@/Sink/Sink'
 
-export class Stream<R, E, A> {
+export class Stream<in out R, in out E, out A> {
   constructor(readonly run: RunStream<R, E, A>) {}
 }
 
 export type RunStream<R, E, A> = (
   sink: Sink.Sink<E, A>,
-  scheduler: Scheduler,
+  context: FiberContext,
 ) => Fx<R, never, Fiber<E, unknown>>

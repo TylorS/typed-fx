@@ -24,7 +24,7 @@ export abstract class FxInstruction<I, R, E, A>
   }
 
   readonly is = <S extends AnyInstructionConstructor>(s: S): this is InstanceOf<S> =>
-    this.constructor.name === s.name
+    this.constructor === s
 
   readonly log = () => {
     return `${this.name} at ${this.trace}`

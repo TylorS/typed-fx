@@ -9,9 +9,7 @@ import type { Access } from './Access'
 import { Async } from './Async'
 import { Fork } from './Fork'
 import type { FromExit } from './FromExit'
-import type { LazyFx } from './FromLazy'
 import { GetFiberContext } from './GetFiberContext'
-import { Join } from './Join'
 import { Provide } from './Provide'
 import { SetInterruptible } from './SetInterruptable'
 import { WithConcurrency } from './WithConcurrency'
@@ -23,8 +21,6 @@ export type Instruction<R = never, E = never, A = never> =
   | Fork<R, E, A>
   | FromExit<E, A>
   | GetFiberContext
-  | Join<E, A>
-  | LazyFx<Fx<R, E, A>>
   | Provide<never, E, A>
   | SetInterruptible<Fx<R, E, A>>
   | WithConcurrency<Fx<R, E, A>>

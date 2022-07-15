@@ -23,7 +23,7 @@ export class Closeable extends Scope {
   constructor(
     readonly addFinalizer: (finalizer: Finalizer) => Of<Finalizer>,
     readonly forkWith: (strategy: FinalizationStrategy) => Of<Closeable>,
-    readonly close: (exit: Exit<any, any>) => Of<void>,
+    readonly close: (exit: Exit<any, any>) => Of<boolean>,
   ) {
     super(addFinalizer, forkWith)
   }

@@ -2,7 +2,7 @@ import * as Ref from './Ref'
 
 import { Atomic } from '@/Atomic/Atomic'
 import { Fx } from '@/Fx/Fx'
-import { fromLazy } from '@/Fx/InstructionSet/index'
+import { fromLazy } from '@/Fx/lazy'
 import * as Layer from '@/Layer/Layer'
 import * as Semaphore from '@/Semaphore/Semaphore'
 

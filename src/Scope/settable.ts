@@ -3,9 +3,9 @@ import { pipe } from 'hkt-ts'
 import { FinalizationStrategy, Finalizer, SequentialStrategy } from './Finalizer'
 import { finalizationStrategyToConcurrency } from './finalizeStrategyToConcurrency'
 
-import { fromLazy } from '@/Fx/InstructionSet/FromLazy'
 import { zipAll } from '@/Fx/InstructionSet/ZipAll'
 import { withConcurrency } from '@/Fx/index'
+import { fromLazy } from '@/Fx/lazy'
 
 export const settable = (strategy: FinalizationStrategy = SequentialStrategy) => {
   const finalizers = new Set<Finalizer>()

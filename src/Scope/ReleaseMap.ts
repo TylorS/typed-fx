@@ -8,9 +8,9 @@ import { finalizationStrategyToConcurrency } from './finalizeStrategyToConcurren
 import { Exit } from '@/Exit/Exit'
 import { Fx, Of } from '@/Fx/Fx'
 import { success, unit } from '@/Fx/InstructionSet/FromExit'
-import { fromLazy, lazy } from '@/Fx/InstructionSet/FromLazy'
 import { withConcurrency } from '@/Fx/InstructionSet/WithConcurrency'
 import { zipAll } from '@/Fx/InstructionSet/ZipAll'
+import { fromLazy, lazy } from '@/Fx/lazy'
 
 const noOpFinalizer: Finalizer = () => unit
 

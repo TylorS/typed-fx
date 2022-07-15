@@ -1,7 +1,6 @@
-import { success } from '@/Fx/index'
 import { Supervisor } from './Supervisor'
 
-export const None = new Supervisor(success(new Set()))
-export type None = typeof None
+import { unit } from '@/Fx/index'
 
-export const isNone = (s: Supervisor): s is None => s === None
+export const None = new Supervisor<any>(unit)
+export type None = typeof None
