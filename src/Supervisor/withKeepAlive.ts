@@ -15,9 +15,11 @@ export function withKeepAlive(
   return new Supervisor(
     supervisor.atomic,
     (...args) => {
-      ping()
+      supervisor.onStart(...args)
 
-      return supervisor.onStart(...args)
+      if (supervisor.atomic.get.size === 0) {
+        ping()
+      }
     },
     (...args) => {
       supervisor.onEnd(...args)
