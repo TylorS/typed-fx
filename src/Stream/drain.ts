@@ -30,13 +30,13 @@ export const forkStreamContext = (fiberContext?: FiberContext): Of<FiberContext>
   })
 
 /**
- * Subscribe to a Stream
+ * Fork a Stream's process into a Fiber
  */
-export const subscribe = <R, E, A>(
+export const fork = <R, E, A>(
   stream: Stream<R, E, A>,
   sink: Sink<E, A>,
   context: FiberContext,
-) => stream.run(sink, context)
+): Fx<R, never, Fiber<E, unknown>> => stream.fork(sink, context)
 
 export const observe =
   <A, R2, E2>(f: (a: A) => Fx<R2, E2, any>) =>
@@ -53,10 +53,10 @@ export const observe =
         }),
       )
 
-      return yield* subscribe(stream, sink, context)
+      return yield* fork(stream, sink, context)
     })
 
 export const drain = <R, E, A>(stream: Stream<R, E, A>) =>
   Fx(function* () {
-    return yield* subscribe(stream, Drain, yield* forkStreamContext())
+    return yield* fork(stream, Drain, yield* forkStreamContext())
   })

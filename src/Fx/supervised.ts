@@ -1,6 +1,6 @@
 import { Fx } from './Fx'
 import { fork } from './InstructionSet/Fork'
-import { join } from './InstructionSet/Join'
+import { join } from './join'
 
 import { Fiber } from '@/Fiber/Fiber'
 import { Supervisor } from '@/Supervisor/Supervisor'

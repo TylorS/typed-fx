@@ -1,4 +1,4 @@
-import { Time } from '@/Clock'
+import { Time } from '@/Clock/Clock'
 
 /**
  * A Timeline is a time-ordered queue, which uses a binary search to quickly insert new values and removals.

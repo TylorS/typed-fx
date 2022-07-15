@@ -1,9 +1,8 @@
 import { isRight } from 'hkt-ts/Either'
 
-import { Fx } from '../Fx'
-
-import { fromExit } from './FromExit'
-import { zipAll } from './ZipAll'
+import { Fx } from './Fx'
+import { fromExit } from './InstructionSet/FromExit'
+import { zipAll } from './InstructionSet/ZipAll'
 
 import type { AnyFiber, Fiber } from '@/Fiber/Fiber'
 

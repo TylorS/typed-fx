@@ -36,7 +36,6 @@ import {
   success,
 } from '@/Fx/index'
 
-// TODO: Handle Supervisor
 export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E, A>> {
   protected _instructionCount = 0
   protected _releasing = false

@@ -1,19 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// TODO: GetContext
-// TODO: GetRuntime
 // TODO: Tracing
 
 import type { Fx } from '../Fx'
 
 import type { Access } from './Access'
-import { Async } from './Async'
-import { Fork } from './Fork'
+import type { Async } from './Async'
+import type { Fork } from './Fork'
 import type { FromExit } from './FromExit'
-import { GetFiberContext } from './GetFiberContext'
-import { Provide } from './Provide'
-import { SetInterruptible } from './SetInterruptable'
-import { WithConcurrency } from './WithConcurrency'
-import { ZipAll } from './ZipAll'
+import type { GetFiberContext } from './GetFiberContext'
+import type { Provide } from './Provide'
+import type { SetInterruptible } from './SetInterruptable'
+import type { WithConcurrency } from './WithConcurrency'
+import type { ZipAll } from './ZipAll'
 
 export type Instruction<R = never, E = never, A = never> =
   | Access<R, R, E, A>

@@ -13,7 +13,7 @@ export const filterMap =
 
 export class FilterMap<R, E, A, B> extends Stream<R, E, B> {
   constructor(readonly stream: Stream<R, E, A>, readonly filterMap: (a: A) => M.Maybe<B>) {
-    super((sink, scheduler) => stream.run(new FilterMapSink(sink, filterMap), scheduler))
+    super((sink, scheduler) => stream.fork(new FilterMapSink(sink, filterMap), scheduler))
   }
 
   static make<R, E, A, B>(stream: Stream<R, E, A>, filterMap: (a: A) => M.Maybe<B>) {

@@ -30,7 +30,7 @@ export class FlatMap<R, E, A, R2, E2, B> extends Stream<R | R2, E | E2, B> {
           f,
         )
 
-        return yield* stream.run(flatMapSink, context)
+        return yield* stream.fork(flatMapSink, context)
       }),
     )
   }
@@ -58,7 +58,7 @@ export class FlatMapSink<R, E, A, R2, E2, B> extends Sink<E, A> {
         Fx(function* () {
           const stream = f(a)
           const streamContext = yield* forkStreamContext(context)
-          const fiber = yield* stream.run(innerSink(), { ...streamContext, supervisor })
+          const fiber = yield* stream.fork(innerSink(), { ...streamContext, supervisor })
           const exit = yield* fiber.exit
 
           if (isLeft(exit)) {
