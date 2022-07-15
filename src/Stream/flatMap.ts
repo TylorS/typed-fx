@@ -10,7 +10,7 @@ import { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
 import { Fx, IO, Of } from '@/Fx/Fx'
 import { getFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
 import { zipAll } from '@/Fx/InstructionSet/ZipAll'
-import { getEnv, provide, result, unit } from '@/Fx/index'
+import { get, provide, result, unit } from '@/Fx/index'
 import { lazy } from '@/Fx/lazy'
 import { Sink } from '@/Sink/Sink'
 import { Supervisor } from '@/Supervisor/Supervisor'
@@ -21,7 +21,7 @@ export class FlatMap<R, E, A, R2, E2, B> extends Stream<R | R2, E | E2, B> {
     super((sink, context) =>
       Fx(function* () {
         const supervisor = fibersIn()
-        const env = yield* getEnv<R | R2>()
+        const env = yield* get<R | R2>()
         const flatMapSink: Sink<E, A> = new FlatMapSink<R, E, A, R2, E2, B>(
           sink,
           context,

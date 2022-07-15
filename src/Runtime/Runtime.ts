@@ -10,7 +10,7 @@ import { FiberRefs } from '@/FiberRefs/FiberRefs'
 import { FiberRuntime, FiberRuntimeParams } from '@/FiberRuntime/index'
 import { fromFiberRuntime } from '@/FiberRuntime/processors/forkFiberRuntime'
 import { Fx } from '@/Fx/Fx'
-import { getEnv } from '@/Fx/InstructionSet/Access'
+import { get } from '@/Fx/InstructionSet/Access'
 import { getFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
 import { Platform } from '@/Platform/Platform'
 import { Scheduler } from '@/Scheduler/Scheduler'
@@ -93,7 +93,7 @@ export class Runtime<R> {
 export function getRuntime<R>() {
   return Fx(function* () {
     const context = yield* getFiberContext
-    const env = yield* getEnv<R>()
+    const env = yield* get<R>()
 
     return new Runtime({
       env,

@@ -26,6 +26,10 @@ import { Stack } from '@/Stack/index'
 import { StackTrace } from '@/StackTrace/StackTrace'
 import { EmptyTrace, StackFrameTrace, Trace } from '@/Trace/Trace'
 
+/**
+ * The FiberRuntime is the stateful portion of a Fiber. It understands how to process RuntimeInstructions
+ * to keep all of the state necessary to create a LiveFiber.
+ */
 export class FiberRuntime<R, E, A> {
   protected _environment: Stack<Env<any>> = new Stack(this.params.env)
   protected _interruptStatus: Stack<boolean> = new Stack(true)
@@ -38,6 +42,7 @@ export class FiberRuntime<R, E, A> {
   protected _fiberStatus: Atomic<FiberStatus<E, A>>
   protected _generators: Generator<RuntimeInstruction<E>, any, any>[]
   protected _suspends: RuntimeIterable<E, any> | null = null
+  protected _instructionProcesssor: InstructionProcessor<R, E, A>
 
   get status(): FiberStatus<E, A> {
     return this._fiberStatus.get
@@ -71,11 +76,12 @@ export class FiberRuntime<R, E, A> {
       Strict,
     )
 
-    this._generators = [new InstructionProcessor(this, fx, params)[Symbol.iterator]()]
+    this._instructionProcesssor = new InstructionProcessor(this, fx, params)
+    this._generators = [this._instructionProcesssor[Symbol.iterator]()]
   }
 
   readonly start = (): void => {
-    if (this._fiberStatus.get.tag !== 'Exited') {
+    if (this._fiberStatus.get.tag !== 'Exited' && this._generators.length > 0) {
       this.processGenerator(this._generators[0], this._generators[0].next())
     }
   }
@@ -90,10 +96,16 @@ export class FiberRuntime<R, E, A> {
     this._interruptedBy.push(fiberId)
 
     if (this._interruptStatus.value) {
-      this.finalize(interrupt(fiberId))
+      this.interruptNow(fiberId)
     }
 
     return wait(this.exit)
+  }
+
+  protected interruptNow(fiberId: FiberId) {
+    this._generators.splice(0, this._generators.length) // Clear all the other Generators
+    this._generators.push(this._instructionProcesssor.close(interrupt(fiberId))[Symbol.iterator]()) // Push in an Interrupt to close the Scope
+    this.start() // Restart the runtime
   }
 
   protected processGenerator = (
@@ -160,8 +172,11 @@ export class FiberRuntime<R, E, A> {
       case 'PopInterruptStatus': {
         this._interruptStatus = this._interruptStatus.pop() || this._interruptStatus
 
+        // If things are interruptable again, lets go ahead and kill
         if (this._interruptedBy.length > 0 && this._interruptStatus.value) {
-          this.finalize(interrupt(this._interruptedBy[0]))
+          this.interruptNow(this._interruptedBy[0])
+
+          return Left(false)
         }
 
         return Right(undefined)
@@ -196,15 +211,15 @@ export class FiberRuntime<R, E, A> {
         })
       }
       case 'Resume': {
-        if (this._suspends) {
-          const iterable = this._suspends
-          this._suspends = null
-          this._generators.unshift(iterable[Symbol.iterator]())
-
-          return Left(true)
+        if (!this._suspends) {
+          throw new Error(`Unable to Resume a Fiber which has not been suspended`)
         }
 
-        throw new Error(`Unable to Resume a Fiber which has not been suspended`)
+        const iterable = this._suspends
+        this._suspends = null
+        this._generators.unshift(iterable[Symbol.iterator]())
+
+        return Left(true)
       }
       case 'YieldNow': {
         Promise.resolve().then(() => this.start())
@@ -213,7 +228,7 @@ export class FiberRuntime<R, E, A> {
       }
     }
 
-    return Left(false)
+    throw new Error(`Unknown Runtime Instruction encountered: ${JSON.stringify(instr)}`)
   }
 
   protected finalize = (exit: Exit<E, A>) => {

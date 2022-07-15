@@ -1,7 +1,16 @@
-export * from './Access'
-export * from './Fork'
-export * from './FromExit'
-export * from './Instruction'
-export * from './Provide'
-export * from './SetInterruptable'
-export * from './WithConcurrency'
+export {
+  access,
+  get,
+  ask,
+  asks,
+  withService,
+  provideLayer,
+  provideLayers,
+  provideService,
+} from './Access'
+export { fork } from './Fork'
+export { fromEither, fromExit, success, die, failure, interrupt, unit } from './FromExit'
+export { provide } from './Provide'
+export { interruptable, uninterruptable } from './SetInterruptable'
+export { withConcurrency } from './WithConcurrency'
+export { zipAll } from './ZipAll'

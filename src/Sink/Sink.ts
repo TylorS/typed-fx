@@ -2,7 +2,7 @@ import { constant, flow, pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
 
 import { Fx, IO } from '@/Fx/Fx'
-import { getEnv } from '@/Fx/InstructionSet/Access'
+import { get } from '@/Fx/InstructionSet/Access'
 import { unit } from '@/Fx/InstructionSet/FromExit'
 import { getFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
 import { provide } from '@/Fx/index'
@@ -43,7 +43,7 @@ export function makeSink<A, R, E, R2 = never, E2 = never>(
   end: Fx<R2, E2, any> = Drain.end,
 ) {
   return Fx(function* () {
-    const env = yield* getEnv<R | R2>()
+    const env = yield* get<R | R2>()
     const sink: Sink<E | E2, A> = {
       event: flow(event, provide(env)),
       end: pipe(end, provide(env)),

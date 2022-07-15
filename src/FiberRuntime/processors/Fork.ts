@@ -3,9 +3,9 @@ import type { RuntimeIterable } from '../RuntimeIterable'
 // eslint-disable-next-line import/no-cycle
 import { forkFiberRuntime, fromFiberRuntime } from './forkFiberRuntime'
 
-import { Fiber } from '@/Fiber/Fiber'
-import { Fx } from '@/Fx/Fx'
-import { Fork } from '@/Fx/index'
+import type { Fiber } from '@/Fiber/Fiber'
+import type { Fx } from '@/Fx/Fx'
+import type { Fork } from '@/Fx/InstructionSet/Fork'
 
 export function* processFork<R, E, A>(
   instr: Fork<R, E, A>,

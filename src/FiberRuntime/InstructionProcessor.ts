@@ -4,7 +4,7 @@ import { Right } from 'hkt-ts/Either'
 // eslint-disable-next-line import/no-cycle
 import type { FiberRuntime } from './FiberRuntime'
 import { FiberRuntimeParams } from './FiberRuntimeParams'
-import { GetCurrentFiberRuntime, PopTrace, PushTrace, YieldNow } from './RuntimeInstruction'
+import { PopTrace, PushTrace, YieldNow } from './RuntimeInstruction'
 import { RuntimeIterable } from './RuntimeIterable'
 import { processAccess } from './processors/Access'
 import { processAsync } from './processors/Async'
@@ -23,56 +23,59 @@ import { pending } from '@/Future/Future'
 import { complete } from '@/Future/complete'
 import { wait } from '@/Future/wait'
 import { Fx } from '@/Fx/Fx'
+import { Access } from '@/Fx/InstructionSet/Access'
 import { Async } from '@/Fx/InstructionSet/Async'
+import { Fork } from '@/Fx/InstructionSet/Fork'
+import { FromExit } from '@/Fx/InstructionSet/FromExit'
 import { GetFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
+import { Instruction } from '@/Fx/InstructionSet/Instruction'
+import { Provide } from '@/Fx/InstructionSet/Provide'
+import { SetInterruptible } from '@/Fx/InstructionSet/SetInterruptable'
+import { WithConcurrency } from '@/Fx/InstructionSet/WithConcurrency'
 import { ZipAll } from '@/Fx/InstructionSet/ZipAll'
-import {
-  Access,
-  Fork,
-  FromExit,
-  Instruction,
-  Provide,
-  SetInterruptible,
-  WithConcurrency,
-  fromLazy,
-  success,
-} from '@/Fx/index'
+import { fromLazy, success } from '@/Fx/index'
 
+/**
+ * An InstructionProcessor is responsible for converting Fx's instruction set into the FiberRuntime's instruction set.
+ * It communicates the lifecycle of the Fiber to its Supervisor. The only state in which it keeps is the total
+ * number of instructions processed, once reached it will yield to other Fibers cooperatively to ensure it is not
+ * hogging up the thread.
+ */
 export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E, A>> {
   protected _instructionCount = 0
-  protected _releasing = false
-  protected _runBound: <A2>(fx: Fx<R, E, A2>) => RuntimeIterable<E, A2>
+
+  readonly run: <A2>(fx: Fx<R, E, A2>) => RuntimeIterable<E, A2>
+  readonly close: (exit: Exit<E, A>) => RuntimeIterable<E, Exit<E, A>>
 
   constructor(
     readonly runtime: FiberRuntime<R, E, A>,
     readonly fx: Fx<R, E, A>,
     readonly params: FiberRuntimeParams<R>,
   ) {
-    this._runBound = this.run.bind(this)
+    this.run = this.runFx.bind(this)
+    this.close = this.release.bind(this)
   }
 
   *[Symbol.iterator]() {
     try {
-      const runtime: FiberRuntime<R, E, A> = yield new GetCurrentFiberRuntime()
+      this.params.supervisor.onStart(this.runtime, this.fx, this.params.parent)
 
-      this.params.supervisor.onStart(runtime, this.fx, this.params.parent)
-
-      const value = yield* this.run(this.fx)
+      const value = yield* this.runFx(this.fx)
       const exit = yield* this.release(Right(value))
 
-      this.params.supervisor.onEnd(runtime, exit)
+      this.params.supervisor.onEnd(this.runtime, exit)
 
       return exit
     } catch (e) {
       const exit = yield* this.release(die(e))
 
-      this.params.supervisor.onEnd(yield new GetCurrentFiberRuntime(), exit)
+      this.params.supervisor.onEnd(this.runtime, exit)
 
       return exit
     }
   }
 
-  protected *run<A2>(fx: Fx<R, E, A2>): RuntimeIterable<E, A2> {
+  protected *runFx<A2>(fx: Fx<R, E, A2>): RuntimeIterable<E, A2> {
     const generator = fx[Symbol.iterator]() as Generator<Instruction<R, E, any>, A2>
     const maxInstructionCount = this.params.platform.maxInstructionCount
     let result = generator.next()
@@ -117,18 +120,18 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
 
     if (instr.is<typeof Async<R, E, any>>(Async)) {
       this.params.supervisor.onSuspend(this.runtime)
-      const x = yield* processAsync(instr, this._runBound)
+      const x = yield* processAsync(instr, this.run)
       this.params.supervisor.onRunning(this.runtime)
 
       return x
     }
 
     if (instr.is<typeof Access<R, R, E, any>>(Access)) {
-      return yield* processAccess(instr, this._runBound)
+      return yield* processAccess(instr, this.run)
     }
 
     if (instr.is<typeof Provide<R, E, any>>(Provide)) {
-      return yield* processProvide(instr, this._runBound)
+      return yield* processProvide(instr, this.run)
     }
 
     if (instr.is(GetFiberContext)) {
@@ -136,19 +139,19 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
     }
 
     if (instr.is(SetInterruptible)) {
-      return yield* processSetInterruptible(instr, this._runBound)
+      return yield* processSetInterruptible(instr, this.run)
     }
 
     if (instr.is(WithConcurrency)) {
-      return yield* processWithConcurrency(instr, this._runBound)
+      return yield* processWithConcurrency(instr, this.run)
     }
 
     if (instr.is(ZipAll)) {
-      return yield* processZipAll(instr, this._runBound)
+      return yield* processZipAll(instr, this.run)
     }
 
     if (instr.is(Fork)) {
-      return yield* processFork(instr, this._runBound)
+      return yield* processFork(instr, this.run)
     }
 
     throw new Error(`Unknown Instruction ecountered: ${JSON.stringify(instr, null, 2)}`)
@@ -157,28 +160,20 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
   protected *release(exit: Exit<E, A>): RuntimeIterable<E, Exit<E, A>> {
     const { scope } = this.params
 
-    this._releasing = true
-
-    const released = yield* this.run(scope.close(exit))
+    const released = yield* this.runFx(scope.close(exit))
 
     // If we were able to release go ahead and
     if (released) {
-      this._releasing = false
-
       return exit
     }
 
     const future = pending<Exit<E, A>>()
 
     // Wait for the Scope to close
-    yield* this.run(
+    yield* this.runFx(
       scope.addFinalizer((exit) => fromLazy(() => pipe(future, complete(success(exit))))),
     )
 
-    const x = yield* this.run(wait(future))
-
-    this._releasing = false
-
-    return x
+    return yield* this.runFx(wait(future))
   }
 }

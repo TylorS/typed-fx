@@ -22,7 +22,7 @@ export const access = <R = never, R2 = never, E = never, A = any>(
   f: (env: Env<R>) => Fx<R2, E, A>,
 ): Fx<R | R2, E, A> => new Access(f)
 
-export const getEnv = <R>(): Fx<R, never, Env<R>> => access((r: Env<R>) => success(r))
+export const get = <R>(): Fx<R, never, Env<R>> => access((r: Env<R>) => success(r))
 
 export const ask = <R extends ServiceConstructor<any>>(
   service: R,

@@ -2,7 +2,7 @@ import { pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
 
 import { Fx, Of } from './Fx'
-import { ask, getEnv, provideService } from './InstructionSet/Access'
+import { ask, get, provideService } from './InstructionSet/Access'
 import { getFiberContext } from './InstructionSet/GetFiberContext'
 import { provide } from './InstructionSet/Provide'
 import { uninterruptable } from './InstructionSet/SetInterruptable'
@@ -69,7 +69,7 @@ export function managed<R, E, A, R2>(
 ): Fx<R | R2 | Scope, E, A> {
   return Fx(function* () {
     const scope = yield* getScope
-    const env = yield* getEnv<R | R2>()
+    const env = yield* get<R | R2>()
 
     const a = yield* uninterruptable(acquire)
 

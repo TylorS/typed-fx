@@ -6,7 +6,7 @@ import { Exit } from '@/Exit/Exit'
 import type { FiberContext } from '@/FiberContext/index'
 import type { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
 import { Fx } from '@/Fx/Fx'
-import { Instruction } from '@/Fx/InstructionSet/index'
+import { Instruction } from '@/Fx/InstructionSet/Instruction'
 
 export class Supervisor<T> {
   constructor(
