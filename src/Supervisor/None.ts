@@ -1,6 +1,8 @@
+import { Strict } from 'hkt-ts/Typeclass/Eq'
+
 import { Supervisor } from './Supervisor'
 
-import { unit } from '@/Fx/index'
+import { Atomic } from '@/Atomic/Atomic'
 
-export const None = new Supervisor<any>(unit)
+export const None = new Supervisor<any>(new Atomic<void>(undefined, Strict))
 export type None = typeof None

@@ -86,13 +86,12 @@ export class FlatMapSink<R, E, A, R2, E2, B> extends Sink<E, A> {
   })
 
   protected finalize = lazy(() => {
-    const getRuntimes = this.supervisor.atomic
+    const runtimes = this.supervisor.atomic
 
     return Fx(function* () {
       const { id } = yield* getFiberContext
-      const runtimes = yield* getRuntimes
 
-      yield* zipAll(...Array.from(runtimes).map((r) => r.interrupt(id)))
+      yield* zipAll(...Array.from(runtimes.get).map((r) => r.interrupt(id)))
     })
   })
 

@@ -16,7 +16,6 @@ export const supervised =
     Fx(function* () {
       const fiber = yield* withSupervisor(supervisor)(fx)
       const a = yield* join(fiber)
-      const b = yield* supervisor.atomic
 
-      return [a, b] as const
+      return [a, supervisor.atomic.get] as const
     })
