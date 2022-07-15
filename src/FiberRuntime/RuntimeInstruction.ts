@@ -24,6 +24,7 @@ export type RuntimeInstruction<E> =
   | PopEnvironment
   | GetEnvironment
   | GetCurrentFiberContext
+  | GetCurrentFiberRuntime
 
 export class Fail<E> {
   readonly tag = 'Fail'
@@ -101,4 +102,8 @@ export class GetEnvironment {
 
 export class GetCurrentFiberContext {
   readonly tag = 'GetCurrentFiberContext'
+}
+
+export class GetCurrentFiberRuntime {
+  readonly tag = 'GetCurrentFiberRuntime'
 }

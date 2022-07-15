@@ -71,7 +71,7 @@ export class FiberRuntime<R, E, A> {
       Strict,
     )
 
-    this._generators = [new InstructionProcessor(fx, params)[Symbol.iterator]()]
+    this._generators = [new InstructionProcessor(this, fx, params)[Symbol.iterator]()]
   }
 
   readonly start = (): void => {
@@ -129,6 +129,9 @@ export class FiberRuntime<R, E, A> {
 
   protected processInstruction(instr: RuntimeInstruction<E>): Either<boolean, any> {
     switch (instr.tag) {
+      case 'GetCurrentFiberRuntime': {
+        return Right(this)
+      }
       case 'Fail': {
         const exit = Left(instr.cause)
 

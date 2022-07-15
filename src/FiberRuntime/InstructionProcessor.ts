@@ -2,8 +2,9 @@ import { pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
 
 // eslint-disable-next-line import/no-cycle
+import type { FiberRuntime } from './FiberRuntime'
 import { FiberRuntimeParams } from './FiberRuntimeParams'
-import { PopTrace, PushTrace, YieldNow } from './RuntimeInstruction'
+import { GetCurrentFiberRuntime, PopTrace, PushTrace, YieldNow } from './RuntimeInstruction'
 import { RuntimeIterable } from './RuntimeIterable'
 import { processAccess } from './processors/Access'
 import { processAsync } from './processors/Async'
@@ -41,18 +42,30 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
   protected _releasing = false
   protected _runBound: <A2>(fx: Fx<R, E, A2>) => RuntimeIterable<E, A2>
 
-  constructor(readonly fx: Fx<R, E, A>, readonly params: FiberRuntimeParams<R>) {
+  constructor(
+    readonly runtime: FiberRuntime<R, E, A>,
+    readonly fx: Fx<R, E, A>,
+    readonly params: FiberRuntimeParams<R>,
+  ) {
     this._runBound = this.run.bind(this)
   }
 
   *[Symbol.iterator]() {
     try {
+      const runtime: FiberRuntime<R, E, A> = yield new GetCurrentFiberRuntime()
+
+      this.params.supervisor.onStart(runtime, this.fx, this.params.parent)
+
       const value = yield* this.run(this.fx)
       const exit = yield* this.release(Right(value))
+
+      this.params.supervisor.onEnd(runtime, exit)
 
       return exit
     } catch (e) {
       const exit = yield* this.release(die(e))
+
+      this.params.supervisor.onEnd(yield new GetCurrentFiberRuntime(), exit)
 
       return exit
     }
@@ -70,6 +83,8 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
         yield new PushTrace(instr.trace)
       }
 
+      this.params.supervisor.onInstruction(this.runtime, instr)
+
       try {
         result = generator.next(yield* this.processInstruction(instr))
       } catch (e) {
@@ -79,7 +94,12 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
       // Suspend to other fibers running
       if (++this._instructionCount > maxInstructionCount) {
         this._instructionCount = 0 // Reset the count
+
+        this.params.supervisor.onSuspend(this.runtime)
+
         yield new YieldNow() // Yield to other fibers cooperatively
+
+        this.params.supervisor.onRunning(this.runtime)
       }
     }
 
@@ -90,14 +110,16 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
   }
 
   protected *processInstruction(instr: Instruction<R, E, any>): RuntimeIterable<E, any> {
-    // ZipAll
-
     if (instr.is<typeof FromExit<E, any>>(FromExit)) {
       return yield* processFromExit(instr)
     }
 
     if (instr.is<typeof Async<R, E, any>>(Async)) {
-      return yield* processAsync(instr, this._runBound)
+      this.params.supervisor.onSuspend(this.runtime)
+      const x = yield* processAsync(instr, this._runBound)
+      this.params.supervisor.onRunning(this.runtime)
+
+      return x
     }
 
     if (instr.is<typeof Access<R, R, E, any>>(Access)) {

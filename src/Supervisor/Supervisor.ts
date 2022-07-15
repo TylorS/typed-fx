@@ -1,28 +1,27 @@
+import { constVoid } from 'hkt-ts'
 import { Maybe } from 'hkt-ts/Maybe'
 
+import { Atomic } from '@/Atomic/Atomic'
 import { Exit } from '@/Exit/Exit'
 import type { FiberContext } from '@/FiberContext/index'
 import type { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
-import { Fx, Of } from '@/Fx/Fx'
-import { Instruction, unit } from '@/Fx/InstructionSet/index'
+import { Fx } from '@/Fx/Fx'
+import { Instruction } from '@/Fx/InstructionSet/index'
 
 export class Supervisor<T> {
   constructor(
-    readonly value: Of<T>,
+    readonly atomic: Atomic<T>,
     readonly onStart: <R, E, A>(
       runtime: FiberRuntime<R, E, A>,
       fx: Fx<R, E, A>,
       parent: Maybe<FiberContext>,
-    ) => Of<unknown> = () => unit,
-    readonly onEnd: <R, E, A>(
-      runtime: FiberRuntime<R, E, A>,
-      exit: Exit<E, A>,
-    ) => Of<unknown> = () => unit,
+    ) => void = constVoid,
+    readonly onEnd: <R, E, A>(runtime: FiberRuntime<R, E, A>, exit: Exit<E, A>) => void = constVoid,
     readonly onInstruction: <R, E, A>(
       runtime: FiberRuntime<R, E, A>,
       instruction: Instruction<R, E, A>,
-    ) => Of<unknown> = () => unit,
-    readonly onSuspend: <R, E, A>(runtime: FiberRuntime<R, E, A>) => Of<unknown> = () => unit,
-    readonly onRunning: <R, E, A>(runtime: FiberRuntime<R, E, A>) => Of<unknown> = () => unit,
+    ) => void = constVoid,
+    readonly onSuspend: <R, E, A>(runtime: FiberRuntime<R, E, A>) => void = constVoid,
+    readonly onRunning: <R, E, A>(runtime: FiberRuntime<R, E, A>) => void = constVoid,
   ) {}
 }

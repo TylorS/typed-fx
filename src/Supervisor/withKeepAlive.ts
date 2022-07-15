@@ -2,7 +2,6 @@ import { Supervisor } from './Supervisor'
 import { keepAlive } from './keepAlive'
 
 import type { FiberRuntime } from '@/FiberRuntime/FiberRuntime'
-import { Fx } from '@/Fx/Fx'
 
 /**
  * Creates a Supervisor intended for usage with the your Root Fibers, intended to keep the process alive while
@@ -14,24 +13,19 @@ export function withKeepAlive(
   const [ping, clear] = keepAlive()
 
   return new Supervisor(
-    supervisor.value,
-    (...args) =>
-      Fx(function* () {
-        ping()
+    supervisor.atomic,
+    (...args) => {
+      ping()
 
-        return yield* supervisor.onStart(...args)
-      }),
-    (...args) =>
-      Fx(function* () {
-        const x = yield* supervisor.onEnd(...args)
-        const fibers = yield* supervisor.value
+      return supervisor.onStart(...args)
+    },
+    (...args) => {
+      supervisor.onEnd(...args)
 
-        if (fibers.size === 0) {
-          clear()
-        }
-
-        return x
-      }),
+      if (supervisor.atomic.get.size === 0) {
+        clear()
+      }
+    },
     supervisor.onInstruction,
     supervisor.onSuspend,
     supervisor.onRunning,
