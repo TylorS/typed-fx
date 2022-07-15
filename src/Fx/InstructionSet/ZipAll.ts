@@ -1,4 +1,4 @@
-import type { AnyFx, ErrorsOf, Fx, ResourcesOf } from '../Fx'
+import type { AnyFx, ErrorsOf, Fx, OutputOf, ResourcesOf } from '../Fx'
 
 import { FxInstruction } from './FxInstruction'
 
@@ -7,7 +7,7 @@ export class ZipAll<FX extends ReadonlyArray<AnyFx>> extends FxInstruction<
   ResourcesOf<FX[number]>,
   ErrorsOf<FX[number]>,
   {
-    readonly [K in keyof FX]: FX[K]
+    readonly [K in keyof FX]: OutputOf<FX[K]>
   }
 > {}
 
@@ -17,6 +17,6 @@ export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   ResourcesOf<FX[number]>,
   ErrorsOf<FX[number]>,
   {
-    readonly [K in keyof FX]: FX[K]
+    readonly [K in keyof FX]: OutputOf<FX[K]>
   }
 > => new ZipAll(fx)
