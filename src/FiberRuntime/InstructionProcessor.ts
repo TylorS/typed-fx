@@ -8,12 +8,14 @@ import { GetCurrentFiberRuntime, PopTrace, PushTrace, YieldNow } from './Runtime
 import { RuntimeIterable } from './RuntimeIterable'
 import { processAccess } from './processors/Access'
 import { processAsync } from './processors/Async'
+// eslint-disable-next-line import/no-cycle
 import { processFork } from './processors/Fork'
 import { processFromExit } from './processors/FromExit'
 import { processGetFiberContext } from './processors/GetFiberContext'
 import { processProvide } from './processors/Provide'
 import { processSetInterruptible } from './processors/SetInterruptible'
 import { processWithConcurrency } from './processors/WithConcurrency'
+// eslint-disable-next-line import/no-cycle
 import { processZipAll } from './processors/ZipAll'
 
 import { Exit, die } from '@/Exit/Exit'

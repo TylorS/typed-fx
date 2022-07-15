@@ -7,7 +7,7 @@ import { Fx } from '@/Fx/Fx'
 import { interrupt } from '@/Fx/index'
 
 /**
- * A Future Queue is a synchronously used Queue for managing Futures that need to be handled in FIFO ordering.
+ * A Future Queue is a synchronously-used, mutable, Queue for managing Futures that need to be handled in FIFO ordering.
  */
 export interface FutureQueue<R, E, A> {
   readonly size: () => number
@@ -42,6 +42,7 @@ export function make<R, E, A>(): FutureQueue<R, E, A> {
   function dispose(fiberId: FiberId) {
     if (queue.length > 0) {
       queue.forEach(complete<R, E, A>(interrupt(fiberId)))
+      queue.splice(0, queue.length) // Clear the Queue
     }
   }
 

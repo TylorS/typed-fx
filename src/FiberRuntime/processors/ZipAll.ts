@@ -1,11 +1,12 @@
 import { Either, pipe } from 'hkt-ts'
+import { makeAssociative } from 'hkt-ts/Array'
 import { isLeft } from 'hkt-ts/Either'
-import { First } from 'hkt-ts/Typeclass/Associative'
 
 import { GetCurrentFiberContext } from '../RuntimeInstruction'
 import { RuntimeIterable } from '../RuntimeIterable'
 
-import { forkFiberRuntime } from './Fork'
+// eslint-disable-next-line import/no-cycle
+import { forkFiberRuntime } from './forkFiberRuntime'
 
 import * as Exit from '@/Exit/index'
 import { pending } from '@/Future/Future'
@@ -15,7 +16,7 @@ import { AnyFx, Fx, OutputOf } from '@/Fx/Fx'
 import { fromExit, success } from '@/Fx/InstructionSet/FromExit'
 import { ZipAll } from '@/Fx/InstructionSet/ZipAll'
 
-const concatExitPar = Exit.makeParallelAssociative<any, any>(First).concat
+const concatExitPar = Exit.makeParallelAssociative<any, readonly any[]>(makeAssociative()).concat
 
 export function* processZipAll<FX extends ReadonlyArray<AnyFx>, R, E>(
   instr: ZipAll<FX>,

@@ -8,7 +8,7 @@ import { FiberContext } from '@/FiberContext/index'
 import { FiberId } from '@/FiberId/FiberId'
 import { FiberRefs } from '@/FiberRefs/FiberRefs'
 import { FiberRuntime, FiberRuntimeParams } from '@/FiberRuntime/index'
-import { fromFiberRuntime } from '@/FiberRuntime/processors/Fork'
+import { fromFiberRuntime } from '@/FiberRuntime/processors/forkFiberRuntime'
 import { Fx } from '@/Fx/Fx'
 import { getEnv } from '@/Fx/InstructionSet/Access'
 import { getFiberContext } from '@/Fx/InstructionSet/GetFiberContext'
@@ -55,6 +55,14 @@ export class Runtime<R> {
     })
 
   readonly runFiber = <E, A>(fx: Fx<R, E, A>, params?: RuntimeFiberParams) => {
+    const runtime = this.makeFiberRuntime(fx, params)
+
+    runtime.start()
+
+    return fromFiberRuntime(runtime)
+  }
+
+  readonly forkDaemon = <E, A>(fx: Fx<R, E, A>, params?: Omit<RuntimeFiberParams, 'scope'>) => {
     const runtime = this.makeFiberRuntime(fx, params)
 
     runtime.start()
