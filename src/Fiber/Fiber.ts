@@ -4,7 +4,7 @@ import type { FiberId } from '@/FiberId/FiberId'
 import type { Of } from '@/Fx/Fx'
 import { StackTrace } from '@/StackTrace/StackTrace'
 
-export type Fiber<E, A> = LiveFiber<E, A>
+export type Fiber<E, A> = LiveFiber<E, A> | SyntheticFiber<E, A>
 
 export type AnyFiber = Fiber<any, any> | Fiber<never, any> | Fiber<any, never> | Fiber<never, never>
 
