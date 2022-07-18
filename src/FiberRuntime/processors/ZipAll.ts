@@ -68,7 +68,7 @@ function zipAllFuture(expected: number) {
     )
 
     if (--expected === 0) {
-      complete(success(exits.reduce(concatExitPar)))(future)
+      complete(future)(success(exits.reduce(concatExitPar)))
     }
   }
 

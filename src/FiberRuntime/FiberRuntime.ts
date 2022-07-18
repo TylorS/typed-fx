@@ -8,6 +8,7 @@ import { FiberRuntimeParams } from './FiberRuntimeParams'
 import { InstructionProcessor } from './InstructionProcessor'
 import { RuntimeInstruction } from './RuntimeInstruction'
 import { RuntimeIterable } from './RuntimeIterable'
+import { SuspendMap } from './SuspendMap'
 
 import { Atomic } from '@/Atomic/Atomic'
 import { Env } from '@/Env/Env'
@@ -24,6 +25,7 @@ import { success } from '@/Fx/InstructionSet/FromExit'
 import { Semaphore } from '@/Semaphore/Semaphore'
 import { Stack } from '@/Stack/index'
 import { StackTrace } from '@/StackTrace/StackTrace'
+import { Delay } from '@/Timer/Timer'
 import { EmptyTrace, StackFrameTrace, Trace } from '@/Trace/Trace'
 
 /**
@@ -43,6 +45,8 @@ export class FiberRuntime<R, E, A> {
   protected _generators: Generator<RuntimeInstruction<E>, any, any>[]
   protected _suspends: RuntimeIterable<E, any> | null = null
   protected _instructionProcesssor: InstructionProcessor<R, E, A>
+  protected _suspended = new SuspendMap<E>()
+  protected timerHandle: (() => void) | null = null
 
   get status(): FiberStatus<E, A> {
     return this._fiberStatus.get
@@ -86,6 +90,10 @@ export class FiberRuntime<R, E, A> {
     }
   }
 
+  readonly startLater = () => {
+    this.timerHandle = this.params.scheduler.setTimer(this.start, Delay(0))
+  }
+
   readonly addObserver = (observer: FiberStatus.Observer<E, A>) => {
     this._fiberStatus.update(FiberStatus.addObserver(observer))
 
@@ -103,6 +111,7 @@ export class FiberRuntime<R, E, A> {
   }
 
   protected interruptNow(fiberId: FiberId) {
+    this.timerHandle?.()
     this._generators.splice(0, this._generators.length) // Clear all the other Generators
     this._generators.push(this._instructionProcesssor.close(interrupt(fiberId))[Symbol.iterator]()) // Push in an Interrupt to close the Scope
     this.start() // Restart the runtime
@@ -134,7 +143,7 @@ export class FiberRuntime<R, E, A> {
       return this.processGenerator(this._generators[0], this._generators[0].next(result.value))
     }
 
-    this.finalize(result.value)
+    this.finalize(Right(result.value))
 
     return Just(result.value)
   }
@@ -147,9 +156,9 @@ export class FiberRuntime<R, E, A> {
       case 'Fail': {
         const exit = Left(instr.cause)
 
-        this.finalize(exit)
+        this._generators = [this._instructionProcesssor.close(exit)[Symbol.iterator]()]
 
-        return Left(false)
+        return Left(true)
       }
       case 'GetConcurrencyLevel':
         return Right(this.concurrencyLevel)
@@ -202,27 +211,21 @@ export class FiberRuntime<R, E, A> {
         return Right(undefined)
       }
       case 'Suspend': {
-        if (this._suspends) {
-          throw new Error(`Unable to suspend a single fiber more than once at a time`)
-        }
-
-        return Right((ri: RuntimeIterable<E, any>) => {
-          this._suspends = ri
-        })
+        return Right(this._suspended.suspend())
       }
       case 'Resume': {
-        if (!this._suspends) {
-          throw new Error(`Unable to Resume a Fiber which has not been suspended`)
-        }
-
-        const iterable = this._suspends
-        this._suspends = null
-        this._generators.unshift(iterable[Symbol.iterator]())
+        this._suspended.resume(instr.id, (iterable) => {
+          this._generators.unshift(iterable[Symbol.iterator]())
+          this.start()
+        })
 
         return Left(true)
       }
       case 'YieldNow': {
-        Promise.resolve().then(() => this.start())
+        this.timerHandle = this.params.scheduler.timer.setTimer(() => {
+          this.timerHandle = null
+          this.start()
+        }, Delay(0))
 
         return Left(false)
       }
@@ -238,7 +241,7 @@ export class FiberRuntime<R, E, A> {
 
     if (currentStatus.tag !== 'Exited') {
       currentStatus.observers.forEach((o) => o(exit))
-      complete(success(exit))(this.exit)
+      complete(this.exit)(success(exit))
     }
   }
 

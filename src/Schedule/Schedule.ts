@@ -40,7 +40,7 @@ export const never: Schedule = {
 }
 
 export const once: Schedule = {
-  step: (now, state) => [state.next(now), state.cumulativeDelay === 0 ? new Continue(asap) : Done],
+  step: (now, state) => [state.next(now), state.iteration === 0 ? new Continue(asap) : Done],
 }
 
 export const forever: Schedule = {
@@ -53,6 +53,13 @@ export const recurring = (amount: NonNegativeInteger): Schedule => ({
 
 export const fixed = (delay: Time): Schedule => ({
   step: (now, state) => [state.next(now, Just(delay)), new Continue(delay)],
+})
+
+export const delayed = (delay: Time): Schedule => ({
+  step: (now, state) => [
+    state.next(now, Just(delay)),
+    state.iteration === 0 ? new Continue(delay) : Done,
+  ],
 })
 
 export const spaced = (delay: Time): Schedule => ({

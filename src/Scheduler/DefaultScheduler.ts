@@ -1,29 +1,28 @@
 import { Scheduler } from './Scheduler'
 import { Timeline } from './Timeline'
 
-import { Clock, Time } from '@/Clock/Clock'
+import { Time } from '@/Clock/Clock'
 import { Future, pending } from '@/Future/Future'
 import { complete } from '@/Future/complete'
 import { wait } from '@/Future/wait'
 import { Fx } from '@/Fx/Fx'
-import { success } from '@/Fx/index'
+import { unit } from '@/Fx/index'
 import { RuntimeFiberParams, getRuntime } from '@/Runtime/Runtime'
 import { Schedule } from '@/Schedule/Schedule'
 import { ScheduleState } from '@/Schedule/ScheduleState'
-
-const completeFuture = complete(success<void>(void 0))
+import { Timer } from '@/Timer/Timer'
 
 export class DefaultScheduler extends Scheduler {
   protected timeline: Timeline<Future<never, never, void>>
-  protected timer: ReturnType<typeof setTimeout> | null = null
+  protected handle: (() => void) | null = null
   protected nextArrival: Time | null = null
 
-  constructor(readonly clock: Clock, timeline?: Timeline<Future<never, never, void>>) {
+  constructor(readonly timer: Timer, timeline?: Timeline<Future<never, never, void>>) {
     // Create a Future which is inserted at a specific time in the Timeline
 
-    super(clock, <R, E, A>(fx: Fx<R, E, A>, schedule: Schedule, params?: RuntimeFiberParams) => {
+    super(timer, <R, E, A>(fx: Fx<R, E, A>, schedule: Schedule, params?: RuntimeFiberParams) => {
       const { addTask, scheduleNextRun } = this
-      const scheduledFx = scheduled(fx, schedule, clock, addTask, scheduleNextRun)
+      const scheduledFx = scheduled(fx, schedule, timer, addTask, scheduleNextRun)
 
       return Fx(function* () {
         // We need to create a Fiber
@@ -36,7 +35,7 @@ export class DefaultScheduler extends Scheduler {
     this.timeline = timeline ?? new Timeline(this.scheduleNextRun)
   }
 
-  readonly fork: () => Scheduler = () => new DefaultScheduler(this.clock.fork(), this.timeline)
+  readonly fork: () => Scheduler = () => new DefaultScheduler(this.timer.fork(), this.timeline)
 
   /**
    * If the Timeline is non-empty, schedules the next scheduled Fx
@@ -56,7 +55,7 @@ export class DefaultScheduler extends Scheduler {
 
     if (needToScheduleEarlierTime) {
       this.cleanupTimer()
-      this.timer = setTimeout(this.runReadyTasks, nextArrival)
+      this.handle = this.timer.setTimer(this.runReadyTasks, this.timer.toDelay(nextArrival))
       this.nextArrival = nextArrival
     }
 
@@ -72,33 +71,33 @@ export class DefaultScheduler extends Scheduler {
   }
 
   protected cleanupTimer = () => {
-    this.timer && clearTimeout(this.timer)
-    this.timer = null
+    this.handle?.()
+    this.handle = null
   }
 
   /**
    * Grabs all the ready task from the Timeline and completes them
    */
   protected runReadyTasks = () =>
-    this.timeline.getReadyTasks(this.currentTime()).forEach(completeFuture)
+    this.timeline.getReadyTasks(this.currentTime()).forEach((f) => complete(f)(unit))
 }
 
 function scheduled<R, E, A>(
   fx: Fx<R, E, A>,
   schedule: Schedule,
-  clock: Clock,
+  timer: Timer,
   addTask: (time: Time) => Future<never, never, void>,
   scheduleNextRun: () => void,
 ) {
   return Fx(function* () {
     // Get our Starting state
-    let [state, decision] = schedule.step(clock.currentTime(), new ScheduleState())
+    let [state, decision] = schedule.step(timer.currentTime(), new ScheduleState())
 
     // Run our Fx repeatedly until our
     while (decision.tag !== 'Done') {
       // If there's a non-zero delay, use the Timeline to schedule this work
       if (decision.delay > 0) {
-        const future = addTask(Time(clock.currentTime() + decision.delay))
+        const future = addTask(Time(timer.currentTime() + decision.delay))
 
         scheduleNextRun()
 
@@ -107,10 +106,13 @@ function scheduled<R, E, A>(
 
       yield* fx
 
-      const next = schedule.step(clock.currentTime(), state)
+      const next = schedule.step(timer.currentTime(), state)
 
-      state = next[0]
       decision = next[1]
+
+      if (decision.tag !== 'Done') {
+        state = next[0]
+      }
     }
 
     return state

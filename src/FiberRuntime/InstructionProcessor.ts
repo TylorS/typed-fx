@@ -171,7 +171,7 @@ export class InstructionProcessor<R, E, A> implements RuntimeIterable<E, Exit<E,
 
     // Wait for the Scope to close
     yield* this.runFx(
-      scope.addFinalizer((exit) => fromLazy(() => pipe(future, complete(success(exit))))),
+      scope.addFinalizer((exit) => fromLazy(() => pipe(exit, success, complete(future)))),
     )
 
     return yield* this.runFx(wait(future))

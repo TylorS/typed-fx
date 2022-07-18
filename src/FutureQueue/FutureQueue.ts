@@ -25,7 +25,7 @@ export function make<R, E, A>(): FutureQueue<R, E, A> {
   function next(fx: Fx<R, E, A>): boolean {
     if (queue.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return pipe(queue.shift()!, complete(fx))
+      return pipe(fx, complete(queue.shift()!))
     }
 
     return false
@@ -41,7 +41,7 @@ export function make<R, E, A>(): FutureQueue<R, E, A> {
 
   function dispose(fiberId: FiberId) {
     if (queue.length > 0) {
-      queue.forEach(complete<R, E, A>(interrupt(fiberId)))
+      queue.forEach((f) => complete<R, E, A>(f)(interrupt(fiberId)))
       queue.splice(0, queue.length) // Clear the Queue
     }
   }

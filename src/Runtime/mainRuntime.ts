@@ -4,13 +4,12 @@ import { DateClock } from '@/Clock/Clock'
 import { Env } from '@/Env/Env'
 import { Platform } from '@/Platform/Platform'
 import { DefaultScheduler } from '@/Scheduler/DefaultScheduler'
-import { track } from '@/Supervisor/track'
+import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer'
 
 export const MainRuntime = new Runtime({
   env: new Env<never>(),
   platform: new Platform(),
-  supervisor: track(),
-  scheduler: new DefaultScheduler(new DateClock()),
+  scheduler: new DefaultScheduler(new SetTimeoutTimer(new DateClock())),
 })
 
 export const { run: runMain, runExit: runMainExit, runFiber: runMainFiber } = MainRuntime

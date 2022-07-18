@@ -16,7 +16,7 @@ export function* processAsync<R, E, A>(
 ) {
   const env: Env<R> = yield new GetEnvironment()
   const context: FiberContext = yield new GetCurrentFiberContext()
-  const cb: (fx: RuntimeIterable<E, any>) => void = yield new Suspend()
+  const [id, cb]: [symbol, (fx: RuntimeIterable<E, any>) => void] = yield new Suspend()
   const either = instr.input(flow(toRuntimeIterable, cb))
 
   if (isRight(either)) {
@@ -27,7 +27,7 @@ export function* processAsync<R, E, A>(
     context.scope.ensuring(pipe(either.left, provide(env))),
   )
 
-  const a: A = yield new Resume()
+  const a: A = yield new Resume(id)
 
   yield* toRuntimeIterable(finalizer(Right(a)))
 

@@ -15,11 +15,12 @@ import { DefaultScheduler } from '@/Scheduler/DefaultScheduler'
 import { SequentialStrategy } from '@/Scope/Finalizer'
 import { LocalScope } from '@/Scope/LocalScope'
 import { None } from '@/Supervisor/None'
+import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer'
 
 describe(__filename, () => {
   const platform = new Platform()
   const clock = new DateClock()
-  const scheduler = new DefaultScheduler(clock)
+  const scheduler = new DefaultScheduler(new SetTimeoutTimer(clock))
   const fiberId = FiberId(platform.sequenceNumber.increment, clock.currentTime())
 
   it(fromExit.name, (done) => {

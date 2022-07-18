@@ -110,6 +110,7 @@ export function toCauseError<E>(cause: Cause<E>) {
 
 export class CauseError<E> extends Error {
   constructor(readonly causedBy: Cause<E>) {
+    console.log(causedBy)
     super(`TODO: Print the Cause : ${causedBy}`)
   }
 }

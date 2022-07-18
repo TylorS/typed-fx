@@ -84,20 +84,10 @@ export class ReleaseMap {
 
   readonly releaseAll = (exit: Exit<any, any>, strategy: FinalizationStrategy): Of<void> =>
     lazy<Of<void>>(() => {
-      const { remove } = this
+      const { release } = this
       this.#exit = Just(exit)
       const removeAll = pipe(
-        zipAll(
-          ...this.#keys.map((key) =>
-            Fx(function* () {
-              const finalizer = yield* remove(key)
-
-              if (isJust(finalizer)) {
-                yield* finalizer.value(exit)
-              }
-            }),
-          ),
-        ),
+        zipAll(...this.#keys.slice().map((k) => release(k, exit))),
         withConcurrency(finalizationStrategyToConcurrency(strategy)),
       )
 

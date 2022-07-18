@@ -41,7 +41,7 @@ export type Drain = typeof Drain
 export function makeSink<A, R, E, R2 = never, E2 = never>(
   event: (a: A) => Fx<R, E, any>,
   end: Fx<R2, E2, any> = Drain.end,
-) {
+): Fx<R | R2, never, Sink<E | E2, A>> {
   return Fx(function* () {
     const env = yield* get<R | R2>()
     const sink: Sink<E | E2, A> = {

@@ -94,14 +94,14 @@ export const AssociativeEither: AE.AssociativeEither3<FxHKT> = {
           Fx(function* () {
             yield* sc.scope.close(exit)
 
-            complete(fromExit(exit))(future)
+            complete(future)(fromExit(exit))
           }),
         )
         yield* sc.scope.addFinalizer((exit) =>
           Fx(function* () {
             yield* sc.scope.close(exit)
 
-            complete(fromExit(exit))(future)
+            complete(future)(fromExit(exit))
           }),
         )
 

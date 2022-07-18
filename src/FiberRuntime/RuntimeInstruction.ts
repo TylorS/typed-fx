@@ -42,6 +42,8 @@ export class Suspend {
 
 export class Resume {
   readonly tag = 'Resume'
+
+  constructor(readonly id: symbol) {}
 }
 
 export class PushInterruptStatus {

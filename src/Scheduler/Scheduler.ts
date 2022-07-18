@@ -1,20 +1,20 @@
-import { Clock } from '@/Clock/Clock'
 import { Fiber } from '@/Fiber/Fiber'
 import { Fx } from '@/Fx/Fx'
 import type { RuntimeFiberParams } from '@/Runtime/Runtime'
 import { Schedule } from '@/Schedule/Schedule'
 import { ScheduleState } from '@/Schedule/ScheduleState'
+import { Timer } from '@/Timer/Timer'
 
-export abstract class Scheduler extends Clock {
+export abstract class Scheduler extends Timer {
   constructor(
-    readonly clock: Clock,
+    readonly timer: Timer,
     readonly schedule: <R, E, A>(
       fx: Fx<R, E, A>,
       schedule: Schedule,
       params?: RuntimeFiberParams,
     ) => Fx<R, never, Fiber<E, ScheduleState>>,
   ) {
-    super(clock.startTime, clock.currentTime)
+    super(timer.clock, timer.setTimer)
   }
 
   abstract override readonly fork: () => Scheduler
