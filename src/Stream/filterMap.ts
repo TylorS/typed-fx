@@ -2,6 +2,7 @@ import * as M from 'hkt-ts/Maybe'
 import { flow } from 'hkt-ts/function'
 
 import { Stream } from './Stream'
+import { Map } from './map'
 
 import { Fx } from '@/Fx/Fx'
 import { Sink } from '@/Sink/Sink'
@@ -17,6 +18,10 @@ export class FilterMap<R, E, A, B> extends Stream<R, E, B> {
   }
 
   static make<R, E, A, B>(stream: Stream<R, E, A>, filterMap: (a: A) => M.Maybe<B>) {
+    if (stream instanceof Map<R, E, any, A>) {
+      return new FilterMap(stream.stream, flow(stream.f, filterMap))
+    }
+
     if (stream instanceof FilterMap) {
       return new FilterMap(stream.stream, flow(stream.filterMap, M.flatMap(filterMap)))
     }

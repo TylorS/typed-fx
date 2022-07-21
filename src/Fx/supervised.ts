@@ -7,7 +7,7 @@ import { Supervisor } from '@/Supervisor/Supervisor'
 
 export const withSupervisor =
   <B>(supervisor: Supervisor<B>) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber<E, A>> =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber.Live<E, A>> =>
     fork(fx, { supervisor })
 
 export const supervised =

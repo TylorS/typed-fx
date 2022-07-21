@@ -11,7 +11,6 @@ import { FromExit, fromExit } from './InstructionSet/FromExit'
 import { Provide } from './InstructionSet/Provide'
 import { SetInterruptible } from './InstructionSet/SetInterruptable'
 import { WithConcurrency } from './InstructionSet/WithConcurrency'
-import { ZipAll } from './InstructionSet/ZipAll'
 
 import { die } from '@/Exit/Exit'
 import { runMain, runMainExit } from '@/Runtime/MainRuntime'
@@ -52,7 +51,6 @@ describe(__filename, () => {
       describe.skip(Fork.name, constVoid)
       describe.skip(SetInterruptible.name, constVoid)
       describe.skip(WithConcurrency.name, constVoid)
-      describe.skip(ZipAll.name, constVoid)
     })
   })
 })

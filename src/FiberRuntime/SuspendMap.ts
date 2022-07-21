@@ -1,33 +1,33 @@
-import { RuntimeIterable } from './RuntimeIterable'
+import { Exit } from '@/Exit/Exit'
 
 export class SuspendMap<E> {
   #supsended = new Set<symbol>()
-  #resumed = new Map<symbol, (iterable: RuntimeIterable<E, any>) => void>()
-  #iterables = new Map<symbol, RuntimeIterable<E, any>>()
+  #resumed = new Map<symbol, (iterable: Exit<E, any>) => void>()
+  #exits = new Map<symbol, Exit<E, any>>()
 
-  readonly suspend = (): readonly [symbol, (iterable: RuntimeIterable<E, any>) => void] => {
+  readonly suspend = (): readonly [symbol, (iterable: Exit<E, any>) => void] => {
     const id = Symbol()
 
     this.#supsended.add(id)
 
     return [
       id,
-      (i: RuntimeIterable<E, any>) => {
+      (exit: Exit<E, any>) => {
         this.#supsended.delete(id)
 
         const resume = this.#resumed.get(id)
 
         if (resume) {
-          resume(i)
+          resume(exit)
           this.#resumed.delete(id)
         } else {
-          this.#iterables.set(id, i)
+          this.#exits.set(id, exit)
         }
       },
     ] as const
   }
 
-  readonly resume = (id: symbol, f: (iterable: RuntimeIterable<E, any>) => void) => {
+  readonly resume = (id: symbol, f: (exit: Exit<E, any>) => void) => {
     const suspended = this.#supsended.has(id)
 
     if (suspended) {
@@ -36,7 +36,7 @@ export class SuspendMap<E> {
       return false
     }
 
-    const iterable = this.#iterables.get(id)
+    const iterable = this.#exits.get(id)
 
     if (iterable) {
       f(iterable)

@@ -1,4 +1,4 @@
-import { flow, pipe } from 'hkt-ts'
+import { pipe } from 'hkt-ts'
 import { Right, isRight } from 'hkt-ts/Either'
 
 import { GetCurrentFiberContext, GetEnvironment, Resume, Suspend } from '../RuntimeInstruction'
@@ -16,8 +16,8 @@ export function* processAsync<R, E, A>(
 ) {
   const env: Env<R> = yield new GetEnvironment()
   const context: FiberContext = yield new GetCurrentFiberContext()
-  const [id, cb]: [symbol, (fx: RuntimeIterable<E, any>) => void] = yield new Suspend()
-  const either = instr.input(flow(toRuntimeIterable, cb))
+  const [id, cb]: [symbol, (fx: Fx<R, E, any>) => void] = yield new Suspend()
+  const either = instr.input(cb)
 
   if (isRight(either)) {
     return yield* toRuntimeIterable(either.right)

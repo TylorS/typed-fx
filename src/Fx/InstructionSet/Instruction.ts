@@ -22,7 +22,7 @@ export type Instruction<R = never, E = never, A = never> =
   | Provide<never, E, A>
   | SetInterruptible<Fx<R, E, A>>
   | WithConcurrency<Fx<R, E, A>>
-  | ZipAll<ReadonlyArray<Fx<R, E, any>>>
+  | ZipAll<ReadonlyArray<Fx<R, E, A[keyof A]>>>
 
 export type AnyInstruction =
   | Instruction<any, any, any>

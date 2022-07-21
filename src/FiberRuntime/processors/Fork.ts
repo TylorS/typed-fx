@@ -1,13 +1,13 @@
 import { GetCurrentFiberContext } from '../RuntimeInstruction'
 import type { RuntimeIterable } from '../RuntimeIterable'
 
-// eslint-disable-next-line import/no-cycle
 import { forkFiberRuntime, fromFiberRuntime } from './forkFiberRuntime'
 
 import type { Fiber } from '@/Fiber/Fiber'
 import { FiberContext } from '@/FiberContext/index'
 import type { Fx } from '@/Fx/Fx'
 import type { Fork } from '@/Fx/InstructionSet/Fork'
+import { fromLazy } from '@/Fx/lazy'
 import { Delay } from '@/Timer/Timer'
 
 export function* processFork<R, E, A>(
@@ -17,10 +17,9 @@ export function* processFork<R, E, A>(
   const [fx, options] = instr.input
   const context: FiberContext = yield new GetCurrentFiberContext()
   const runtime = yield* forkFiberRuntime(fx, options, toRuntimeIterable)
+  const cleanup = context.scheduler.timer.setTimer(runtime.start, Delay(0))
 
-  context.scheduler.timer.setTimer(runtime.start, Delay(0))
-
-  // TODO: Cleanup Timer
+  yield* toRuntimeIterable(context.scope.ensuring(fromLazy(cleanup)))
 
   return fromFiberRuntime(runtime)
 }

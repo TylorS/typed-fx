@@ -8,9 +8,9 @@ import { fromFx } from './fromFx'
 import { Fx, fromLazy, join, success } from '@/Fx/index'
 import { runMain } from '@/Runtime/MainRuntime'
 
-describe.only(__filename, () => {
+describe(__filename, () => {
   describe(fromFx.name, () => {
-    it('creates a Stream from an Fx', (done) => {
+    it.only('creates a Stream from an Fx', (done) => {
       const stream = fromFx(success(1))
 
       const test = Fx(function* () {

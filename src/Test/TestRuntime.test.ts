@@ -21,7 +21,7 @@ describe(__filename, () => {
         // Manually progress Time to run our Timer
         // runtime.progessTimeBy(Delay(delay))
 
-        console.log(yield* fiber.exit)
+        yield* fiber.exit
 
         const now = new Date()
         const elapsed = now.getTime() - startTime.getTime()

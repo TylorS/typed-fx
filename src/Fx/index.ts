@@ -1,5 +1,7 @@
 export * from './forkScope'
+export * from './fromPromise'
 export * from './Fx'
+export * from './hkt'
 export * from './InstructionSet/index'
 export * from './lazy'
 export * from './result'

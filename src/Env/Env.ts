@@ -21,7 +21,7 @@ import { InstanceOf } from '@/internal'
 /**
  * An Environment contains any number of Services that can be retrieved
  */
-export class Env<out R = never> {
+export class Env<R = never> {
   constructor(
     readonly services = new ServiceMap<any>(),
     readonly layers = new ServiceMap<Layer.AnyLayer<any>>(),
@@ -37,10 +37,8 @@ export class Env<out R = never> {
     implementation: B,
   ): Env<R | InstanceOf<S> | B> =>
     new Env(
-      this.services
-        .extend<S, InstanceOf<S>>(service.id(), implementation)
-        .extend((implementation as Service).id, implementation),
-      this.layers as ServiceMap<Layer.AnyLayer<R | InstanceOf<S>>>,
+      this.services.extend<S, InstanceOf<S>>(service.id(), implementation),
+      this.layers,
       this.fibers,
       this.dependencyGraph,
     )

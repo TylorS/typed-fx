@@ -11,9 +11,9 @@ import { interrupt } from '@/Fx/index'
  */
 export interface FutureQueue<R, E, A> {
   readonly size: () => number
-  readonly next: (value: Fx<R, E, A>) => void
+  readonly next: (value: Fx<R, E, A>) => boolean
   readonly waitFor: (amount: number) => ReadonlyArray<Future<R, E, A>>
-  readonly dispose: (fiberId: FiberId) => void
+  readonly dispose: (fiberId: FiberId) => boolean
 }
 
 /**
@@ -39,11 +39,15 @@ export function make<R, E, A>(): FutureQueue<R, E, A> {
     return pendingFutures
   }
 
-  function dispose(fiberId: FiberId) {
+  function dispose(fiberId: FiberId): boolean {
     if (queue.length > 0) {
       queue.forEach((f) => complete<R, E, A>(f)(interrupt(fiberId)))
       queue.splice(0, queue.length) // Clear the Queue
+
+      return true
     }
+
+    return false
   }
 
   return {

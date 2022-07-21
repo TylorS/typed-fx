@@ -4,6 +4,6 @@ export class CurrentDate extends Service {
   constructor(readonly currentDate: () => Date) {
     super()
   }
-
-  static live = CurrentDate.layerOf(new CurrentDate(() => new Date()))
 }
+
+export const live = CurrentDate.layerOf(new CurrentDate(() => new Date()))

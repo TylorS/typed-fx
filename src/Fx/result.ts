@@ -1,3 +1,5 @@
+import { isRight } from 'hkt-ts/Either'
+
 import { Fx } from './Fx'
 import { fork } from './InstructionSet/Fork'
 
@@ -8,7 +10,9 @@ export const result = <R, E, A>(fx: Fx<R, E, A>) =>
     const fiber: LiveFiber<E, A> = yield* fork(fx)
     const exit = yield* fiber.exit
 
-    yield* fiber.inheritFiberRefs
+    if (isRight(exit)) {
+      yield* fiber.inheritFiberRefs
+    }
 
     return exit
   })

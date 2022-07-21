@@ -32,8 +32,15 @@ export class Atomic<A> {
       return [updated, updated]
     })
 
+  readonly getAndUpdate = (f: Endomorphism<A>) =>
+    this.modify((a) => {
+      const updated = f(a)
+
+      return [a, updated]
+    })
+
   readonly compareAndSwap: (current: A, updated: A) => Maybe<A> = (c, u) => {
-    if (this.eq.equals(this.#value, c)) return Just(this.modify(() => [u, u]))
+    if (this.eq.equals(this.#value, c)) return Just(this.set(u))
 
     return Nothing
   }

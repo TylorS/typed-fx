@@ -1,6 +1,7 @@
 import { Lazy } from 'hkt-ts'
 import { Branded } from 'hkt-ts/Branded'
 
+import { CurrentDate } from '@/CurrentDate/CurrentDate'
 import { Service } from '@/Service/Service'
 
 /**
@@ -30,12 +31,18 @@ export class Clock extends Service {
 }
 
 export class DateClock extends Clock {
-  constructor() {
-    const start = new Date()
-    const offset = start.getTime()
+  constructor(
+    readonly startTime: Date = new Date(),
+    readonly currentDate: Lazy<Date> = () => new Date(),
+  ) {
+    const offset = startTime.getTime()
 
-    super(start, () => Time(new Date().getTime() - offset))
+    super(startTime, () => Time(currentDate().getTime() - offset))
   }
 }
 
 export const toDate = (time: Time) => Clock.asks((c) => c.toDate(time))
+
+export const live = Clock.layer(
+  CurrentDate.asks((c) => new DateClock(c.currentDate(), c.currentDate)),
+)

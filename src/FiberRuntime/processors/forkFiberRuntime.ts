@@ -1,6 +1,5 @@
 import { Just } from 'hkt-ts/Maybe'
 
-// eslint-disable-next-line import/no-cycle
 import { FiberRuntime } from '../FiberRuntime'
 import { FiberRuntimeParams } from '../FiberRuntimeParams'
 import { GetCurrentFiberContext, GetEnvironment } from '../RuntimeInstruction'
@@ -32,7 +31,7 @@ export function* forkFiberRuntime<R, E, A>(
   const params: FiberRuntimeParams<R> = {
     fiberId,
     env,
-    scheduler: context.scheduler,
+    scheduler: context.scheduler.fork(),
     supervisor: None,
     fiberRefs: options.fiberRefs ?? (yield* toRuntimeIterable(context.fiberRefs.fork)),
     scope: options.scope ?? (yield* toRuntimeIterable(context.scope.fork)),

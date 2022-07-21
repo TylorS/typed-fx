@@ -2,25 +2,31 @@
 import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
 
 import { Fiber } from '@/Fiber/Fiber'
-import { AnyFiberRef } from '@/FiberRef/index'
+import * as FiberRef from '@/FiberRef/index'
 import { Fx, Of } from '@/Fx/Fx'
 import { fork } from '@/Fx/InstructionSet/Fork'
 import { fromExit, success } from '@/Fx/InstructionSet/FromExit'
 import { join } from '@/Fx/join'
 import { fromLazy, lazy } from '@/Fx/lazy'
-import * as Ref from '@/Ref/Ref'
+import { Lock, Semaphore, acquire } from '@/Semaphore/Semaphore'
 
 export class FiberRefs {
-  #fibers = new Map<AnyFiberRef, Fiber<any, any>>()
+  #fibers = new Map<FiberRef.AnyFiberRef, Fiber<any, any>>()
+  #semaphores = new Map<FiberRef.AnyFiberRef, Semaphore>()
 
-  constructor(readonly references: Map<AnyFiberRef, any>) {}
+  constructor(readonly references: Map<FiberRef.AnyFiberRef, any>) {}
 
-  readonly getMaybe: <R extends AnyFiberRef>(ref: R) => Of<Maybe<Ref.OutputOf<R>>> = (ref) =>
-    fromLazy(() => (this.references.has(ref) ? Just(this.references.get(ref)) : Nothing))
+  readonly getMaybe: <R extends FiberRef.AnyFiberRef>(ref: R) => Of<Maybe<FiberRef.OutputOf<R>>> = (
+    ref,
+  ) => fromLazy(() => (this.references.has(ref) ? Just(this.references.get(ref)) : Nothing))
 
-  readonly get: <R extends AnyFiberRef>(
+  readonly get: <R extends FiberRef.AnyFiberRef>(
     ref: R,
-  ) => Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, Ref.OutputOf<R>> = <R extends AnyFiberRef>(ref: R) =>
+  ) => Fx<FiberRef.ResourcesOf<R>, FiberRef.ErrorsOf<R>, FiberRef.OutputOf<R>> = <
+    R extends FiberRef.AnyFiberRef,
+  >(
+    ref: R,
+  ) =>
     lazy(() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this
@@ -33,14 +39,14 @@ export class FiberRefs {
         }
 
         if (self.#fibers.has(ref)) {
-          const fiber = self.#fibers.get(ref) as Fiber<Ref.ErrorsOf<R>, Ref.OutputOf<R>>
+          const fiber = self.#fibers.get(ref) as Fiber<FiberRef.ErrorsOf<R>, FiberRef.OutputOf<R>>
           const exit = yield* fiber.exit
 
           return yield* fromExit(exit)
         }
 
         const fiber = yield* fork(
-          ref.initial as Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, Ref.OutputOf<R>>,
+          ref.initial as Fx<FiberRef.ResourcesOf<R>, FiberRef.ErrorsOf<R>, FiberRef.OutputOf<R>>,
         )
 
         self.#fibers.set(ref, fiber)
@@ -50,24 +56,27 @@ export class FiberRefs {
         self.references.set(ref, value)
 
         return value
-      }) as Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, Ref.OutputOf<R>>
+      })
     })
 
-  readonly modify: <R extends AnyFiberRef, B>(
+  readonly modify: <R extends FiberRef.AnyFiberRef, R2, E2, B>(
     ref: R,
-    f: (a: Ref.OutputOf<R>) => readonly [B, Ref.OutputOf<R>],
-  ) => Fx<Ref.ResourcesOf<R>, Ref.ErrorsOf<R>, readonly [B, Ref.OutputOf<R>]> = (ref, f) =>
+    f: (a: FiberRef.OutputOf<R>) => Fx<R2, E2, readonly [B, FiberRef.OutputOf<R>]>,
+  ) => Fx<FiberRef.ResourcesOf<R> | R2, FiberRef.ErrorsOf<R> | E2, B> = (ref, f) =>
     lazy(() => {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this
 
-      return Fx(function* () {
-        const updated = f(yield* self.get(ref))
+      return this.runWithSemaphore(
+        ref,
+        Fx(function* () {
+          const [b, updated] = yield* f(yield* self.get(ref))
 
-        self.references.set(ref, updated[1])
+          self.references.set(ref, updated)
 
-        return updated
-      })
+          return b
+        }),
+      )
     })
 
   /**
@@ -75,7 +84,7 @@ export class FiberRefs {
    */
   readonly fork: Of<FiberRefs> = lazy(() => {
     const refs = this.references
-    const references = new Map<AnyFiberRef, any>()
+    const references = new Map<FiberRef.AnyFiberRef, any>()
 
     for (const [k, v] of this.references) {
       const maybe = k.fork(v)
@@ -103,4 +112,14 @@ export class FiberRefs {
         return self
       })
     })
+
+  protected runWithSemaphore<REF extends FiberRef.AnyFiberRef, R, E, A>(
+    ref: REF,
+    fx: Fx<R, E, A>,
+  ): Fx<R, E, A> {
+    const semaphore =
+      this.#semaphores.get(ref) ?? (this.#semaphores.set(ref, new Lock()).get(ref) as Semaphore)
+
+    return acquire(semaphore)(fx)
+  }
 }

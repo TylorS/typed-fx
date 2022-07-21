@@ -1,16 +1,15 @@
-import { Either, Left, Right, isLeft } from 'hkt-ts/Either'
-import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
+import * as Either from 'hkt-ts/Either'
 import { Strict } from 'hkt-ts/Typeclass/Eq'
+import { pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { FiberRuntimeParams } from './FiberRuntimeParams'
-// eslint-disable-next-line import/no-cycle
 import { InstructionProcessor } from './InstructionProcessor'
-import { RuntimeInstruction } from './RuntimeInstruction'
-import { RuntimeIterable } from './RuntimeIterable'
+import { RuntimeInstruction, YieldNow } from './RuntimeInstruction'
 import { SuspendMap } from './SuspendMap'
 
 import { Atomic } from '@/Atomic/Atomic'
+import { Traced } from '@/Cause/Cause'
 import { Env } from '@/Env/Env'
 import { Exit, interrupt } from '@/Exit/Exit'
 import { Fiber } from '@/Fiber/Fiber'
@@ -24,7 +23,7 @@ import { Fx, Of } from '@/Fx/Fx'
 import { success } from '@/Fx/InstructionSet/FromExit'
 import { Semaphore } from '@/Semaphore/Semaphore'
 import { Stack } from '@/Stack/index'
-import { StackTrace } from '@/StackTrace/StackTrace'
+import { StackTrace, captureTrace } from '@/StackTrace/StackTrace'
 import { Delay } from '@/Timer/Timer'
 import { EmptyTrace, StackFrameTrace, Trace } from '@/Trace/Trace'
 
@@ -33,27 +32,28 @@ import { EmptyTrace, StackFrameTrace, Trace } from '@/Trace/Trace'
  * to keep all of the state necessary to create a LiveFiber.
  */
 export class FiberRuntime<R, E, A> {
-  protected _environment: Stack<Env<any>> = new Stack(this.params.env)
-  protected _interruptStatus: Stack<boolean> = new Stack(true)
+  protected _children = new Map<FiberId, Fiber.Live<any, any>>()
   protected _concurrencyLevel: Stack<Semaphore> = new Stack(
     new Semaphore(this.params.platform.maxConcurrency),
   )
-  protected _interruptedBy: Array<FiberId> = []
-  protected _stackTrace = new StackTrace(this.params.fiberId, new Stack<Trace>(EmptyTrace))
-  protected _children = new Map<FiberId, Fiber.Live<any, any>>()
+  protected _environment: Stack<Env<any>> = new Stack(this.params.env)
   protected _fiberStatus: Atomic<FiberStatus<E, A>>
-  protected _generators: Generator<RuntimeInstruction<E>, any, any>[]
-  protected _suspends: RuntimeIterable<E, any> | null = null
-  protected _instructionProcesssor: InstructionProcessor<R, E, A>
+  protected _generator: Generator<RuntimeInstruction<E>, any, any>
+  protected _instructionProcessor: InstructionProcessor<R, E, A>
+  protected _interruptedBy: Array<FiberId> = []
+  protected _interruptStatus: Stack<boolean> = new Stack(true)
+  protected _stackTrace = new StackTrace(this.params.fiberId, new Stack<Trace>(EmptyTrace))
   protected _suspended = new SuspendMap<E>()
-  protected timerHandle: (() => void) | null = null
+  protected _timerHandle: (() => void) | null = null
+  protected _instructionCount = 0
+  protected _shouldBreak = false
+
+  get context(): FiberContext {
+    return this.getFiberContext()
+  }
 
   get status(): FiberStatus<E, A> {
     return this._fiberStatus.get
-  }
-
-  get children(): ReadonlySet<Fiber.Live<any, any>> {
-    return new Set(this._children.values())
   }
 
   get interruptStatus(): boolean {
@@ -68,8 +68,8 @@ export class FiberRuntime<R, E, A> {
     return this._stackTrace
   }
 
-  get context(): FiberContext {
-    return this.getFiberContext()
+  get children(): ReadonlySet<Fiber.Live<any, any>> {
+    return new Set(this._children.values())
   }
 
   readonly exit: Future<never, never, Exit<E, A>> = pending()
@@ -80,18 +80,34 @@ export class FiberRuntime<R, E, A> {
       Strict,
     )
 
-    this._instructionProcesssor = new InstructionProcessor(this, fx, params)
-    this._generators = [this._instructionProcesssor[Symbol.iterator]()]
+    this._instructionProcessor = new InstructionProcessor(fx, params.scope, () => this.context)
+    this._generator = this._instructionProcessor[Symbol.iterator]()
+    this.params.supervisor.onStart(this, fx, params.parent)
   }
 
-  readonly start = (): void => {
-    if (this._fiberStatus.get.tag !== 'Exited' && this._generators.length > 0) {
-      this.processGenerator(this._generators[0], this._generators[0].next())
+  readonly start = (value?: any): void => {
+    this._timerHandle = null
+    let result = this._generator.next(value)
+
+    while (!result.done && !this._shouldBreak) {
+      const either = this.processInstruction(result.value)
+
+      if (Either.isLeft(either)) {
+        if (either.left) {
+          return this.start()
+        }
+
+        return
+      }
+
+      result = this._generator.next(either.right)
     }
+
+    this._shouldBreak = false
   }
 
   readonly startLater = () => {
-    this.timerHandle = this.params.scheduler.setTimer(this.start, Delay(0))
+    this._timerHandle = this.params.scheduler.setTimer(this.start, Delay(0))
   }
 
   readonly addObserver = (observer: FiberStatus.Observer<E, A>) => {
@@ -104,130 +120,114 @@ export class FiberRuntime<R, E, A> {
     this._interruptedBy.push(fiberId)
 
     if (this._interruptStatus.value) {
-      this.interruptNow(fiberId)
+      this.interruptNow(interrupt(fiberId))
+      this.start()
     }
 
     return wait(this.exit)
   }
 
-  protected interruptNow(fiberId: FiberId) {
-    this.timerHandle?.()
-    this._generators.splice(0, this._generators.length) // Clear all the other Generators
-    this._generators.push(this._instructionProcesssor.close(interrupt(fiberId))[Symbol.iterator]()) // Push in an Interrupt to close the Scope
-    this.start() // Restart the runtime
+  protected interruptNow(exit: Exit<E, A>) {
+    this._shouldBreak = true
+    this._timerHandle?.()
+    this._generator = this._instructionProcessor.close(exit)[Symbol.iterator]() // Push in an Interrupt to close the Scope
   }
 
-  protected processGenerator = (
-    generator: Generator<RuntimeInstruction<E>, any>,
-    result: IteratorResult<RuntimeInstruction<E>, any>,
-  ): Maybe<any> => {
-    while (!result.done) {
-      const either = this.processInstruction(result.value)
+  protected processInstruction(instr: RuntimeInstruction<E>): Either.Either<boolean, any> {
+    switch (instr.tag) {
+      case 'Done': {
+        this.finalize(instr.exit)
 
-      if (isLeft(either)) {
-        if (either.left) {
-          this.start()
+        return Either.Left(false)
+      }
+      case 'OnInstruction': {
+        const fxInstr = instr.instruction
+
+        if (++this._instructionCount === this.params.platform.maxInstructionCount) {
+          this._instructionCount = 0
+
+          return this.processInstruction(new YieldNow())
         }
 
-        return Nothing
-      }
-
-      result = generator.next(either.right)
-    }
-
-    // Remove this generator from the stack
-    this._generators.shift()
-
-    // Continue processing if needed
-    if (this._generators.length > 0) {
-      return this.processGenerator(this._generators[0], this._generators[0].next(result.value))
-    }
-
-    this.finalize(Right(result.value))
-
-    return Just(result.value)
-  }
-
-  protected processInstruction(instr: RuntimeInstruction<E>): Either<boolean, any> {
-    switch (instr.tag) {
-      case 'GetCurrentFiberRuntime': {
-        return Right(this)
+        return Either.Right(this.params.supervisor.onInstruction(this, fxInstr as any))
       }
       case 'Fail': {
-        const exit = Left(instr.cause)
+        this.interruptNow(Either.Left(instr.cause))
 
-        this._generators = [this._instructionProcesssor.close(exit)[Symbol.iterator]()]
-
-        return Left(true)
+        return Either.Left(true)
       }
       case 'GetConcurrencyLevel':
-        return Right(this.concurrencyLevel)
+        return Either.Right(this.concurrencyLevel)
       case 'GetCurrentFiberContext':
-        return Right(this.getFiberContext())
+        return Either.Right(this.getFiberContext())
       case 'GetEnvironment':
-        return Right(this._environment.value)
+        return Either.Right(this._environment.value)
       case 'GetInterruptStatus':
-        return Right(this.interruptStatus)
+        return Either.Right(this.interruptStatus)
       case 'GetTrace':
-        return Right(this.stackTrace)
+        return Either.Right(this.stackTrace.flatten())
       case 'PopConcurrencyLevel': {
         this._concurrencyLevel = this._concurrencyLevel.pop() || this._concurrencyLevel
-        return Right(undefined)
+        return Either.Right(undefined)
       }
       case 'PopEnvironment': {
         this._environment = this._environment.pop() || this._environment
-        return Right(undefined)
+        return Either.Right(undefined)
       }
       case 'PopInterruptStatus': {
         this._interruptStatus = this._interruptStatus.pop() || this._interruptStatus
 
         // If things are interruptable again, lets go ahead and kill
         if (this._interruptedBy.length > 0 && this._interruptStatus.value) {
-          this.interruptNow(this._interruptedBy[0])
+          this.interruptNow(interrupt(this._interruptedBy[0]))
 
-          return Left(false)
+          return Either.Left(true)
         }
 
-        return Right(undefined)
+        return Either.Right(undefined)
       }
       case 'PopTrace': {
         this._stackTrace = this._stackTrace.pop() || this._stackTrace
-        return Right(undefined)
+        return Either.Right(undefined)
       }
       case 'PushConcurrencyLevel': {
         this._concurrencyLevel = this._concurrencyLevel.push(new Semaphore(instr.concurrencyLevel))
-        return Right(undefined)
+        return Either.Right(undefined)
       }
       case 'PushEnvironment': {
         this._environment = this._environment.push(instr.env)
-        return Right(undefined)
+        return Either.Right(undefined)
       }
       case 'PushInterruptStatus': {
         this._interruptStatus = this._interruptStatus.push(instr.interruptStatus)
-        return Right(undefined)
+        return Either.Right(undefined)
       }
       case 'PushTrace': {
-        this._stackTrace.push(parseCustomTrace(instr.trace))
-        return Right(undefined)
+        this._stackTrace = this._stackTrace.push(parseCustomTrace(instr.trace))
+        return Either.Right(undefined)
       }
       case 'Suspend': {
-        return Right(this._suspended.suspend())
+        this.params.supervisor.onSuspend(this)
+        this._stackTrace = this._stackTrace.push(captureTrace())
+
+        return Either.Right(this._suspended.suspend())
       }
       case 'Resume': {
-        this._suspended.resume(instr.id, (iterable) => {
-          this._generators.unshift(iterable[Symbol.iterator]())
-          this.start()
-        })
-
-        return Left(true)
+        return Either.Left(
+          this._suspended.resume(instr.id, (exit) => {
+            if (Either.isLeft(exit)) {
+              this.interruptNow(exit)
+              this.start()
+            } else {
+              this.start(exit.right)
+            }
+          }),
+        )
       }
       case 'YieldNow': {
-        this.timerHandle = this.params.scheduler.timer.setTimer(() => {
-          this.timerHandle = null
-          this.start()
-        }, Delay(0))
+        this._stackTrace = this._stackTrace.push(captureTrace())
 
-        return Left(false)
+        return Either.Left(false)
       }
     }
 
@@ -236,12 +236,19 @@ export class FiberRuntime<R, E, A> {
 
   protected finalize = (exit: Exit<E, A>) => {
     const currentStatus = this._fiberStatus.getAndSet(
-      new FiberStatus.Exited(this.params.fiberId, exit),
+      new FiberStatus.Exited(
+        this.params.fiberId,
+        pipe(
+          exit,
+          Either.mapLeft((cause) => new Traced(cause, this.stackTrace.flatten())),
+        ),
+      ),
     )
 
     if (currentStatus.tag !== 'Exited') {
       currentStatus.observers.forEach((o) => o(exit))
       complete(this.exit)(success(exit))
+      this.params.supervisor.onEnd(this, exit)
     }
   }
 

@@ -43,7 +43,7 @@ export const observe =
   <R, E>(stream: Stream<R, E, A>): Fx<R | R2, never, Fiber<E | E2, unknown>> =>
     Fx(function* () {
       const context = yield* forkStreamContext()
-      const sink = yield* makeSink((x: A) =>
+      const sink: Sink<E, A> = yield* makeSink((x: A) =>
         Fx(function* () {
           const exit = yield* result(f(x))
 

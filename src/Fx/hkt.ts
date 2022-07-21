@@ -13,9 +13,8 @@ import { Fx } from './Fx'
 import { async } from './InstructionSet/Async'
 import { fork } from './InstructionSet/Fork'
 import { fromExit, success, unit } from './InstructionSet/FromExit'
+import { zipAll } from './InstructionSet/ZipAll'
 import { result } from './result'
-
-import { zipAll } from './index'
 
 import * as Exit from '@/Exit/index'
 import { pending } from '@/Future/Future'
@@ -55,11 +54,14 @@ export const Top: T.Top3<FxHKT> = {
   top: success([]),
 }
 
+export const top = Top.top
+
 export const Bottom: Bottom3<FxHKT> = {
   bottom: async<never, never, never>(() => Left(unit)),
 }
 
 export const bottom = Bottom.bottom
+export { bottom as never }
 
 export const AssociativeBoth: AB.AssociativeBoth3<FxHKT> = {
   both: (s) => (f) => zipAll(f, s),
@@ -92,16 +94,16 @@ export const AssociativeEither: AE.AssociativeEither3<FxHKT> = {
         // Ensure closing one closes the other
         yield* fc.scope.addFinalizer((exit) =>
           Fx(function* () {
-            yield* sc.scope.close(exit)
-
-            complete(future)(fromExit(exit))
+            if (complete(future)(fromExit(exit))) {
+              yield* sc.scope.close(exit)
+            }
           }),
         )
         yield* sc.scope.addFinalizer((exit) =>
           Fx(function* () {
-            yield* sc.scope.close(exit)
-
-            complete(future)(fromExit(exit))
+            if (complete(future)(fromExit(exit))) {
+              yield* sc.scope.close(exit)
+            }
           }),
         )
 

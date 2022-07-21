@@ -5,7 +5,6 @@ import { isLeft } from 'hkt-ts/Either'
 import { GetCurrentFiberContext } from '../RuntimeInstruction'
 import { RuntimeIterable } from '../RuntimeIterable'
 
-// eslint-disable-next-line import/no-cycle
 import { forkFiberRuntime } from './forkFiberRuntime'
 
 import * as Exit from '@/Exit/index'

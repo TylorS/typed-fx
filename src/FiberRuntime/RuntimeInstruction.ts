@@ -5,8 +5,11 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Cause } from '@/Cause/Cause'
 import { Env } from '@/Env/Env'
+import { Exit } from '@/Exit/Exit'
+import { AnyInstruction } from '@/Fx/InstructionSet/Instruction'
 
 export type RuntimeInstruction<E> =
+  | Done<E>
   | Fail<E>
   | YieldNow
   | Suspend
@@ -24,7 +27,12 @@ export type RuntimeInstruction<E> =
   | PopEnvironment
   | GetEnvironment
   | GetCurrentFiberContext
-  | GetCurrentFiberRuntime
+  | OnInstruction
+
+export class Done<E> {
+  readonly tag = 'Done'
+  constructor(readonly exit: Exit<E, any>) {}
+}
 
 export class Fail<E> {
   readonly tag = 'Fail'
@@ -106,6 +114,8 @@ export class GetCurrentFiberContext {
   readonly tag = 'GetCurrentFiberContext'
 }
 
-export class GetCurrentFiberRuntime {
-  readonly tag = 'GetCurrentFiberRuntime'
+export class OnInstruction {
+  readonly tag = 'OnInstruction'
+
+  constructor(readonly instruction: AnyInstruction) {}
 }

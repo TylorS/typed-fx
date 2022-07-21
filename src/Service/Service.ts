@@ -80,4 +80,27 @@ export class Service {
 export type ServiceConstructor<A = any> = {
   readonly id: () => ServiceId<A>
   readonly name: string
+
+  readonly access: <S extends ServiceConstructor, R, E, A>(
+    this: S,
+    f: (s: InstanceOf<S>) => Fx<R, E, A>,
+  ) => Fx<InstanceOf<S> | R, E, A>
+  readonly ask: <S extends ServiceConstructor>(this: S) => Fx<InstanceOf<S>, never, InstanceOf<S>>
+  readonly asks: <S extends ServiceConstructor, A>(
+    this: S,
+    f: (i: InstanceOf<S>) => A,
+  ) => Fx<InstanceOf<S>, never, A>
+
+  readonly layer: <S extends ServiceConstructor, R = never, E = never>(
+    this: S,
+    provider: Fx<R, E, InstanceOf<S>>,
+  ) => Layer<S, R, E>
+  readonly layerOf: <S extends ServiceConstructor, B extends InstanceOf<S>>(
+    this: S,
+    instance: B,
+  ) => Layer<S>
+  readonly provide: <S extends ServiceConstructor, B extends InstanceOf<S>>(
+    this: S,
+    instance: B,
+  ) => <R, E, A>(fx: Fx<R, E, A>) => Fx<Exclude<R, InstanceOf<S>>, E, A>
 }

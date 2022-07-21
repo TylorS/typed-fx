@@ -31,7 +31,6 @@ export function make<R, E, A>(initial: Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
         return yield* ref.modify(f)
       })
     }
-
     static get<REF extends AnyRef>(this: REF): Fx<R | InstanceOf<REF>, E, A> {
       return this.modify((s) => [s, s])
     }

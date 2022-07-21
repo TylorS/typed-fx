@@ -15,7 +15,7 @@ export const makeTestRuntime = <R = never>(
   params: Partial<TestRuntimeOptions<R>> = {},
 ): TestRuntime<R> =>
   new TestRuntime(startTime, {
-    env: new Env<never>(),
+    env: new Env<R>(),
     platform: new Platform(),
     scheduler: new TestScheduler(new TestTimer(new TestClock(startTime))),
     ...params,

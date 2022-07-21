@@ -1,8 +1,10 @@
 import { isLeft } from 'hkt-ts/Either'
-import { pipe } from 'hkt-ts/function'
+import * as Maybe from 'hkt-ts/Maybe'
+import { flow, identity, pipe } from 'hkt-ts/function'
 
 import { Stream } from './Stream'
 import { forkStreamContext } from './drain'
+import { FilterMap } from './filterMap'
 
 import { Env } from '@/Env/Env'
 import { FiberContext } from '@/FiberContext/index'
@@ -16,8 +18,25 @@ import { Sink } from '@/Sink/Sink'
 import { Supervisor } from '@/Supervisor/Supervisor'
 import { fibersIn } from '@/Supervisor/fibersIn'
 
-export class FlatMap<R, E, A, R2, E2, B> extends Stream<R | R2, E | E2, B> {
-  constructor(readonly stream: Stream<R, E, A>, readonly f: (a: A) => Stream<R2, E2, B>) {
+export const filterFlatMap =
+  <A, R2, E2, B>(f: (a: A) => Maybe.Maybe<Stream<R2, E2, B>>) =>
+  <R, E>(stream: Stream<R, E, A>) =>
+    FilterFlatMap.make(stream, f)
+
+export const flatMap =
+  <A, R2, E2, B>(f: (a: A) => Stream<R2, E2, B>) =>
+  <R, E>(stream: Stream<R, E, A>) =>
+    FilterFlatMap.make(stream, flow(f, Maybe.Just))
+
+export const flatten = flatMap(identity) as <R, E, R2, E2, A>(
+  stream: Stream<R, E, Stream<R2, E2, A>>,
+) => Stream<R | R2, E | E2, A>
+
+export class FilterFlatMap<R, E, A, R2, E2, B> extends Stream<R | R2, E | E2, B> {
+  constructor(
+    readonly stream: Stream<R, E, A>,
+    readonly f: (a: A) => Maybe.Maybe<Stream<R2, E2, B>>,
+  ) {
     super((sink, context) =>
       Fx(function* () {
         const supervisor = fibersIn()
@@ -34,6 +53,17 @@ export class FlatMap<R, E, A, R2, E2, B> extends Stream<R | R2, E | E2, B> {
       }),
     )
   }
+
+  static make<R, E, A, R2, E2, B>(
+    stream: Stream<R, E, A>,
+    f: (a: A) => Maybe.Maybe<Stream<R2, E2, B>>,
+  ) {
+    if (stream instanceof FilterMap) {
+      return new FilterFlatMap(stream.stream, flow(stream.filterMap, Maybe.flatMap(f)))
+    }
+
+    return new FilterFlatMap(stream, f)
+  }
 }
 
 export class FlatMapSink<R, E, A, R2, E2, B> extends Sink<E, A> {
@@ -45,7 +75,7 @@ export class FlatMapSink<R, E, A, R2, E2, B> extends Sink<E, A> {
     readonly context: FiberContext,
     readonly env: Env<R | R2>,
     readonly supervisor: Supervisor<ReadonlySet<FiberRuntime<any, any, any>>>,
-    readonly f: (a: A) => Stream<R2, E2, B>,
+    readonly f: (a: A) => Maybe.Maybe<Stream<R2, E2, B>>,
   ) {
     super()
   }
@@ -57,8 +87,13 @@ export class FlatMapSink<R, E, A, R2, E2, B> extends Sink<E, A> {
       return pipe(
         Fx(function* () {
           const stream = f(a)
+
+          if (Maybe.isNothing(stream)) {
+            return
+          }
+
           const streamContext = yield* forkStreamContext(context)
-          const fiber = yield* stream.fork(innerSink(), { ...streamContext, supervisor })
+          const fiber = yield* stream.value.fork(innerSink(), { ...streamContext, supervisor })
           const exit = yield* fiber.exit
 
           if (isLeft(exit)) {

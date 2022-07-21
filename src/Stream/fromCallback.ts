@@ -11,7 +11,7 @@ export class FromCallback<R, E, A> extends Stream<R, E, A> {
   constructor(
     readonly register: (
       cb: (a: Fx<R, E, A>) => Promise<unknown>,
-      close: (exit: Exit<E, A>) => Promise<unknown>,
+      close: (exit: Exit<E, unknown>) => Promise<unknown>,
       context: FiberContext,
     ) => Fx<R, E, Finalizer>,
   ) {
@@ -38,7 +38,7 @@ export class FromCallback<R, E, A> extends Stream<R, E, A> {
 
 export type CallbackRegister<R, E, A, R2 = R, E2 = E> = (
   cb: (a: Fx<R, E, A>) => Promise<unknown>,
-  close: (exit: Exit<E, A>) => Promise<unknown>,
+  close: (exit: Exit<E, unknown>) => Promise<unknown>,
   context: FiberContext,
 ) => Fx<R2, E2, Finalizer>
 
