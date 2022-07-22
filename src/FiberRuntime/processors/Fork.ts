@@ -19,7 +19,7 @@ export function* processFork<R, E, A>(
   const runtime = yield* forkFiberRuntime(fx, options, toRuntimeIterable)
   const cleanup = context.scheduler.timer.setTimer(runtime.start, Delay(0))
 
-  yield* toRuntimeIterable(context.scope.ensuring(fromLazy(cleanup)))
+  context.scope.ensuring(fromLazy(cleanup))
 
   return fromFiberRuntime(runtime)
 }

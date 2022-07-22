@@ -1,13 +1,15 @@
+import { Nothing } from 'hkt-ts/Maybe'
+
 import { LocalScope } from './LocalScope'
 import { Closeable } from './Scope'
 
-import { fromLazy, success, unit } from '@/Fx/index'
+import { success } from '@/Fx/index'
 
 export class GlobalScope extends Closeable {
   constructor() {
     super(
-      () => success(() => unit),
-      (s) => fromLazy(() => new LocalScope(s)),
+      () => Nothing,
+      (s) => new LocalScope(s),
       () => success(false),
     )
   }

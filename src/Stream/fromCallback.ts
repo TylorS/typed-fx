@@ -26,7 +26,7 @@ export class FromCallback<R, E, A> extends Stream<R, E, A> {
 
         return yield* context.scheduler.schedule(
           Fx(function* () {
-            yield* context.scope.addFinalizer(yield* register(cb, close, context))
+            context.scope.addFinalizer(yield* register(cb, close, context))
           }),
           once,
           context,

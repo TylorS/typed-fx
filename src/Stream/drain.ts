@@ -18,7 +18,7 @@ export const forkStreamContext = (fiberContext?: FiberContext): Of<FiberContext>
     const current = fiberContext ?? (yield* getFiberContext)
 
     // Always Fork a Fresh Scope + Scheduler to have most expected behaviors.
-    const scope = yield* current.scope.fork
+    const scope = current.scope.fork
     const scheduler = current.scheduler.fork()
     const context: FiberContext = {
       ...current,

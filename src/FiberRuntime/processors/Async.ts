@@ -1,5 +1,6 @@
 import { pipe } from 'hkt-ts'
 import { Right, isRight } from 'hkt-ts/Either'
+import { isJust } from 'hkt-ts/Maybe'
 
 import { GetCurrentFiberContext, GetEnvironment, Resume, Suspend } from '../RuntimeInstruction'
 import { RuntimeIterable } from '../RuntimeIterable'
@@ -23,13 +24,13 @@ export function* processAsync<R, E, A>(
     return yield* toRuntimeIterable(either.right)
   }
 
-  const finalizer = yield* toRuntimeIterable(
-    context.scope.ensuring(pipe(either.left, provide(env))),
-  )
+  const finalizer = context.scope.ensuring(pipe(either.left, provide(env)))
 
   const a: A = yield new Resume(id)
 
-  yield* toRuntimeIterable(finalizer(Right(a)))
+  if (isJust(finalizer)) {
+    yield* toRuntimeIterable(finalizer.value(Right(a)))
+  }
 
   return a
 }

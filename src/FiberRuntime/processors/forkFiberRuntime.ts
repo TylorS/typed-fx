@@ -34,7 +34,7 @@ export function* forkFiberRuntime<R, E, A>(
     scheduler: context.scheduler.fork(),
     supervisor: None,
     fiberRefs: options.fiberRefs ?? (yield* toRuntimeIterable(context.fiberRefs.fork)),
-    scope: options.scope ?? (yield* toRuntimeIterable(context.scope.fork)),
+    scope: options.scope ?? context.scope.fork,
     platform: context.platform,
     parent: Just(context),
     ...options,

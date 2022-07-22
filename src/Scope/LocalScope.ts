@@ -1,3 +1,5 @@
+import { pipe } from 'hkt-ts'
+import * as Maybe from 'hkt-ts/Maybe'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { FinalizationStrategy } from './Finalizer'
@@ -5,8 +7,8 @@ import { ReleaseMap } from './ReleaseMap'
 import { Closeable } from './Scope'
 
 import { AtomicCounter } from '@/Atomic/AtomicCounter'
+import { Exit } from '@/Exit/Exit'
 import { Fx } from '@/Fx/Fx'
-import { uninterruptable } from '@/Fx/InstructionSet/SetInterruptable'
 import { lazy } from '@/Fx/lazy'
 
 export class LocalScope extends Closeable {
@@ -15,30 +17,33 @@ export class LocalScope extends Closeable {
 
   constructor(readonly strategy: FinalizationStrategy) {
     super(
-      (f) => this.releaseMap.add(f),
-      (s) =>
-        lazy(() => {
-          const { releaseMap, refCount } = this
+      (f) =>
+        pipe(
+          f,
+          this.releaseMap.addIfOpen,
+          Maybe.map((k) => (exit: Exit<any, any>) => this.releaseMap.release(k, exit)),
+        ),
+      (s) => {
+        const { refCount } = this
 
-          return uninterruptable(
-            Fx(function* () {
-              const scope = new LocalScope(s)
-              const finalizer = yield* releaseMap.add(scope.close)
+        const scope = new LocalScope(s)
+        const finalizer = this.addFinalizer(scope.close)
 
-              refCount.increment
+        if (Maybe.isNothing(finalizer)) {
+          throw new Error(`Unable to fork a Scope which has been closed`)
+        }
 
-              yield* scope.addFinalizer((exit) =>
-                lazy(() => {
-                  refCount.decrement
+        refCount.increment
+        scope.addFinalizer((exit) =>
+          lazy(() => {
+            refCount.decrement
 
-                  return finalizer(exit)
-                }),
-              )
+            return finalizer.value(exit)
+          }),
+        )
 
-              return scope
-            }),
-          )
-        }),
+        return scope
+      },
       (exit) =>
         lazy(() => {
           const { refCount } = this

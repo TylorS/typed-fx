@@ -10,7 +10,7 @@ export const forkScope =
   (scope: Scope, strategy: FinalizationStrategy = SequentialStrategy) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber<E, A>> =>
     Fx(function* () {
-      return yield* fork(fx, { scope: yield* scope.forkWith(strategy) })
+      return yield* fork(fx, { scope: scope.forkWith(strategy) })
     })
 
 export const forkDaemon = <R, E, A>(

@@ -1,4 +1,5 @@
 import * as Either from 'hkt-ts/Either'
+import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
 import { Strict } from 'hkt-ts/Typeclass/Eq'
 import { pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
@@ -38,7 +39,7 @@ export class FiberRuntime<R, E, A> {
   )
   protected _environment: Stack<Env<any>> = new Stack(this.params.env)
   protected _fiberStatus: Atomic<FiberStatus<E, A>>
-  protected _generator: Generator<RuntimeInstruction<E>, any, any>
+  protected _generators: Generator<RuntimeInstruction<E>, any, any>[]
   protected _instructionProcessor: InstructionProcessor<R, E, A>
   protected _interruptedBy: Array<FiberId> = []
   protected _interruptStatus: Stack<boolean> = new Stack(true)
@@ -81,26 +82,33 @@ export class FiberRuntime<R, E, A> {
     )
 
     this._instructionProcessor = new InstructionProcessor(fx, params.scope, () => this.context)
-    this._generator = this._instructionProcessor[Symbol.iterator]()
+    this._generators = [this._instructionProcessor[Symbol.iterator]()]
     this.params.supervisor.onStart(this, fx, params.parent)
   }
 
-  readonly start = (value?: any): void => {
+  readonly start = () => {
+    if (this.status.tag !== 'Exited') {
+      this.runGenerator()
+    }
+  }
+
+  readonly runGenerator = (value?: any): void => {
     this._timerHandle = null
-    let result = this._generator.next(value)
+    const gen = this._generators[0]
+    let result = gen.next(value)
 
     while (!result.done && !this._shouldBreak) {
       const either = this.processInstruction(result.value)
 
       if (Either.isLeft(either)) {
-        if (either.left) {
-          return this.start()
+        if (isJust(either.left)) {
+          return this.runGenerator(either.left.value)
         }
 
         return
       }
 
-      result = this._generator.next(either.right)
+      result = gen.next(either.right)
     }
 
     this._shouldBreak = false
@@ -130,15 +138,23 @@ export class FiberRuntime<R, E, A> {
   protected interruptNow(exit: Exit<E, A>) {
     this._shouldBreak = true
     this._timerHandle?.()
-    this._generator = this._instructionProcessor.close(exit)[Symbol.iterator]() // Push in an Interrupt to close the Scope
+    this._generators = [this._instructionProcessor.close(exit)[Symbol.iterator]()] // Push in an Interrupt to close the Scope
   }
 
-  protected processInstruction(instr: RuntimeInstruction<E>): Either.Either<boolean, any> {
+  protected processInstruction(instr: RuntimeInstruction<E>): Either.Either<Maybe<any>, any> {
+    console.log(instr.tag)
+
     switch (instr.tag) {
       case 'Done': {
+        this._generators.shift()
+
+        if (this._generators.length > 0 && Either.isRight(instr.exit)) {
+          return Either.Left(Just(instr.exit.right))
+        }
+
         this.finalize(instr.exit)
 
-        return Either.Left(false)
+        return Either.Left(Nothing)
       }
       case 'OnInstruction': {
         const fxInstr = instr.instruction
@@ -154,7 +170,7 @@ export class FiberRuntime<R, E, A> {
       case 'Fail': {
         this.interruptNow(Either.Left(instr.cause))
 
-        return Either.Left(true)
+        return Either.Left(Just(undefined))
       }
       case 'GetConcurrencyLevel':
         return Either.Right(this.concurrencyLevel)
@@ -181,7 +197,7 @@ export class FiberRuntime<R, E, A> {
         if (this._interruptedBy.length > 0 && this._interruptStatus.value) {
           this.interruptNow(interrupt(this._interruptedBy[0]))
 
-          return Either.Left(true)
+          return Either.Left(Just(undefined))
         }
 
         return Either.Right(undefined)
@@ -214,20 +230,16 @@ export class FiberRuntime<R, E, A> {
       }
       case 'Resume': {
         return Either.Left(
-          this._suspended.resume(instr.id, (exit) => {
-            if (Either.isLeft(exit)) {
-              this.interruptNow(exit)
-              this.start()
-            } else {
-              this.start(exit.right)
-            }
+          this._suspended.resume(instr.id, (iterable) => {
+            this._generators.unshift(iterable[Symbol.iterator]())
+            this.start()
           }),
         )
       }
       case 'YieldNow': {
         this._stackTrace = this._stackTrace.push(captureTrace())
 
-        return Either.Left(false)
+        return Either.Left(Nothing)
       }
     }
 

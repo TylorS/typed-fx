@@ -79,7 +79,7 @@ function* waitForExit<R, E, A>(
   const future = pending<Exit<E, A>>()
 
   // Wait for the Scope to close
-  yield* run(scope.addFinalizer((exit) => fromLazy(() => pipe(exit, success, complete(future)))))
+  scope.addFinalizer((exit) => fromLazy(() => pipe(exit, success, complete(future))))
 
   return yield* run(wait(future))
 }

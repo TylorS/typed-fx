@@ -1,18 +1,20 @@
-import { Exit } from '@/Exit/Exit'
+import { Just, Nothing } from 'hkt-ts/Maybe'
+
+import { RuntimeIterable } from './RuntimeIterable'
 
 export class SuspendMap<E> {
   #supsended = new Set<symbol>()
-  #resumed = new Map<symbol, (iterable: Exit<E, any>) => void>()
-  #exits = new Map<symbol, Exit<E, any>>()
+  #resumed = new Map<symbol, (iterable: RuntimeIterable<E, any>) => void>()
+  #exits = new Map<symbol, RuntimeIterable<E, any>>()
 
-  readonly suspend = (): readonly [symbol, (iterable: Exit<E, any>) => void] => {
+  readonly suspend = (): readonly [symbol, (iterable: RuntimeIterable<E, any>) => void] => {
     const id = Symbol()
 
     this.#supsended.add(id)
 
     return [
       id,
-      (exit: Exit<E, any>) => {
+      (exit: RuntimeIterable<E, any>) => {
         this.#supsended.delete(id)
 
         const resume = this.#resumed.get(id)
@@ -27,13 +29,13 @@ export class SuspendMap<E> {
     ] as const
   }
 
-  readonly resume = (id: symbol, f: (exit: Exit<E, any>) => void) => {
+  readonly resume = (id: symbol, f: (exit: RuntimeIterable<E, any>) => void) => {
     const suspended = this.#supsended.has(id)
 
     if (suspended) {
       this.#resumed.set(id, f)
 
-      return false
+      return Nothing
     }
 
     const iterable = this.#exits.get(id)
@@ -41,7 +43,7 @@ export class SuspendMap<E> {
     if (iterable) {
       f(iterable)
 
-      return true
+      return Just(undefined)
     }
 
     throw new Error(

@@ -10,37 +10,32 @@ import { wait } from '@/Scope/wait'
 import { Sink } from '@/Sink/Sink'
 import { Stream } from '@/Stream/Stream'
 
-export class Subject<R, E, A> extends Stream<R, E, A> implements Sink<E, A> {
+export class Subject<E, A> extends Stream<never, E, A> implements Sink<E, A> {
   readonly observers: Set<readonly [Sink<E, A>, FiberContext]> = new Set()
 
   constructor() {
     super((sink, context) =>
-      lazy(() => {
+      fromLazy(() => {
         const exit = wait<E, A>(context.scope)
-        const { observers } = this
+        const observer = [sink, context] as const
 
-        return Fx(function* () {
-          const observer = [sink, context] as const
+        this.observers.add(observer)
+        context.scope.ensuring(fromLazy(() => this.observers.delete(observer)))
 
-          observers.add(observer)
+        return new SyntheticFiber(
+          exit,
+          Fx(function* () {
+            const { fiberRefs } = yield* getFiberContext
 
-          yield* context.scope.ensuring(fromLazy(() => observers.delete(observer)))
-
-          return new SyntheticFiber(
-            exit,
+            yield* fiberRefs.join(context.fiberRefs)
+          }),
+          (fiberId) =>
             Fx(function* () {
-              const { fiberRefs } = yield* getFiberContext
+              yield* context.scope.close(interrupt(fiberId))
 
-              yield* fiberRefs.join(context.fiberRefs)
+              return yield* exit
             }),
-            (fiberId) =>
-              Fx(function* () {
-                yield* context.scope.close(interrupt(fiberId))
-
-                return yield* exit
-              }),
-          )
-        })
+        )
       }),
     )
   }

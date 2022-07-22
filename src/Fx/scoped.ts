@@ -20,7 +20,7 @@ export const getScope = ask(Scope)
 export function scoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, E, A> {
   return Fx(function* () {
     const { scope: fiberScope } = yield* getFiberContext
-    const scope = yield* fiberScope.fork // Fork the scope, will be closed in event of failure.
+    const scope = fiberScope.fork // Fork the scope, will be closed in event of failure.
 
     // Run effect with a specific Scope
     const a = yield* pipe(scoped, provideService(Scope, scope))
@@ -50,7 +50,7 @@ export function reserve<R, E, A>(
 ): Of<Reservation<Exclude<R, Scope>, E, A>> {
   return Fx(function* () {
     const { scope: fiberScope } = yield* getFiberContext
-    const scope = yield* fiberScope.fork // Fork the scope, will be closed in event of failure.
+    const scope = fiberScope.fork // Fork the scope, will be closed in event of failure.
     const reservation: Reservation<Exclude<R, Scope>, E, A> = {
       acquire: pipe(scoped, provideService(Scope, scope), result, uninterruptable),
       release: scope.close,
@@ -73,7 +73,7 @@ export function managed<R, E, A, R2>(
 
     const a = yield* uninterruptable(acquire)
 
-    yield* scope.addFinalizer(() => pipe(a, release, provide(env)))
+    scope.addFinalizer(() => pipe(a, release, provide(env)))
 
     return a
   })

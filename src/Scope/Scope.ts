@@ -1,3 +1,5 @@
+import { Maybe } from 'hkt-ts/Maybe'
+
 import { FinalizationStrategy, Finalizer, SequentialStrategy } from './Finalizer'
 
 import type { Exit } from '@/Exit/Exit'
@@ -6,8 +8,8 @@ import { Service } from '@/Service/Service'
 
 export class Scope extends Service {
   constructor(
-    readonly addFinalizer: (finalizer: Finalizer) => Of<Finalizer>,
-    readonly forkWith: (strategy: FinalizationStrategy) => Of<Closeable>,
+    readonly addFinalizer: (finalizer: Finalizer) => Maybe<Finalizer>,
+    readonly forkWith: (strategy: FinalizationStrategy) => Closeable,
   ) {
     super()
   }
@@ -21,8 +23,8 @@ export class Scope extends Service {
 
 export class Closeable extends Scope {
   constructor(
-    readonly addFinalizer: (finalizer: Finalizer) => Of<Finalizer>,
-    readonly forkWith: (strategy: FinalizationStrategy) => Of<Closeable>,
+    readonly addFinalizer: (finalizer: Finalizer) => Maybe<Finalizer>,
+    readonly forkWith: (strategy: FinalizationStrategy) => Closeable,
     readonly close: (exit: Exit<any, any>) => Of<boolean>,
   ) {
     super(addFinalizer, forkWith)

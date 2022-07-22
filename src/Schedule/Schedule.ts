@@ -102,6 +102,9 @@ export const or =
   (first: Schedule): Schedule =>
     UnionAssociative.concat(first, second)
 
+export const union = (...schedules: ReadonlyArray<Schedule>): Schedule =>
+  schedules.length === 0 ? never : schedules.reduce((x, y) => or(y)(x))
+
 export const IntersectionAssociative: Associative.Associative<Schedule> = {
   concat: (f, s) => ({
     step: (now, state) =>
@@ -113,3 +116,6 @@ export const and =
   (second: Schedule) =>
   (first: Schedule): Schedule =>
     IntersectionAssociative.concat(first, second)
+
+export const intersect = (...schedules: ReadonlyArray<Schedule>): Schedule =>
+  schedules.length === 0 ? never : schedules.reduce((x, y) => and(y)(x))

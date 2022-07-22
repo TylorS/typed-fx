@@ -88,7 +88,7 @@ export class Runtime<R> {
           this.params.platform.sequenceNumber.increment,
           this.params.scheduler.currentTime(),
         ),
-        scope: merged.scope ?? merged.parent?.scope ?? new LocalScope(SequentialStrategy),
+        scope: merged.scope ?? merged.parent?.scope.fork ?? new LocalScope(SequentialStrategy),
         ...merged,
         parent: fromNullable(merged.parent),
         supervisor: merged.supervisor ?? None,

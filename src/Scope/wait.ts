@@ -10,7 +10,7 @@ export function wait<E, A>(scope: Scope): Of<Exit<E, A>> {
   return Fx(function* () {
     const future = Future.pending<Exit<E, A>, never>()
 
-    yield* scope.addFinalizer((exit) => fromLazy(() => Future.complete(future)(success(exit))))
+    scope.addFinalizer((exit) => fromLazy(() => Future.complete(future)(success(exit))))
 
     return yield* Future.wait(future)
   })

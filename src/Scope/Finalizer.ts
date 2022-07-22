@@ -1,3 +1,4 @@
+import { Branded } from 'hkt-ts/Branded'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import type { Exit } from '@/Exit/Exit'
@@ -28,3 +29,6 @@ export const ConcurrentNStrategy = (concurency: NonNegativeInteger): ConcurrentN
   strategy: 'ConcurrentN',
   concurrency: concurency,
 })
+
+export type FinalizerKey = Branded<{ readonly FinalizerKey: FinalizerKey }, symbol>
+export const FinalizerKey = Branded<FinalizerKey>()
