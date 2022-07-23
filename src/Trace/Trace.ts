@@ -51,9 +51,9 @@ export const Identity: I.Identity<Trace> = {
 
 export const Debug: D.Debug<Trace> = D.sum<Trace>()('tag')({
   EmptyTrace: {
-    debug: () => `  <empty trace>`,
+    debug: () => `<empty trace>`,
   },
   StackFrameTrace: {
-    debug: ({ frames }) => '  ' + frames.map(StackFrame.Debug.debug).join('\n  '),
+    debug: ({ frames }) => frames.map(StackFrame.debug).join('\n'),
   },
 })

@@ -1,44 +1,75 @@
-import * as D from 'hkt-ts/Typeclass/Debug'
+import * as A from 'hkt-ts/Array'
+import * as ASC from 'hkt-ts/Typeclass/Associative'
 import * as E from 'hkt-ts/Typeclass/Eq'
-import { unsafeCoerce } from 'hkt-ts/function'
+import * as I from 'hkt-ts/Typeclass/Identity'
 import * as N from 'hkt-ts/number'
 
-import { Clock, Time } from '@/Clock/Clock'
+import { Time } from '@/Time/index'
 
-// TODO: Add a TraceLocation ?
-export interface FiberId {
-  /**
-   * The monotonic id of a Fiber
-   */
-  readonly sequenceNumber: number
+export type FiberId = FiberId.None | FiberId.Live | FiberId.Synthetic
 
-  /**
-   * The Time at which a FiberId started in relation to its parent
-   */
-  readonly startTime: Time
-}
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace FiberId {
+  export const None = new (class None {
+    readonly tag = 'None'
+  })()
 
-export function FiberId(sequenceNumber: number, startTime: Time): FiberId {
-  return {
-    sequenceNumber,
-    startTime,
+  export type None = typeof None
+
+  export class Live {
+    readonly tag = 'Live'
+    constructor(readonly sequenceNumber: N.NonNegativeInteger, readonly startTime: Time) {}
+  }
+
+  export class Synthetic {
+    readonly tag = 'Synthetic'
+
+    constructor(readonly fiberIds: ReadonlyArray<FiberId>) {}
   }
 }
 
-export const None = FiberId(-1, unsafeCoerce(-1))
+export const None = FiberId.None
+export type None = FiberId.None
 
-export const isNone = (id: FiberId): boolean => id.sequenceNumber === -1
+export type Live = FiberId.Live
+export const Live = (sequenceNumber: N.NonNegativeInteger, startTime: Time) =>
+  new FiberId.Live(sequenceNumber, startTime)
 
-export const Eq: E.Eq<FiberId> = E.struct({
-  sequenceNumber: N.Eq,
-  startTime: Time.makeEq(N.Eq),
+export type Synthetic = FiberId.Synthetic
+export const Synthetic = (fiberIds: ReadonlyArray<FiberId>) => new FiberId.Synthetic(fiberIds)
+
+export const match =
+  <A, B, C>(
+    onNone: () => A,
+    onLive: (id: FiberId.Live) => B,
+    onSynthetic: (id: FiberId.Synthetic) => C,
+  ) =>
+  (id: FiberId): A | B | C => {
+    switch (id.tag) {
+      case 'None':
+        return onNone()
+      case 'Live':
+        return onLive(id)
+      case 'Synthetic':
+        return onSynthetic(id)
+    }
+  }
+
+export const Eq: E.Eq<FiberId> = E.sum<FiberId>()('tag')({
+  None: E.struct({ tag: E.string }),
+  Live: E.struct({
+    tag: E.string,
+    sequenceNumber: N.NonNegativeIntegerEq,
+    startTime: Time.makeEq(N.Eq),
+  }),
+  Synthetic: E.struct({ tag: E.string, fiberIds: A.makeEq(E.lazy(() => Eq)) }),
 })
 
-export const Debug: D.Debug<FiberId> = {
-  debug: (id) => `Fiber #${id.sequenceNumber} (started at ${id.startTime})`,
+export const Associative: ASC.Associative<FiberId> = {
+  concat: (f, s) => (f === None ? s : s === None ? f : Synthetic([f, s])),
 }
 
-export const makeDebug = (clock: Clock): D.Debug<FiberId> => ({
-  debug: (id) =>
-    `Fiber #${id.sequenceNumber} (started at ${clock.toDate(id.startTime).toISOString()})`,
-})
+export const Identity: I.Identity<FiberId> = {
+  ...Associative,
+  id: None,
+}

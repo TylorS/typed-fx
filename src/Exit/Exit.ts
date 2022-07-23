@@ -5,20 +5,17 @@ import { Identity } from 'hkt-ts/Typeclass/Identity'
 
 import * as Cause from '@/Cause/Cause'
 import { FiberId } from '@/FiberId/FiberId'
-import { EmptyTrace, Trace } from '@/Trace/Trace'
 
 export type Exit<E, A> = Either.Either<Cause.Cause<E>, A>
 
 export const success = <A>(value: A): Exit<never, A> => Either.Right(value)
 
-export const interrupt = (fiberId: FiberId, trace: Trace = EmptyTrace): Exit<never, never> =>
-  Either.Left(new Cause.Interrupted(fiberId, trace))
+export const interrupt = (fiberId: FiberId): Exit<never, never> =>
+  Either.Left(new Cause.Interrupted(fiberId))
 
-export const die = (error: unknown, trace: Trace = EmptyTrace): Exit<never, never> =>
-  Either.Left(new Cause.Died(error, trace))
+export const die = (error: unknown): Exit<never, never> => Either.Left(new Cause.Died(error))
 
-export const failure = <E>(error: E, trace: Trace = EmptyTrace): Exit<E, never> =>
-  Either.Left(new Cause.Failed(error, trace))
+export const failure = <E>(error: E): Exit<E, never> => Either.Left(new Cause.Failed(error))
 
 export const fromEither = <E, A>(either: Either.Either<E, A>): Exit<E, A> =>
   pipe(

@@ -3,12 +3,17 @@ import { Associative } from 'hkt-ts/Typeclass/Associative'
 import { pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { Time } from '@/Clock/Clock'
+import { Delay, Time } from '@/Time'
 
-const minTimeAssociative = Time.makeAssociative({
+const minDelayAssociative = Delay.makeAssociative({
   concat: Math.min,
 })
-const maybeMinTimeAssociative = makeAssociative(minTimeAssociative)
+const maybeMinDelayAssociative = makeAssociative(minDelayAssociative)
+
+const maxDelayAssociative = Delay.makeAssociative({
+  concat: Math.max,
+})
+const maybeMaxDelayAssociative = makeAssociative(maxDelayAssociative)
 
 const maxTimeAssociative = Time.makeAssociative({
   concat: Math.max,
@@ -17,13 +22,25 @@ const maybeMaxTimeAssociative = makeAssociative(maxTimeAssociative)
 
 export class ScheduleState {
   constructor(
+    /**
+     * The Time at which the Schedule was last run
+     */
     readonly time: Maybe<Time> = Nothing,
+    /**
+     * The number of iterations this Schedule has been through
+     */
     readonly iteration: NonNegativeInteger = NonNegativeInteger(0),
-    readonly previousDelay: Maybe<Time> = Nothing,
-    readonly cumulativeDelay: Time = Time(0),
+    /**
+     * The previousDelay of this Schedule, if any
+     */
+    readonly previousDelay: Maybe<Delay> = Nothing,
+    /**
+     * The cumulative delay of this Schedule, will remain 0 if no delay is applied.
+     */
+    readonly cumulativeDelay: Delay = Delay(0),
   ) {}
 
-  readonly next = (now: Time, delay: Maybe<Time> = Nothing): ScheduleState =>
+  readonly next = (now: Time, delay: Maybe<Delay> = Nothing): ScheduleState =>
     new ScheduleState(
       Just(now),
       NonNegativeInteger(this.iteration + 1),
@@ -32,7 +49,7 @@ export class ScheduleState {
         delay,
         match(
           () => this.cumulativeDelay,
-          (d) => Time(this.cumulativeDelay + d),
+          (d) => Delay(this.cumulativeDelay + d),
         ),
       ),
     )
@@ -41,16 +58,16 @@ export class ScheduleState {
     new ScheduleState(
       maybeMaxTimeAssociative.concat(this.time, state.time),
       NonNegativeInteger(Math.max(this.iteration, state.iteration)),
-      maybeMinTimeAssociative.concat(this.previousDelay, state.previousDelay),
-      minTimeAssociative.concat(this.cumulativeDelay, state.cumulativeDelay),
+      maybeMinDelayAssociative.concat(this.previousDelay, state.previousDelay),
+      minDelayAssociative.concat(this.cumulativeDelay, state.cumulativeDelay),
     )
 
   readonly intersect = (state: ScheduleState): ScheduleState =>
     new ScheduleState(
       maybeMaxTimeAssociative.concat(this.time, state.time),
       NonNegativeInteger(Math.max(this.iteration, state.iteration)),
-      maybeMaxTimeAssociative.concat(this.previousDelay, state.previousDelay),
-      maxTimeAssociative.concat(this.cumulativeDelay, state.cumulativeDelay),
+      maybeMaxDelayAssociative.concat(this.previousDelay, state.previousDelay),
+      maxDelayAssociative.concat(this.cumulativeDelay, state.cumulativeDelay),
     )
 }
 

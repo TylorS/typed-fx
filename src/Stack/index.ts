@@ -6,7 +6,6 @@ export class Stack<A> {
 
   readonly push = (value: A): Stack<A> => new Stack(value, this)
   readonly pop = (): Stack<A> | undefined => this.previous
-
   readonly replace = (f: (value: A) => A): Stack<A> => new Stack(f(this.value), this.previous);
 
   *[Symbol.iterator]() {

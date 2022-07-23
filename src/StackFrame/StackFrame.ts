@@ -20,3 +20,5 @@ export const Eq: E.Eq<StackFrame> = E.struct<StackFrame>({
 export const Debug: D.Debug<StackFrame> = {
   debug: (frame) => `at ${frame.method} (${frame.file}:${frame.line}:${frame.column})`,
 }
+
+export const debug = Debug.debug

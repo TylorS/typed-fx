@@ -9,7 +9,6 @@ import {
   Interrupted,
   Parallel,
   Sequential,
-  ShouldPrintStack,
   Traced,
   match,
 } from './Cause'
@@ -22,12 +21,11 @@ export const Covariant: C.Covariant1<CauseHKT> = {
   map: function map<A, B>(f: (a: A) => B): (cause: Cause<A>) => Cause<B> {
     return match(
       () => Empty,
-      (id, trace) => new Interrupted(id, trace),
-      (error, trace) => new Died(error, trace),
-      (e, trace) => new Failed(f(e), trace),
+      (id) => new Interrupted(id),
+      (error) => new Died(error),
+      (e) => new Failed(f(e)),
       (left, right) => new Sequential(map(f)(left), map(f)(right)),
       (left, right) => new Parallel(map(f)(left), map(f)(right)),
-      (cause, shouldPrintStack) => new ShouldPrintStack(map(f)(cause), shouldPrintStack),
       (cause, trace) => new Traced(map(f)(cause), trace),
     )
   },

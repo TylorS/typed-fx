@@ -1,7 +1,7 @@
 import { Associative } from 'hkt-ts/Typeclass'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
-import * as FiberId from '@/FiberId/index'
+import { FiberId } from '@/FiberId/index'
 import * as Trace from '@/Trace/Trace'
 
 export type Cause<E> =
@@ -11,74 +11,82 @@ export type Cause<E> =
   | Failed<E>
   | Sequential<E, E>
   | Parallel<E, E>
-  | ShouldPrintStack<E>
   | Traced<E>
 
-export const Empty = { tag: 'Empty' } as const
+export const Empty = new (class Empty {
+  readonly tag = 'Empty'
+})()
 export type Empty = typeof Empty
 
 export class Interrupted {
   readonly tag = 'Interrupted'
-  constructor(readonly fiberId: FiberId.FiberId, readonly trace: Trace.Trace = Trace.EmptyTrace) {}
+  constructor(readonly fiberId: FiberId) {}
 }
+
+export const interrupted = (fiberId: FiberId) => new Interrupted(fiberId)
 
 export class Died {
   readonly tag = 'Died'
-  constructor(readonly error: unknown, readonly trace: Trace.Trace = Trace.EmptyTrace) {}
+  constructor(readonly error: unknown) {}
 }
+
+export const died = (error: unknown) => new Died(error)
 
 export class Failed<E> {
   readonly tag = 'Failed'
-  constructor(readonly error: E, readonly trace: Trace.Trace = Trace.EmptyTrace) {}
+  constructor(readonly error: E) {}
 }
+
+export const failed = <E>(error: E) => new Failed(error)
 
 export class Sequential<E1, E2> {
   readonly tag = 'Sequential'
   constructor(readonly left: Cause<E1>, readonly right: Cause<E2>) {}
 }
 
+export const sequential = <E1, E2>(left: Cause<E1>, right: Cause<E2>) => new Sequential(left, right)
+
 export class Parallel<E1, E2> {
   readonly tag = 'Parallel'
   constructor(readonly left: Cause<E1>, readonly right: Cause<E2>) {}
 }
 
-export class ShouldPrintStack<E> {
-  readonly tag = 'ShouldPrintStack'
-  constructor(readonly cause: Cause<E>, readonly shouldPrintStack: boolean) {}
-}
+export const parallel = <E1, E2>(left: Cause<E1>, right: Cause<E2>) => new Parallel(left, right)
 
 export class Traced<E> {
   readonly tag = 'Traced'
   constructor(readonly cause: Cause<E>, readonly trace: Trace.Trace) {}
 }
 
+export const traced =
+  (trace: Trace.Trace) =>
+  <E>(cause: Cause<E>) =>
+    new Traced(cause, trace)
+
 export const match =
-  <A, B, C, E, D, F, G, H, I>(
+  <A, B, C, E, D, F, G, H>(
     onEmpty: () => A,
-    onInterrupted: (fiberId: FiberId.FiberId, trace: Trace.Trace) => B,
-    onDied: (error: unknown, trace: Trace.Trace) => C,
-    onFailed: (e: E, trace: Trace.Trace) => D,
+    onInterrupted: (fiberId: FiberId) => B,
+    onDied: (error: unknown) => C,
+    onFailed: (e: E) => D,
     onSequential: (left: Cause<E>, right: Cause<E>) => F,
     onParallel: (left: Cause<E>, right: Cause<E>) => G,
-    onShouldPrintStack: (cause: Cause<E>, shouldPrintStack: boolean) => H,
-    onTraced: (cause: Cause<E>, trace: Trace.Trace) => I,
+    onTraced: (cause: Cause<E>, trace: Trace.Trace) => H,
   ) =>
-  (cause: Cause<E>): A | B | C | D | F | G | H | I => {
+  (cause: Cause<E>): A | B | C | D | F | G | H => {
     switch (cause.tag) {
       case 'Empty':
         return onEmpty()
       case 'Interrupted':
-        return onInterrupted(cause.fiberId, cause.trace)
+        return onInterrupted(cause.fiberId)
       case 'Died':
-        return onDied(cause.error, cause.trace)
+        return onDied(cause.error)
       case 'Failed':
-        return onFailed(cause.error, cause.trace)
+        return onFailed(cause.error)
       case 'Sequential':
         return onSequential(cause.left, cause.right)
       case 'Parallel':
         return onParallel(cause.left, cause.right)
-      case 'ShouldPrintStack':
-        return onShouldPrintStack(cause.cause, cause.shouldPrintStack)
       case 'Traced':
         return onTraced(cause.cause, cause.trace)
     }

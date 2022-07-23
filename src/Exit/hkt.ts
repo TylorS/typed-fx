@@ -1,6 +1,7 @@
 import { HKT2, Params, flow, pipe } from 'hkt-ts'
 import { Left, Right, match } from 'hkt-ts/Either'
 import * as B from 'hkt-ts/Typeclass/Bicovariant'
+import * as C from 'hkt-ts/Typeclass/Covariant'
 
 import { Exit } from './Exit'
 
@@ -17,3 +18,12 @@ export const Bicovariant: B.Bicovariant2<ExitHKT> = {
 export const bimap = Bicovariant.bimap
 export const mapLeft = B.mapLeft(Bicovariant)
 export const map = B.map(Bicovariant)
+
+export const Covariant: C.Covariant2<ExitHKT> = {
+  map,
+}
+
+export const bindTo = C.bindTo(Covariant)
+export const flap = C.flap(Covariant)
+export const mapTo = C.mapTo(Covariant)
+export const tupled = C.tupled(Covariant)

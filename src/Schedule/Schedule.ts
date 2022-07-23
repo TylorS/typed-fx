@@ -17,9 +17,9 @@ import {
   ScheduleStateUnionAssociative,
 } from './ScheduleState'
 
-import { Time } from '@/Clock/Clock'
+import { Delay, Time } from '@/Time'
 
-const asap = Time(0)
+const asap = Delay(0)
 
 const stateDecisionUnionAssociative = makeAssociative<ScheduleState, Decision>(
   ScheduleStateUnionAssociative,
@@ -51,24 +51,24 @@ export const recurring = (amount: NonNegativeInteger): Schedule => ({
   step: (now, state) => [state.next(now), state.iteration < amount ? new Continue(asap) : Done],
 })
 
-export const fixed = (delay: Time): Schedule => ({
+export const periodic = (delay: Delay): Schedule => ({
   step: (now, state) => [state.next(now, Just(delay)), new Continue(delay)],
 })
 
-export const delayed = (delay: Time): Schedule => ({
+export const delayed = (delay: Delay): Schedule => ({
   step: (now, state) => [
     state.next(now, Just(delay)),
     state.iteration === 0 ? new Continue(delay) : Done,
   ],
 })
 
-export const spaced = (delay: Time): Schedule => ({
+export const spaced = (delay: Delay): Schedule => ({
   step: (now, state) => {
     const spacedDelay = pipe(
       state.previousDelay,
       match(
         () => delay,
-        (n) => Time(n + delay),
+        (n) => Delay(n + delay),
       ),
     )
 
@@ -76,13 +76,13 @@ export const spaced = (delay: Time): Schedule => ({
   },
 })
 
-export const exponential = (delay: Time): Schedule => ({
+export const exponential = (delay: Delay): Schedule => ({
   step: (now, state) => {
     const exponentialDelay = pipe(
       state.previousDelay,
       match(
         () => delay,
-        (n) => Time(n ** delay),
+        (n) => Delay(n ** delay),
       ),
     )
 
@@ -119,3 +119,48 @@ export const and =
 
 export const intersect = (...schedules: ReadonlyArray<Schedule>): Schedule =>
   schedules.length === 0 ? never : schedules.reduce((x, y) => and(y)(x))
+
+export const capDelay =
+  (delay: Delay) =>
+  (schedule: Schedule): Schedule => ({
+    step: (now, state) => {
+      const [next, decision] = schedule.step(now, state)
+
+      // Cap Delay
+      if (decision.tag === 'Continue' && decision.delay >= delay) {
+        return [state.next(now, Just(delay)), new Continue(delay)]
+      }
+
+      return [next, decision]
+    },
+  })
+
+export const capCumulativeDelay =
+  (delay: Delay) =>
+  (schedule: Schedule): Schedule => ({
+    step: (now, state) => {
+      const [next, decision] = schedule.step(now, state)
+
+      // Cap Cumulative Delay
+      if (decision.tag === 'Continue' && next.cumulativeDelay >= delay) {
+        return [state.next(now, Just(delay)), new Continue(delay)]
+      }
+
+      return [next, decision]
+    },
+  })
+
+export const maxRetries =
+  (retries: NonNegativeInteger) =>
+  (schedule: Schedule): Schedule => ({
+    step: (now, state) => {
+      const [next, decision] = schedule.step(now, state)
+
+      // If we've reached or retry limit, lets return Done.
+      if (decision.tag === 'Continue' && next.iteration === retries) {
+        return [next, Done]
+      }
+
+      return [next, decision]
+    },
+  })
