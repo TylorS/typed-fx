@@ -1,6 +1,11 @@
 import { Lazy, flow } from 'hkt-ts'
 
-import type { ErrorsFromInstruction, Instruction, ResourcesFromInstruction } from './Instruction'
+import type {
+  AnyInstruction,
+  ErrorsFromInstruction,
+  Instruction,
+  ResourcesFromInstruction,
+} from './Instruction'
 
 import * as Cause from '@/Cause/Cause'
 import * as Eff from '@/Eff/index'
@@ -35,13 +40,7 @@ export type OutputFromGenerator<T> = T extends Generator<AnyInstruction, infer A
 
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-type AnyInstruction =
-  | Instruction<any, any, any>
-  | Instruction<never, never, any>
-  | Instruction<never, any, any>
-  | Instruction<any, never, any>
-
-export function Sync<G extends Generator<any, any>>(
+export function Sync<G extends Generator<AnyInstruction, any>>(
   f: () => G,
 ): Sync<ResourcesFromGenerator<G>, ErrorsFromGenerator<G>, OutputFromGenerator<G>> {
   return {
@@ -59,7 +58,8 @@ export const attempt = Eff.attempt as <R, E, A>(sync: Sync<R, E, A>) => Sync<R, 
 
 export const access = Eff.access as <R, R2, E, A>(f: (r: R) => Sync<R2, E, A>) => Sync<R | R2, E, A>
 export const ask = <R>(): Sync<R, never, R> => access(fromValue)
-export const asks = <R, A>(f: (r: R) => A) => access((r: R) => fromLazy(() => f(r)))
+export const asks = <R, A>(f: (r: R) => A): Sync<R, never, A> =>
+  access((r: R) => fromLazy(() => f(r)))
 export const provide = Eff.provide as <R>(
   resources: R,
 ) => <E, A>(sync: Sync<R, E, A>) => Sync<never, E, A>

@@ -14,3 +14,9 @@ export type ErrorsFromInstruction<T> = T extends Access<infer _R, infer _R2, inf
   : T extends Failure<infer E>
   ? E
   : never
+
+export type AnyInstruction =
+  | Instruction<any, any, any>
+  | Instruction<never, never, any>
+  | Instruction<never, any, any>
+  | Instruction<any, never, any>
