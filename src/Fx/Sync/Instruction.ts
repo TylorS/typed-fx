@@ -1,7 +1,8 @@
-import type { Access } from '@/Eff/Access'
-import type { Failure } from '@/Eff/Failure'
+import type { Access } from '@/Fx/Eff/Access'
+import type { Failure } from '@/Fx/Eff/Failure'
+import type { AddTrace, GetTrace } from '@/Fx/Eff/Trace'
 
-export type Instruction<R, E, A> = Access<R, R, E, A> | Failure<E>
+export type Instruction<R, E, A> = Access<R, R, E, A> | Failure<E> | AddTrace | GetTrace
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type ResourcesFromInstruction<T> = T extends Access<infer R, infer R2, infer _E, infer _A>

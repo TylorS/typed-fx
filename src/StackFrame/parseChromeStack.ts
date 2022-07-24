@@ -1,10 +1,10 @@
-import { StackFrame } from './StackFrame'
+import { RuntimeStackFrame } from './StackFrame'
 
 const chromeRe =
   /^\s*at (.*?) ?\(((?:file|https?|blob|chrome-extension|native|eval|webpack|<anonymous>|\/|[a-z]:\\|\\\\).*?)(?::(\d+))?(?::(\d+))?\)?\s*$/i
 const chromeEvalRe = /\((\S*)(?::(\d+))(?::(\d+))\)/
 
-export function parseChrome(line: string): StackFrame | null {
+export function parseChrome(line: string): RuntimeStackFrame | null {
   const parts = chromeRe.exec(line)
 
   if (!parts) {
@@ -23,6 +23,7 @@ export function parseChrome(line: string): StackFrame | null {
   }
 
   return {
+    tag: 'Runtime',
     file: !isNative ? parts[2] : '',
     method: parts[1] || '',
     line: parts[3] ? +parts[3] : -1,

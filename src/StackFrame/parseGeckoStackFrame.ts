@@ -1,10 +1,10 @@
-import { StackFrame } from './StackFrame'
+import { RuntimeStackFrame } from './StackFrame'
 
 const geckoRe =
   /^\s*(.*?)(?:\((.*?)\))?(?:^|@)((?:file|https?|blob|chrome|webpack|resource|\[native).*?|[^@]*bundle)(?::(\d+))?(?::(\d+))?\s*$/i
 const geckoEvalRe = /(\S+) line (\d+)(?: > eval line \d+)* > eval/i
 
-export function parseGecko(line: string): StackFrame | null {
+export function parseGecko(line: string): RuntimeStackFrame | null {
   const parts = geckoRe.exec(line)
 
   if (!parts) {
@@ -22,6 +22,7 @@ export function parseGecko(line: string): StackFrame | null {
   }
 
   return {
+    tag: 'Runtime',
     file: parts[3],
     method: parts[1] || '',
     line: parts[4] ? +parts[4] : -1,

@@ -3,8 +3,8 @@ import * as EQ from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 import * as S from 'hkt-ts/string'
 
-import * as FiberId from '@/FiberId/index'
-import * as Trace from '@/Trace/Trace'
+import * as FiberId from '@/Fx/FiberId/index'
+import * as Trace from '@/Fx/Trace/Trace'
 
 export type Cause<E> =
   | Empty

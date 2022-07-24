@@ -5,7 +5,7 @@ import * as C from 'hkt-ts/Typeclass/Covariant'
 
 import { Exit } from './Exit'
 
-import * as Cause from '@/Cause/index'
+import * as Cause from '@/Fx/Cause/index'
 
 export interface ExitHKT extends HKT2 {
   readonly type: Exit<this[Params.E], this[Params.A]>

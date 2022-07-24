@@ -1,9 +1,9 @@
 import { deepStrictEqual } from 'assert'
 
 import { Sync, ask, fail } from './Sync'
-import { runWith } from './run'
+import { run } from './run'
 
-import * as Exit from '@/Exit/Exit'
+import * as Exit from '@/Fx/Exit/Exit'
 
 describe(__filename, () => {
   describe(Sync.name, () => {
@@ -20,8 +20,8 @@ describe(__filename, () => {
         return a + b
       })
 
-      deepStrictEqual(runWith(test, 1), Exit.success(2))
-      deepStrictEqual(runWith(test, 7), Exit.failure(error))
+      deepStrictEqual(run(test, 1), Exit.success(2))
+      deepStrictEqual(run(test, 7), Exit.failure(error))
     })
   })
 })

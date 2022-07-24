@@ -19,12 +19,12 @@ export class Stack<A> {
   }
 }
 
-type StackDto<A> = {
-  readonly value: A
-  readonly previous: Stack<A> | null
-}
-
 export const makeEq = <A>(A: E.Eq<A>): E.Eq<Stack<A>> => {
+  type StackDto<A> = {
+    readonly value: A
+    readonly previous: Stack<A> | null
+  }
+
   const eq: E.Eq<Stack<A>> = pipe(
     E.struct<StackDto<A>>({
       value: A,

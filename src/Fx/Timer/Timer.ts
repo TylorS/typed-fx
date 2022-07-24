@@ -1,5 +1,5 @@
-import { Clock } from '@/Clock/Clock'
-import { Disposable } from '@/Disposable/Disposable'
+import { Clock } from '@/Clock/index'
+import { Disposable } from '@/Fx/Disposable/Disposable'
 import { Service } from '@/Service/index'
 import { Delay } from '@/Time/index'
 

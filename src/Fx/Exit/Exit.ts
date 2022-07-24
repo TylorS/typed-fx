@@ -4,8 +4,8 @@ import { Associative } from 'hkt-ts/Typeclass'
 import { Eq } from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
-import * as Cause from '@/Cause/index'
-import * as FiberId from '@/FiberId/FiberId'
+import * as Cause from '@/Fx/Cause/index'
+import * as FiberId from '@/Fx/FiberId/FiberId'
 
 export type Exit<E, A> = Either.Either<Cause.Cause<E>, A>
 

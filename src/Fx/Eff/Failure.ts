@@ -1,19 +1,30 @@
 import { Left, Right } from 'hkt-ts/Either'
 
-import * as Cause from '@/Cause/Cause'
-import { Eff } from '@/Eff/Eff'
-import { Exit, die } from '@/Exit/Exit'
+import { Trace } from '../Trace/Trace'
 
-export class Failure<E> implements Eff<Failure<E>, never, never> {
+import { AddTrace } from './Trace'
+
+import * as Cause from '@/Fx/Cause/Cause'
+import { Eff } from '@/Fx/Eff/Eff'
+import { Exit } from '@/Fx/Exit/Exit'
+
+export class Failure<E> implements Eff<Failure<E> | AddTrace, never, never> {
   readonly tag = 'Fail'
   constructor(readonly cause: Cause.Cause<E>, readonly __trace?: string) {}
 
   *[Symbol.iterator]() {
+    if (this.__trace) {
+      yield* new AddTrace(Trace.custom(this.__trace))
+    }
+
     return (yield this) as never
   }
 }
 
-export function failure<E>(cause: Cause.Cause<E>, __trace?: string): Eff<Failure<E>, never, never> {
+export function failure<E>(
+  cause: Cause.Cause<E>,
+  __trace?: string,
+): Eff<Failure<E> | AddTrace, never, never> {
   return new Failure(cause, __trace)
 }
 
@@ -37,7 +48,7 @@ export function attempt<Y, E, R, N>(
 
       return Right(result.value)
     } catch (e) {
-      return die(e)
+      return Left(new Cause.Died(e))
     }
   })
 }

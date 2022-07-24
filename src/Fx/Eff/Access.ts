@@ -1,10 +1,17 @@
-import { Eff } from './Eff'
+import { Trace } from '../Trace/Trace'
 
-export class Access<R, Y, R2, N> implements Eff<Y | Access<R, Y, R2, N>, R2, N | R2> {
+import { Eff } from './Eff'
+import { AddTrace } from './Trace'
+
+export class Access<R, Y, R2, N> implements Eff<Y | Access<R, Y, R2, N> | AddTrace, R2, N | R2> {
   readonly tag = 'Access'
   constructor(readonly access: (resources: R) => Eff<Y, R2, N>, readonly __trace?: string) {}
 
   *[Symbol.iterator]() {
+    if (this.__trace) {
+      yield* new AddTrace(Trace.custom(this.__trace))
+    }
+
     return (yield this as Access<R, Y, R2, N>) as R2
   }
 }
@@ -12,7 +19,7 @@ export class Access<R, Y, R2, N> implements Eff<Y | Access<R, Y, R2, N>, R2, N |
 export function access<R, Y, R2, N>(
   f: (resources: R) => Eff<Y, R2, N>,
   __trace?: string,
-): Eff<Y | Access<R, Y, R2, N>, R2, R2 | N> {
+): Eff<Y | Access<R, Y, R2, N> | AddTrace, R2, R2 | N> {
   return new Access(f, __trace)
 }
 
