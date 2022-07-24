@@ -1,26 +1,27 @@
 import { pipe } from 'hkt-ts'
 import * as Either from 'hkt-ts/Either'
 import { Associative } from 'hkt-ts/Typeclass'
+import { Eq } from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
-import * as Cause from '@/Cause/Cause'
-import { FiberId } from '@/FiberId/FiberId'
+import * as Cause from '@/Cause/index'
+import * as FiberId from '@/FiberId/FiberId'
 
 export type Exit<E, A> = Either.Either<Cause.Cause<E>, A>
 
 export const success = <A>(value: A): Exit<never, A> => Either.Right(value)
 
-export const interrupt = (fiberId: FiberId): Exit<never, never> =>
-  Either.Left(new Cause.Interrupted(fiberId))
+export const interrupt = (fiberId: FiberId.FiberId): Exit<never, never> =>
+  Either.Left(Cause.interrupted(fiberId))
 
-export const die = (error: unknown): Exit<never, never> => Either.Left(new Cause.Died(error))
+export const die = (error: unknown): Exit<never, never> => Either.Left(Cause.died(error))
 
-export const failure = <E>(error: E): Exit<E, never> => Either.Left(new Cause.Failed(error))
+export const failure = <E>(error: E): Exit<E, never> => Either.Left(Cause.failed(error))
 
 export const fromEither = <E, A>(either: Either.Either<E, A>): Exit<E, A> =>
   pipe(
     either,
-    Either.mapLeft((e) => new Cause.Failed(e)),
+    Either.mapLeft((e) => Cause.failed(e)),
   )
 
 export const makeParallelAssociative = <A, E = never>(
@@ -38,3 +39,9 @@ export const makeParallelIdentity = <A, E = never>(A: Identity<A>): Identity<Exi
 
 export const makeSequentialIdentity = <A, E = never>(A: Identity<A>): Identity<Exit<E, A>> =>
   Either.makeIdentity(Cause.makeSequentialAssociative<E>(), A)
+
+export const makeParallelBottom = <E>() => Either.makeBottom(Cause.makeParallelIdentity<E>())
+export const makeSequentialBottom = <E>() => Either.makeBottom(Cause.makeSequentialIdentity<E>())
+
+export const makeEq = <E, A>(E: Eq<E>, A: Eq<A>): Eq<Exit<E, A>> =>
+  Either.makeEq(Cause.makeEq(E), A)

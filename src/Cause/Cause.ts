@@ -1,7 +1,9 @@
 import { Associative } from 'hkt-ts/Typeclass'
+import * as EQ from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
+import * as S from 'hkt-ts/string'
 
-import { FiberId } from '@/FiberId/index'
+import * as FiberId from '@/FiberId/index'
 import * as Trace from '@/Trace/Trace'
 
 export type Cause<E> =
@@ -20,17 +22,17 @@ export type Empty = typeof Empty
 
 export class Interrupted {
   readonly tag = 'Interrupted'
-  constructor(readonly fiberId: FiberId) {}
+  constructor(readonly fiberId: FiberId.FiberId) {}
 }
 
-export const interrupted = (fiberId: FiberId) => new Interrupted(fiberId)
+export const interrupted = (fiberId: FiberId.FiberId): Cause<never> => new Interrupted(fiberId)
 
 export class Died {
   readonly tag = 'Died'
   constructor(readonly error: unknown) {}
 }
 
-export const died = (error: unknown) => new Died(error)
+export const died = (error: unknown): Cause<never> => new Died(error)
 
 export class Failed<E> {
   readonly tag = 'Failed'
@@ -44,14 +46,16 @@ export class Sequential<E1, E2> {
   constructor(readonly left: Cause<E1>, readonly right: Cause<E2>) {}
 }
 
-export const sequential = <E1, E2>(left: Cause<E1>, right: Cause<E2>) => new Sequential(left, right)
+export const sequential = <E1, E2>(left: Cause<E1>, right: Cause<E2>): Cause<E1 | E2> =>
+  new Sequential(left, right)
 
 export class Parallel<E1, E2> {
   readonly tag = 'Parallel'
   constructor(readonly left: Cause<E1>, readonly right: Cause<E2>) {}
 }
 
-export const parallel = <E1, E2>(left: Cause<E1>, right: Cause<E2>) => new Parallel(left, right)
+export const parallel = <E1, E2>(left: Cause<E1>, right: Cause<E2>): Cause<E1 | E2> =>
+  new Parallel(left, right)
 
 export class Traced<E> {
   readonly tag = 'Traced'
@@ -60,13 +64,13 @@ export class Traced<E> {
 
 export const traced =
   (trace: Trace.Trace) =>
-  <E>(cause: Cause<E>) =>
+  <E>(cause: Cause<E>): Cause<E> =>
     new Traced(cause, trace)
 
 export const match =
   <A, B, C, E, D, F, G, H>(
     onEmpty: () => A,
-    onInterrupted: (fiberId: FiberId) => B,
+    onInterrupted: (fiberId: FiberId.FiberId) => B,
     onDied: (error: unknown) => C,
     onFailed: (e: E) => D,
     onSequential: (left: Cause<E>, right: Cause<E>) => F,
@@ -93,7 +97,8 @@ export const match =
   }
 
 export const makeParallelAssociative = <E>(): Associative.Associative<Cause<E>> => ({
-  concat: (left, right) => new Parallel(left, right),
+  concat: (left, right) =>
+    left.tag === Empty.tag ? right : right.tag === Empty.tag ? left : new Parallel(left, right),
 })
 
 export const makeParallelIdentity = <E>(): Identity<Cause<E>> => ({
@@ -102,10 +107,49 @@ export const makeParallelIdentity = <E>(): Identity<Cause<E>> => ({
 })
 
 export const makeSequentialAssociative = <E>(): Associative.Associative<Cause<E>> => ({
-  concat: (left, right) => new Sequential(left, right),
+  concat: (left, right) =>
+    left.tag === Empty.tag ? right : right.tag === Empty.tag ? left : new Sequential(left, right),
 })
 
 export const makeSequentialIdentity = <E>(): Identity<Cause<E>> => ({
   ...makeSequentialAssociative<E>(),
   id: Empty,
 })
+
+export const makeEq = <E>(Eq: EQ.Eq<E>): EQ.Eq<Cause<E>> => {
+  const eq = EQ.sum<Cause<E>>()('tag')({
+    Empty: EQ.AlwaysEqual,
+    Interrupted: EQ.struct({
+      tag: S.Eq,
+      fiberId: FiberId.Eq,
+    }),
+    Died: EQ.struct({
+      tag: S.Eq,
+      error: EQ.DeepEquals,
+    }),
+    Failed: EQ.struct({
+      tag: S.Eq,
+      error: Eq,
+    }),
+    Sequential: EQ.struct({
+      tag: S.Eq,
+      left: EQ.lazy(() => eq),
+      right: EQ.lazy(() => eq),
+    }),
+    Parallel: EQ.struct({
+      tag: S.Eq,
+      left: EQ.lazy(() => eq),
+      right: EQ.lazy(() => eq),
+    }),
+    Traced: EQ.struct({
+      tag: S.Eq,
+      cause: EQ.lazy(() => eq),
+      trace: Trace.Eq,
+    }),
+  })
+
+  return eq
+}
+
+// TODO: Debug
+// TODO: Ord

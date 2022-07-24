@@ -54,7 +54,7 @@ export class ScheduleState {
       ),
     )
 
-  readonly union = (state: ScheduleState): ScheduleState =>
+  readonly or = (state: ScheduleState): ScheduleState =>
     new ScheduleState(
       maybeMaxTimeAssociative.concat(this.time, state.time),
       NonNegativeInteger(Math.max(this.iteration, state.iteration)),
@@ -62,7 +62,7 @@ export class ScheduleState {
       minDelayAssociative.concat(this.cumulativeDelay, state.cumulativeDelay),
     )
 
-  readonly intersect = (state: ScheduleState): ScheduleState =>
+  readonly and = (state: ScheduleState): ScheduleState =>
     new ScheduleState(
       maybeMaxTimeAssociative.concat(this.time, state.time),
       NonNegativeInteger(Math.max(this.iteration, state.iteration)),
@@ -72,9 +72,9 @@ export class ScheduleState {
 }
 
 export const ScheduleStateUnionAssociative: Associative<ScheduleState> = {
-  concat: (f, s) => f.union(s),
+  concat: (f, s) => f.or(s),
 }
 
 export const ScheduleStateIntersectionAssociative: Associative<ScheduleState> = {
-  concat: (f, s) => f.intersect(s),
+  concat: (f, s) => f.and(s),
 }

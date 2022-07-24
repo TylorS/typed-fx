@@ -54,6 +54,6 @@ export function fromLazy<A>(f: Lazy<A>) {
 /**
  * Once all yields are provided you can run an Eff synchronously
  */
-export function runEff<R>(eff: Eff<never, R>) {
+export function runEff<R, N>(eff: Eff<never, R, N>) {
   return eff[Symbol.iterator]().next().value
 }
