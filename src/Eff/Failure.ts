@@ -6,15 +6,15 @@ import { Exit, die } from '@/Exit/Exit'
 
 export class Failure<E> implements Eff<Failure<E>, never, never> {
   readonly tag = 'Fail'
-  constructor(readonly cause: Cause.Cause<E>) {}
+  constructor(readonly cause: Cause.Cause<E>, readonly __trace?: string) {}
 
   *[Symbol.iterator]() {
     return (yield this) as never
   }
 }
 
-export function failure<E>(cause: Cause.Cause<E>): Eff<Failure<E>, never, never> {
-  return new Failure(cause)
+export function failure<E>(cause: Cause.Cause<E>, __trace?: string): Eff<Failure<E>, never, never> {
+  return new Failure(cause, __trace)
 }
 
 export function attempt<Y, E, R, N>(

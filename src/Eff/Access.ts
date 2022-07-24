@@ -2,7 +2,7 @@ import { Eff } from './Eff'
 
 export class Access<R, Y, R2, N> implements Eff<Y | Access<R, Y, R2, N>, R2, N | R2> {
   readonly tag = 'Access'
-  constructor(readonly access: (resources: R) => Eff<Y, R2, N>) {}
+  constructor(readonly access: (resources: R) => Eff<Y, R2, N>, readonly __trace?: string) {}
 
   *[Symbol.iterator]() {
     return (yield this as Access<R, Y, R2, N>) as R2
@@ -11,8 +11,9 @@ export class Access<R, Y, R2, N> implements Eff<Y | Access<R, Y, R2, N>, R2, N |
 
 export function access<R, Y, R2, N>(
   f: (resources: R) => Eff<Y, R2, N>,
+  __trace?: string,
 ): Eff<Y | Access<R, Y, R2, N>, R2, R2 | N> {
-  return new Access(f)
+  return new Access(f, __trace)
 }
 
 export function provide<R2>(resources: R2) {
