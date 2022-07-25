@@ -1,10 +1,11 @@
 import * as A from 'hkt-ts/Array'
 import * as ASC from 'hkt-ts/Typeclass/Associative'
+import * as D from 'hkt-ts/Typeclass/Debug'
 import * as E from 'hkt-ts/Typeclass/Eq'
 import * as I from 'hkt-ts/Typeclass/Identity'
 import * as N from 'hkt-ts/number'
 
-import { Clock } from '@/Clock/Clock'
+import { Clock, toDate } from '@/Clock/Clock'
 import { Time } from '@/Time/index'
 
 export type FiberId = FiberId.None | FiberId.Live | FiberId.Synthetic
@@ -84,3 +85,19 @@ export const Identity: I.Identity<FiberId> = {
   ...Associative,
   id: None,
 }
+
+export const Debug: D.Debug<FiberId> = D.sum<FiberId>()('tag')({
+  None: {
+    debug: () => '',
+  },
+  Live: {
+    debug: (id) =>
+      `Fiber #${id.sequenceNumber} (started at ${toDate(id.startTime)(id.clock).toISOString()})`,
+  },
+  Synthetic: {
+    debug: (id) =>
+      `Synthetic Fiber (started at ${toDate(id.startTime)(
+        id.clock,
+      ).toISOString()})\n  -${id.fiberIds.map(Debug.debug).join('\n  -')}`,
+  },
+})

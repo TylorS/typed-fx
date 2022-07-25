@@ -51,7 +51,9 @@ export const Debug: D.Debug<StackFrame> = {
   debug: (frame) =>
     frame.tag === 'Custom'
       ? frame.trace
-      : `at ${frame.method} (${frame.file}:${frame.line}:${frame.column})`,
+      : `at ${frame.method} (${frame.file}${frame.line > -1 ? `:${frame.line}` : ``}${
+          frame.column > -1 ? `:${frame.column}` : ``
+        })`,
 }
 
 export const debug = Debug.debug

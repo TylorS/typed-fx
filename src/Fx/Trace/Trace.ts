@@ -45,9 +45,6 @@ export const EmptyTrace = {
 
 export type EmptyTrace = typeof EmptyTrace
 
-/**
- * TODO: Add the ability to parse locations from a string?
- */
 export class StackFrameTrace {
   readonly tag = 'StackFrameTrace'
 

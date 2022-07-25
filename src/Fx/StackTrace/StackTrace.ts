@@ -34,15 +34,13 @@ export class StackTrace {
    * Push StackFrames onto the Stack but trim them to avoid repition
    */
   readonly trimExisting = (frames: ReadonlyArray<StackFrame.StackFrame>): StackTrace => {
-    const current = this.flatten()
+    const current = this.trace.value
 
     if (current.tag === 'EmptyTrace') {
       return this.push(isNonEmpty(frames) ? new Trace.StackFrameTrace(frames) : Trace.EmptyTrace)
     }
 
-    const existing = A.intersection(StackFrame.Eq)(frames)(
-      current.frames.filter((x) => x.tag === 'Runtime'),
-    )
+    const existing = A.intersection(StackFrame.Eq)(frames)(current.frames.slice(0, frames.length))
     const remaining = frames.filter(
       (x) => x.tag === 'Runtime' && A.contains(StackFrame.Eq)(x)(existing),
     )

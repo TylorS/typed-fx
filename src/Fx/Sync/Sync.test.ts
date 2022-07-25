@@ -1,8 +1,13 @@
-import { deepStrictEqual } from 'assert'
+import { deepEqual, deepStrictEqual, ok } from 'assert'
+
+import { isLeft } from 'hkt-ts/Either'
+
+import { Debug } from '../Trace/Trace'
 
 import { Sync, ask, fail } from './Sync'
-import { run } from './run'
+import { runWith } from './run'
 
+import * as Cause from '@/Fx/Cause/Cause'
 import * as Exit from '@/Fx/Exit/Exit'
 
 describe(__filename, () => {
@@ -20,8 +25,14 @@ describe(__filename, () => {
         return a + b
       })
 
-      deepStrictEqual(run(test, 1), Exit.success(2))
-      deepStrictEqual(run(test, 7), Exit.failure(error))
+      deepStrictEqual(runWith(test, 1), Exit.success(2))
+
+      const failing = runWith(test, 7)
+
+      ok(isLeft(failing))
+      ok(failing.left.tag === 'Traced')
+      console.log(Debug.debug(failing.left.trace))
+      deepEqual(failing.left.cause, new Cause.Failed(error))
     })
   })
 })

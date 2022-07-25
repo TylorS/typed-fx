@@ -1,4 +1,5 @@
 import { Lazy } from 'hkt-ts'
+import { U } from 'ts-toolbelt'
 
 import { Trace } from '../Trace/Trace'
 
@@ -50,14 +51,14 @@ export function Sync<G extends Generator<AnyInstruction, any>>(
   }
 }
 
-export const fromValue = Eff.fromValue as <A>(value: A) => Sync<unknown, never, A>
-export const fromLazy = Eff.fromLazy as <A>(f: Lazy<A>) => Sync<unknown, never, A>
+export const fromValue = Eff.fromValue as <A>(value: A) => Sync<never, never, A>
+export const fromLazy = Eff.fromLazy as <A>(f: Lazy<A>) => Sync<never, never, A>
 
 export const failure = Eff.failure as <E = never>(
   cause: Cause.Cause<E>,
   __trace?: string,
-) => Sync<unknown, E, never>
-export const die = (error: unknown, __trace?: string): Sync<unknown, never, never> =>
+) => Sync<never, E, never>
+export const die = (error: unknown, __trace?: string): Sync<never, never, never> =>
   failure(Cause.died(error), __trace)
 export const fail = <E>(error: E, __trace?: string) => failure(Cause.failed(error), __trace)
 export const attempt = Eff.attempt as <R, E, A>(sync: Sync<R, E, A>) => Sync<R, never, Exit<E, A>>
@@ -65,14 +66,14 @@ export const attempt = Eff.attempt as <R, E, A>(sync: Sync<R, E, A>) => Sync<R, 
 export const access = Eff.access as <R, R2, E, A>(
   f: (r: R) => Sync<R2, E, A>,
   __trace?: string,
-) => Sync<R & R2, E, A>
-export const ask = <R>(__trace?: string | undefined): Sync<R, never, R> =>
-  access((r: R) => fromValue(r), __trace)
+) => Sync<R | R2, E, A>
+export const ask = <R>(__trace?: string | undefined): Sync<R, never, U.IntersectOf<R>> =>
+  access((r: R) => fromValue(r as U.IntersectOf<R>), __trace)
 export const asks = <R, A>(f: (r: R) => A, __trace?: string | undefined): Sync<R, never, A> =>
   access((r: R) => fromLazy(() => f(r)), __trace)
 export const provide = Eff.provide as <R>(
   resources: R,
-) => <E, A>(sync: Sync<R, E, A>) => Sync<unknown, E, A>
+) => <E, A>(sync: Sync<R, E, A>) => Sync<never, E, A>
 
-export const getTrace = Eff.getTrace as Sync<unknown, never, Trace>
-export const addTrace = Eff.addTrace as (trace: Trace) => Sync<unknown, never, void>
+export const getTrace = Eff.getTrace as Sync<never, never, Trace>
+export const addTrace = Eff.addTrace as (trace: Trace) => Sync<never, never, void>

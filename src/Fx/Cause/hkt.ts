@@ -4,6 +4,7 @@ import * as AF from 'hkt-ts/Typeclass/AssociativeFlatten'
 import { Bottom1 } from 'hkt-ts/Typeclass/Bottom'
 import { Compact1 } from 'hkt-ts/Typeclass/Compact'
 import * as C from 'hkt-ts/Typeclass/Covariant'
+import * as D from 'hkt-ts/Typeclass/Debug'
 import * as FIM from 'hkt-ts/Typeclass/FilterMap'
 import * as FM from 'hkt-ts/Typeclass/FoldMap'
 import * as FE from 'hkt-ts/Typeclass/ForEach'
@@ -13,6 +14,7 @@ import { IdentityFlatten1 } from 'hkt-ts/Typeclass/IdentityFlatten'
 import * as T from 'hkt-ts/Typeclass/Top'
 
 import * as Cause from './Cause'
+import { Renderer, defaultRenderer, prettyPrint } from './Renderer'
 
 export interface CauseHKT extends HKT {
   readonly type: Cause.Cause<this[Params.A]>
@@ -202,3 +204,8 @@ export const Compact: Compact1<CauseHKT> = {
 }
 
 export const compacted = FE.compacted<CauseHKT>({ ...ForEach, ...Compact })
+
+export const makeDebug = <E>(renderer: Renderer<E> = defaultRenderer): D.Debug<Cause.Cause<E>> =>
+  D.Debug((cause) => prettyPrint(cause, renderer))
+
+export const Debug = makeDebug()

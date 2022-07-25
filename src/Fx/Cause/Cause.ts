@@ -1,7 +1,6 @@
 import { Associative } from 'hkt-ts/Typeclass'
 import * as EQ from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
-import * as S from 'hkt-ts/string'
 
 import * as FiberId from '@/Fx/FiberId/index'
 import * as Trace from '@/Fx/Trace/Trace'
@@ -120,29 +119,29 @@ export const makeEq = <E>(Eq: EQ.Eq<E>): EQ.Eq<Cause<E>> => {
   const eq = EQ.sum<Cause<E>>()('tag')({
     Empty: EQ.AlwaysEqual,
     Interrupted: EQ.struct({
-      tag: S.Eq,
+      tag: EQ.AlwaysEqual,
       fiberId: FiberId.Eq,
     }),
     Died: EQ.struct({
-      tag: S.Eq,
+      tag: EQ.AlwaysEqual,
       error: EQ.DeepEquals,
     }),
     Failed: EQ.struct({
-      tag: S.Eq,
+      tag: EQ.AlwaysEqual,
       error: Eq,
     }),
     Sequential: EQ.struct({
-      tag: S.Eq,
+      tag: EQ.AlwaysEqual,
       left: EQ.lazy(() => eq),
       right: EQ.lazy(() => eq),
     }),
     Parallel: EQ.struct({
-      tag: S.Eq,
+      tag: EQ.AlwaysEqual,
       left: EQ.lazy(() => eq),
       right: EQ.lazy(() => eq),
     }),
     Traced: EQ.struct({
-      tag: S.Eq,
+      tag: EQ.AlwaysEqual,
       cause: EQ.lazy(() => eq),
       trace: Trace.Eq,
     }),
@@ -150,6 +149,4 @@ export const makeEq = <E>(Eq: EQ.Eq<E>): EQ.Eq<Cause<E>> => {
 
   return eq
 }
-
-// TODO: Debug
-// TODO: Ord
+// TODO: ORD

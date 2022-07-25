@@ -16,6 +16,7 @@ describe(__filename, () => {
       deepStrictEqual(
         { ...frame.value, file: frame.value.file.replace(root, '') },
         {
+          tag: 'Runtime',
           file: 'src/StackFrame/getStackFrames.ts',
           method: 'getCurrentStackFrame',
           column: 11,
