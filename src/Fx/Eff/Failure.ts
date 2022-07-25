@@ -10,9 +10,17 @@ import { Exit } from '@/Fx/Exit/Exit'
 
 export class Failure<E> implements Eff<Failure<E> | AddTrace, never, never> {
   readonly tag = 'Fail'
-  constructor(readonly cause: Cause.Cause<E>, readonly __trace?: string) {}
+  constructor(
+    readonly cause: Cause.Cause<E>,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    readonly __trace?: string,
+  ) {}
 
-  *[Symbol.iterator]() {
+  *[Symbol.iterator](): ReturnType<
+    Eff<Failure<E> | AddTrace, never, never>[typeof Symbol.iterator]
+  > {
+    yield* new AddTrace(Trace.runtime({}, this[Symbol.iterator]))
+
     if (this.__trace) {
       yield* new AddTrace(Trace.custom(this.__trace))
     }
@@ -48,7 +56,9 @@ export function attempt<Y, E, R, N>(
 
       return Right(result.value)
     } catch (e) {
-      return Left(new Cause.Died(e))
+      return Left(
+        new Cause.Traced<E>(new Cause.Died(e), Trace.runtime(e instanceof Error ? e : {})),
+      )
     }
   })
 }

@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { Eff } from './Eff'
 
 import { StackTrace } from '@/Fx/StackTrace/StackTrace'
 import { Trace } from '@/Fx/Trace/Trace'
 
 export class AddTrace implements Eff<AddTrace, void, void> {
+  // eslint-disable-next-line @typescript-eslint/ban-types
   constructor(readonly trace: Trace) {}
 
   *[Symbol.iterator]() {
@@ -22,7 +24,7 @@ export class GetTrace implements Eff<GetTrace, Trace, Trace> {
 export const getTrace = new GetTrace()
 
 export function withTracing<Y, R, N>(
-  eff: Eff<Y | AddTrace | GetTrace, R, N | Trace>,
+  eff: Eff<Y | AddTrace | GetTrace, R, N | Trace | Function>,
 ): Eff<Exclude<Y, AddTrace | GetTrace>, readonly [R, Trace], Exclude<N, Trace>> {
   return Eff(function* () {
     const gen = eff[Symbol.iterator]()

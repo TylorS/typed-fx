@@ -7,7 +7,7 @@ import { parseGecko } from './parseGeckoStackFrame'
 const lineRegex = /\s+at\s(?:(?<method>.+?)\s\()?(?<file>.+?):(?<line>\d+):(?<char>\d+)\)?\s*$/
 
 export function getStackFrames<E extends { stack?: string } = Error>(
-  error: E = new Error() as unknown as E,
+  error: E = {} as E,
   // eslint-disable-next-line @typescript-eslint/ban-types
   targetObject?: Function,
 ): ReadonlyArray<RuntimeStackFrame> {

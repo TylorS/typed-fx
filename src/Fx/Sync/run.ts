@@ -18,7 +18,7 @@ export function runWith<R, E, A>(
 ): Exit<E, A> {
   const [exit, trace] = pipe(
     Sync(function* () {
-      yield* addTrace(Trace.runtime(runWith))
+      yield* addTrace(Trace.runtime({}, runWith))
       return yield* sync
     }),
     provide(env as any),

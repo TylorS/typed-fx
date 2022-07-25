@@ -28,13 +28,13 @@ export class StackTrace {
   /**
    * Flatten a StackTrace into a single Trace
    */
-  readonly flatten = (): Trace.Trace => A.foldLeft(Trace.Identity)(Array.from(this.trace))
+  readonly flatten = (): Trace.Trace => A.foldLeft(Trace.Identity)(Array.from(this.trace).reverse())
 
   /**
    * Push StackFrames onto the Stack but trim them to avoid repition
    */
   readonly trimExisting = (frames: ReadonlyArray<StackFrame.StackFrame>): StackTrace => {
-    const current = this.trace.value
+    const current = this.flatten()
 
     if (current.tag === 'EmptyTrace') {
       return this.push(isNonEmpty(frames) ? new Trace.StackFrameTrace(frames) : Trace.EmptyTrace)
@@ -49,14 +49,4 @@ export class StackTrace {
       isNonEmpty(remaining) ? new Trace.StackFrameTrace(remaining) : Trace.EmptyTrace,
     )
   }
-}
-
-export function captureTrace<E extends { readonly stack?: string }>(
-  error?: E,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  targetObject?: Function,
-): Trace.Trace {
-  const frames = StackFrame.getStackFrames(error, targetObject)
-
-  return isNonEmpty(frames) ? new Trace.StackFrameTrace(frames) : Trace.EmptyTrace
 }

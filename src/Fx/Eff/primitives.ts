@@ -9,7 +9,7 @@ export function fromValue<A>(value: A, __trace?: string) {
   // eslint-disable-next-line require-yield
   return Eff(function* () {
     if (__trace) {
-      yield* new AddTrace(Trace.custom(__trace))
+      yield* new AddTrace(Trace.custom(__trace), fromValue)
     }
 
     return value
@@ -20,7 +20,7 @@ export function fromLazy<A>(f: Lazy<A>, __trace?: string) {
   // eslint-disable-next-line require-yield
   return Eff(function* () {
     if (__trace) {
-      yield* new AddTrace(Trace.custom(__trace))
+      yield* new AddTrace(Trace.custom(__trace), fromLazy)
     }
 
     return f()

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { Lazy } from 'hkt-ts'
 import { U } from 'ts-toolbelt'
 

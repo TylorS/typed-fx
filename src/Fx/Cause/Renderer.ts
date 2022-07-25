@@ -8,8 +8,8 @@ import { Debug as FiberIdDebug } from '@/Fx/FiberId'
 import { Trace, Debug as TraceDebug } from '@/Fx/Trace/index'
 
 export interface Renderer<E> {
-  readonly renderError: (error: E) => Lines
-  readonly renderUnknown: (error: unknown) => Lines
+  readonly renderError: (error: E, hasTrace: boolean) => Lines
+  readonly renderUnknown: (error: unknown, hasTrace: boolean) => Lines
   readonly renderTrace: TraceRenderer
 }
 
@@ -77,9 +77,9 @@ export function renderInterrupted<E>(
 export function renderFailed<E>(cause: Failed<E>, trace: M.Maybe<Trace>, renderer: Renderer<E>) {
   return Sequential([
     Failure([
-      'An Failed error has occurred.',
+      'An expected error has occurred.',
       '',
-      ...renderer.renderError(cause.error),
+      ...renderer.renderError(cause.error, M.isJust(trace)),
       ...renderTrace(trace, renderer),
     ]),
   ])
@@ -88,9 +88,12 @@ export function renderFailed<E>(cause: Failed<E>, trace: M.Maybe<Trace>, rendere
 export function renderDied<E>(cause: Died, trace: M.Maybe<Trace>, renderer: Renderer<E>) {
   return Sequential([
     Failure([
-      'An Died error has occurred.',
+      'An unexpected error has occurred.',
       '',
-      ...renderer.renderUnknown(cause.error),
+      ...renderer.renderUnknown(
+        cause.error,
+        M.isJust(trace) && trace.value.tag !== 'EmptyTrace' && trace.value.frames.length > 0,
+      ),
       ...renderTrace(trace, renderer),
     ]),
   ])
@@ -181,8 +184,8 @@ export function parrallelSegments<E>(
   }
 }
 
-export function renderError(error: Error): Lines {
-  return lines(error.stack !== undefined ? error.stack : String(error))
+export function renderError(error: Error, hasTrace = false): Lines {
+  return hasTrace ? lines(`${error.name}: ${error.message}`) : lines(String(error))
 }
 
 export function renderTrace<E>(trace: M.Maybe<Trace>, renderer: Renderer<E>): Lines {
@@ -252,14 +255,14 @@ export function prettyLines<E>(cause: Cause<E>, renderer: Renderer<E>): Lines {
   return formatted.length === 0 ? [] : ['╥', ...formatted.slice(1)]
 }
 
-export function defaultErrorToLines(error: unknown): Lines {
-  return error instanceof Error ? renderError(error) : lines(renderString(error))
+export function defaultErrorToLines(error: unknown, hasTrace = false): Lines {
+  return error instanceof Error ? renderError(error, hasTrace) : lines(renderString(error))
 }
 
 export const defaultRenderer: Renderer<unknown> = {
   renderError: defaultErrorToLines,
   renderUnknown: defaultErrorToLines,
-  renderTrace: TraceDebug.debug,
+  renderTrace: (t) => '    ' + TraceDebug.debug(t).replace(/\n/g, '\n    '),
 }
 
 export function prettyPrint<E>(cause: Cause<E>, renderer: Renderer<E> = defaultRenderer): string {

@@ -9,15 +9,19 @@ import { StackFrames } from '@/StackFrame/index'
 
 export type Trace = EmptyTrace | StackFrameTrace
 
-const INSTRUMENTED_REGEX = /^[a-z]+:[a-z]+:[0-9]+:[0-9]+$/i
+const INSTRUMENTED_REGEX = /^.+\s.+:[0-9]+:[0-9]+$/i
+
+export const isInstrumentedTrace = (trace: string) => INSTRUMENTED_REGEX.test(trace)
 
 export namespace Trace {
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  export const runtime = (targetObject?: Function) =>
-    new StackFrameTrace(StackFrame.getStackFrames(undefined, targetObject))
+  export const runtime = <E extends { stack?: string } = Error>(
+    error: E,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    targetObject?: Function,
+  ) => new StackFrameTrace(StackFrame.getStackFrames(error, targetObject))
 
   export const custom = (trace: string): StackFrameTrace => {
-    if (!INSTRUMENTED_REGEX.test(trace)) {
+    if (!isInstrumentedTrace(trace)) {
       return new StackFrameTrace([
         {
           tag: 'Custom',
@@ -26,7 +30,8 @@ export namespace Trace {
       ])
     }
 
-    const [file, method, line, column] = trace.split(/:/g)
+    const [methodFile, line, column] = trace.split(/:/g)
+    const [method, file] = methodFile.split(/\s/)
     const stackFrame: StackFrame.StackFrame = {
       tag: 'Instrumented',
       file,
