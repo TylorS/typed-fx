@@ -19,6 +19,8 @@ export default function tracer(program: ts.Program, config?: { readonly root?: s
 
         function getTrace(node: ts.Node, exisingText?: string): ts.Expression {
           const nodeEnd = sourceFile.getLineAndCharacterOfPosition(node.getEnd())
+
+          // Must be an expression, so we create a binary expression to concatenate the 2 parts of the string.
           const expression = ts.factory.createBinaryExpression(
             ts.factory.createStringLiteral(
               exisingText ? trimQuotations(exisingText) : node.getText(),
@@ -34,15 +36,20 @@ export default function tracer(program: ts.Program, config?: { readonly root?: s
 
         function visitor(node: ts.Node): ts.VisitResult<ts.Node> {
           if (ts.isCallExpression(node)) {
+            // Continue processing any arguments that might be CallExpressions
+            const processedArguments = ts.visitNodes(node.arguments, visitor)
+
+            // Reolve signature to get the declaration parameters.
             const signature =
               checker.getResolvedSignature(node) ?? getSignatureIfSole(checker, node.expression)
             const signatureDeclaration = signature?.getDeclaration()
             const declarationParameters = Array.from(signatureDeclaration?.parameters || [])
-            const processedArguments = ts.visitNodes(node.arguments, visitor)
 
-            const lastDeclarationParameter = declarationParameters[declarationParameters.length - 1]
+            // Grab the last argument and last declaration parameter.
             const lastParameter = processedArguments[processedArguments.length - 1]
+            const lastDeclarationParameter = declarationParameters[declarationParameters.length - 1]
 
+            // Check if this function should append a trace, and how.
             const isTraceLastParameter = lastDeclarationParameter?.name.getText() === '__trace'
             const haveNotProvidedTrace =
               processedArguments.length === declarationParameters.length - 1
@@ -54,26 +61,23 @@ export default function tracer(program: ts.Program, config?: { readonly root?: s
             const shouldAppendTrace =
               isTraceLastParameter && (haveNotProvidedTrace || traceIsMissingLocation)
 
-            const updated = ts.factory.updateCallExpression(
+            // Update the CallExpression
+            return ts.factory.updateCallExpression(
               node,
-              ts.visitNode(node.expression, visitor),
+              ts.visitNode(node.expression, visitor), // Process the expression
               node.typeArguments,
               shouldAppendTrace
-                ? traceIsMissingLocation && !haveNotProvidedTrace
+                ? traceIsMissingLocation && !haveNotProvidedTrace // Ammend existing custom Trace with line numbers
                   ? [
                       ...node.arguments.slice(0, -1),
-                      getTrace(
-                        node.expression,
-                        processedArguments[processedArguments.length - 1].getText(sourceFile),
-                      ),
+                      getTrace(node.expression, lastParameter.getText(sourceFile)),
                     ]
-                  : [...node.arguments, getTrace(node.expression)]
-                : node.arguments,
+                  : [...node.arguments, getTrace(node.expression)] // Append new Trace
+                : node.arguments, // Don't do anything
             )
-
-            return updated
           }
 
+          // Ensure we traverse through variable declarations
           if (ts.isVariableDeclaration(node)) {
             return ts.factory.updateVariableDeclaration(
               node,
@@ -84,6 +88,7 @@ export default function tracer(program: ts.Program, config?: { readonly root?: s
             )
           }
 
+          // Keep traversing through the rest of the tree
           return ts.visitEachChild(node, visitor, ctx)
         }
 
