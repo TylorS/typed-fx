@@ -8,7 +8,7 @@ const INSTRUMENTED_REGEX = /^[a-z]+\s.+:[0-9]+:[0-9]+$/i
 
 const isInstrumentedTrace = (trace: string) => INSTRUMENTED_REGEX.test(trace)
 
-export default function tracer(program: ts.Program, config?: { readonly root?: string }) {
+export default function tracingPlugin(program: ts.Program, config?: { readonly root?: string }) {
   const checker = program.getTypeChecker()
   const root = config?.root ?? program.getCompilerOptions().rootDir ?? process.cwd()
 

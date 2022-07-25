@@ -3,7 +3,7 @@ import { Project, ts } from 'ts-morph'
 // @ts-expect-error
 import type { Plugin } from 'vite'
 
-import tracer from './plugin'
+import tracingPlugin from './plugin'
 
 export interface TracingParams {
   // Where to find the tsconfig.json file.
@@ -51,7 +51,7 @@ export function tracingPlugin(params: TracingParams): Plugin {
 
     configResolved(config) {
       customTransformers = {
-        before: [tracer(project.getProgram().compilerObject, { root: config.root }).before],
+        before: [tracingPlugin(project.getProgram().compilerObject, { root: config.root }).before],
       }
     },
 
