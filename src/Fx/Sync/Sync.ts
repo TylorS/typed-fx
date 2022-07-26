@@ -2,20 +2,19 @@
 import { Lazy } from 'hkt-ts'
 import { U } from 'ts-toolbelt'
 
-import { Trace } from '../Trace/Trace'
-
 import type {
   AnyInstruction,
   ErrorsFromInstruction,
   Instruction,
   ResourcesFromInstruction,
-} from './Instruction'
+} from './Instruction.js'
 
-import * as Cause from '@/Fx/Cause/Cause'
-import * as Eff from '@/Fx/Eff/index'
-import { Exit } from '@/Fx/Exit/Exit'
+import { Cause, died, failed } from '@/Fx/Cause/Cause.js'
+import * as Eff from '@/Fx/Eff/index.js'
+import { Exit } from '@/Fx/Exit/Exit.js'
+import { Trace } from '@/Fx/Trace/index.js'
 
-export interface Sync<in out R, out E, out A> {
+export interface Sync<R, E, A> {
   readonly [Symbol.iterator]: () => Generator<Instruction<R, E, any>, A>
 }
 
@@ -56,12 +55,12 @@ export const fromValue = Eff.fromValue as <A>(value: A) => Sync<never, never, A>
 export const fromLazy = Eff.fromLazy as <A>(f: Lazy<A>) => Sync<never, never, A>
 
 export const failure = Eff.failure as <E = never>(
-  cause: Cause.Cause<E>,
+  cause: Cause<E>,
   __trace?: string,
 ) => Sync<never, E, never>
 export const die = (error: unknown, __trace?: string): Sync<never, never, never> =>
-  failure(Cause.died(error), __trace)
-export const fail = <E>(error: E, __trace?: string) => failure(Cause.failed(error), __trace)
+  failure(died(error), __trace)
+export const fail = <E>(error: E, __trace?: string) => failure(failed(error), __trace)
 export const attempt = Eff.attempt as <R, E, A>(sync: Sync<R, E, A>) => Sync<R, never, Exit<E, A>>
 
 export const access = Eff.access as <R, R2, E, A>(

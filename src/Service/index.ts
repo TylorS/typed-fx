@@ -2,7 +2,7 @@ import { HKT, Params } from 'hkt-ts'
 import { ReadonlyRecord } from 'hkt-ts/Record'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
 
-import { Tagged } from '@/Tagged/index'
+import { Tagged } from '@/Tagged/index.js'
 
 /**
  * The Definition/ID of a Service

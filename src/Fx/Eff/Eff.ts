@@ -18,6 +18,16 @@ export function Eff<Y, R, N>(f: () => Generator<Y, R, N>): Eff<Y, R, N> {
   }
 }
 
+export namespace Eff {
+  export class Instruction<I, R, N> implements Eff<Instruction<I, R, N>, R, R> {
+    constructor(readonly input: I, readonly __trace?: string) {}
+
+    *[Symbol.iterator]() {
+      return (yield this) as R
+    }
+  }
+}
+
 /**
  * Once all yields are provided you can run an Eff synchronously
  */

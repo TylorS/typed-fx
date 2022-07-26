@@ -3,7 +3,7 @@ import { Associative } from 'hkt-ts/Typeclass/Associative'
 import { pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { Delay, Time } from '@/Time'
+import { Delay, Time } from '@/Time/index.js'
 
 const minDelayAssociative = Delay.makeAssociative({
   concat: Math.min,

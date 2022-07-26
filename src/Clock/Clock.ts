@@ -2,8 +2,8 @@ import { Lazy } from 'hkt-ts'
 import * as Associative from 'hkt-ts/Typeclass/Associative'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
-import { Service } from '@/Service/index'
-import { MAX_UNIX_TIME, MIN_UNIX_TIME, Time, UnixTime } from '@/Time/index'
+import { Service } from '@/Service/index.js'
+import { MAX_UNIX_TIME, MIN_UNIX_TIME, Time, UnixTime } from '@/Time/index.js'
 
 export interface Clock {
   readonly startTime: UnixTime

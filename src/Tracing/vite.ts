@@ -1,9 +1,8 @@
-import { Project, ts } from 'ts-morph'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
+import { Project } from 'ts-morph'
+import ts from 'typescript'
 import type { Plugin } from 'vite'
 
-import tracingPlugin from './plugin'
+import { tracingPlugin as ttypescriptPlugin } from './ttypescript.js'
 
 export interface TracingParams {
   // Where to find the tsconfig.json file.
@@ -18,29 +17,16 @@ export interface TracingParams {
 
 const jsRegex = /.([c|m]?jsx?)$/
 const jsMapRegex = /.js.map$/
+const name = '@typed/fx/tracing'
 
 export function tracingPlugin(params: TracingParams): Plugin {
-  const initial = new Project({
-    tsConfigFilePath: params.tsconfig,
-    compilerOptions: {
-      outDir: 'node_modules/.fx-tracing-plugin',
-    },
-  })
-  const project = new Project({
-    compilerOptions: initial.getCompilerOptions(),
-    skipAddingFilesFromTsConfig: true,
-    useInMemoryFileSystem: true,
-  })
-
-  initial
-    .getSourceFiles()
-    .forEach((file) => project.createSourceFile(file.getFilePath(), file.getText()))
+  console.info(`${name} :: Setting up TypeScript project...`)
+  const project = new Project({ tsConfigFilePath: params.tsconfig })
+  console.info(`${name} :: TypeScript project ready.`)
 
   let customTransformers: ts.CustomTransformers | undefined
   return {
-    name: '@typed/fx/tracing',
-    enforce: 'pre',
-
+    name,
     apply(_, env) {
       const shouldRunCommand = env.command === 'build' ? params.build ?? true : params.serve ?? true
       const shouldRunMode = env.mode === 'dev' ? params.dev ?? true : true
@@ -51,7 +37,11 @@ export function tracingPlugin(params: TracingParams): Plugin {
 
     configResolved(config) {
       customTransformers = {
-        before: [tracingPlugin(project.getProgram().compilerObject, { root: config.root }).before],
+        before: [
+          ttypescriptPlugin(project.getProgram().compilerObject, {
+            root: config.root,
+          }),
+        ],
       }
     },
 

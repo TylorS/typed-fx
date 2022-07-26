@@ -3,17 +3,17 @@ import { join } from 'path'
 import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
-import { tracingPlugin } from './src/Tracing/index'
+import { tracingPlugin } from './src/Tracing/vite'
 
-require('./require-hooks')
+const tsConfig = join(__dirname, 'tsconfig.test.json')
 
 export default defineConfig({
   plugins: [
     tsconfigPaths({
-      root: __dirname,
+      projects: [tsConfig],
     }),
     tracingPlugin({
-      tsconfig: join(__dirname, 'tsconfig.json'),
+      tsconfig: tsConfig
     }),
   ],
   build: {
@@ -24,5 +24,5 @@ export default defineConfig({
   },
   server: {
     port: 7777,
-  },
+  }
 })

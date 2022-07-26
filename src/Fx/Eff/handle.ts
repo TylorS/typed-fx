@@ -1,4 +1,4 @@
-import { Eff } from './Eff'
+import { Eff } from './Eff.js'
 
 export function handle<Y, Y2, R2, N, R, Y3 = never, R3 = R, N2 = never>(
   onInstruction: (instr: Y) => Eff<Y2, R2, N>,

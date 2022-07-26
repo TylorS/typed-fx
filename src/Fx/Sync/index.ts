@@ -1,2 +1,2 @@
-export * from './run'
-export * from './Sync'
+export * from './run.js'
+export * from './Sync.js'

@@ -1,2 +1,2 @@
-export * from './Clock'
-export * from './DateClock'
+export * from './Clock.js'
+export * from './DateClock.js'

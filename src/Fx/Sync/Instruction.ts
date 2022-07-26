@@ -1,6 +1,6 @@
-import type { Access } from '@/Fx/Eff/Access'
-import type { Failure } from '@/Fx/Eff/Failure'
-import type { AddTrace, GetTrace } from '@/Fx/Eff/Trace'
+import type { Access } from '@/Fx/Eff/Access.js'
+import type { Failure } from '@/Fx/Eff/Failure.js'
+import type { AddTrace, GetTrace } from '@/Fx/Eff/Trace.js'
 
 export type Instruction<R, E, A> = Access<R, R, E, A> | Failure<E> | AddTrace | GetTrace
 

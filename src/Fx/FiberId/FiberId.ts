@@ -5,8 +5,8 @@ import * as E from 'hkt-ts/Typeclass/Eq'
 import * as I from 'hkt-ts/Typeclass/Identity'
 import * as N from 'hkt-ts/number'
 
-import { Clock, toDate } from '@/Clock/Clock'
-import { Time } from '@/Time/index'
+import { Clock, toDate } from '@/Clock/Clock.js'
+import { Time } from '@/Time/index.js'
 
 export type FiberId = FiberId.None | FiberId.Live | FiberId.Synthetic
 

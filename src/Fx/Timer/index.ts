@@ -1,2 +1,2 @@
-export * from './SetTimeoutTimer'
-export * from './Timer'
+export * from './SetTimeoutTimer.js'
+export * from './Timer.js'

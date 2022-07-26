@@ -2,8 +2,8 @@ import { Associative } from 'hkt-ts/Typeclass'
 import * as EQ from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
-import * as FiberId from '@/Fx/FiberId/index'
-import * as Trace from '@/Fx/Trace/Trace'
+import * as FiberId from '@/Fx/FiberId/index.js'
+import * as Trace from '@/Fx/Trace/Trace.js'
 
 export type Cause<E> =
   | Empty

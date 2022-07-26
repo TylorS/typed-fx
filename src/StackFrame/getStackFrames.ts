@@ -1,8 +1,8 @@
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 
-import type { RuntimeStackFrame } from './StackFrame'
-import { parseChrome } from './parseChromeStack'
-import { parseGecko } from './parseGeckoStackFrame'
+import type { RuntimeStackFrame } from './StackFrame.js'
+import { parseChrome } from './parseChromeStack.js'
+import { parseGecko } from './parseGeckoStackFrame.js'
 
 const lineRegex = /\s+at\s(?:(?<method>.+?)\s\()?(?<file>.+?):(?<line>\d+):(?<char>\d+)\)?\s*$/
 

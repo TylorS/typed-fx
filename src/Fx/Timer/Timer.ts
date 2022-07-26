@@ -1,7 +1,7 @@
-import { Clock } from '@/Clock/index'
-import { Disposable } from '@/Fx/Disposable/Disposable'
-import { Service } from '@/Service/index'
-import { Delay } from '@/Time/index'
+import { Clock } from '@/Clock/index.js'
+import { Disposable } from '@/Fx/Disposable/Disposable.js'
+import { Service } from '@/Service/index.js'
+import { Delay } from '@/Time/index.js'
 
 export interface Timer extends Clock {
   readonly setTimer: (f: () => void, delay: Delay) => Disposable

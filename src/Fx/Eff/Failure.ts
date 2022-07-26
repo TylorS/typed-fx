@@ -1,45 +1,22 @@
 import { Left, Right } from 'hkt-ts/Either'
 
-import { Trace } from '../Trace/Trace'
+import { AddTrace } from './Trace.js'
 
-import { AddTrace } from './Trace'
+import * as Cause from '@/Fx/Cause/Cause.js'
+import { Eff } from '@/Fx/Eff/Eff.js'
+import { Exit } from '@/Fx/Exit/Exit.js'
+import { Trace } from '@/Fx/Trace/Trace.js'
 
-import * as Cause from '@/Fx/Cause/Cause'
-import { Eff } from '@/Fx/Eff/Eff'
-import { Exit } from '@/Fx/Exit/Exit'
+export class Failure<E> extends Eff.Instruction<Cause.Cause<E>, never, never> {}
 
-export class Failure<E> implements Eff<Failure<E> | AddTrace, never, never> {
-  readonly tag = 'Fail'
-  constructor(
-    readonly cause: Cause.Cause<E>,
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    readonly __trace?: string,
-  ) {}
-
-  *[Symbol.iterator](): ReturnType<
-    Eff<Failure<E> | AddTrace, never, never>[typeof Symbol.iterator]
-  > {
-    yield* new AddTrace(Trace.runtime({}, this[Symbol.iterator]))
-
-    if (this.__trace) {
-      yield* new AddTrace(Trace.custom(this.__trace))
-    }
-
-    return (yield this) as never
-  }
-}
-
-export function failure<E>(
-  cause: Cause.Cause<E>,
-  __trace?: string,
-): Eff<Failure<E> | AddTrace, never, never> {
+export function failure<E>(cause: Cause.Cause<E>, __trace?: string): Eff<Failure<E>, never, never> {
   return new Failure(cause, __trace)
 }
 
 export function attempt<Y, E, R, N>(
   sync: Eff<Y | Failure<E>, R, N>,
-): Eff<Exclude<Y, Failure<E>>, Exit<E, R>, N> {
-  return Eff(function* () {
+): Eff<Exclude<Y, Failure<E>> | AddTrace, Exit<E, R>, N> {
+  return Eff(function* attempt() {
     try {
       const gen = sync[Symbol.iterator]()
       let result = gen.next()
@@ -48,7 +25,15 @@ export function attempt<Y, E, R, N>(
         const instr = result.value
 
         if (instr instanceof Failure<E>) {
-          return Left(instr.cause)
+          // Always add the latest Runtime Trace to give the user the most amount of information
+          yield* new AddTrace(Trace.runtime({}, attempt))
+
+          // Append Custom trace if available
+          if (instr.__trace) {
+            yield* new AddTrace(Trace.custom(instr.__trace))
+          }
+
+          return Left(instr.input)
         }
 
         result = gen.next((yield instr as Exclude<Y, Failure<E>>) as N)
@@ -56,9 +41,10 @@ export function attempt<Y, E, R, N>(
 
       return Right(result.value)
     } catch (e) {
-      return Left(
-        new Cause.Traced<E>(new Cause.Died(e), Trace.runtime(e instanceof Error ? e : {})),
-      )
+      // Always add the latest Runtime Trace to give the user the most amount of information
+      yield* new AddTrace(Trace.runtime(e instanceof Error ? e : {}, attempt))
+
+      return Left(new Cause.Died(e))
     }
   })
 }

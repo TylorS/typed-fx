@@ -1,2 +1,2 @@
-export * from './Exit'
-export * from './hkt'
+export * from './Exit.js'
+export * from './hkt.js'

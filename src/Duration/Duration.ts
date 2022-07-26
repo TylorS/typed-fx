@@ -1,4 +1,4 @@
-import { Delay, Time, UnixTime } from '@/Time/index'
+import { Delay, Time, UnixTime } from '@/Time/index.js'
 
 /**
  * TODO: Add support for Month/Year -- how to deal with the variability of each month/year?

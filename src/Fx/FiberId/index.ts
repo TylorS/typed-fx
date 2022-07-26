@@ -1,1 +1,1 @@
-export * from './FiberId'
+export * from './FiberId.js'

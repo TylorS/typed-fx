@@ -1,6 +1,6 @@
 import { Eq, NonNegativeInteger } from 'hkt-ts/number'
 
-import { Atomic } from './Atomic'
+import { Atomic } from './Atomic.js'
 
 export class AtomicCounter extends Atomic<NonNegativeInteger> {
   constructor(initial: NonNegativeInteger) {

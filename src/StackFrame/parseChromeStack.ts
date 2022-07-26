@@ -1,4 +1,4 @@
-import { RuntimeStackFrame } from './StackFrame'
+import { RuntimeStackFrame } from './StackFrame.js'
 
 const chromeRe =
   /^\s*at (.*?) ?\(((?:file|https?|blob|chrome-extension|native|eval|webpack|<anonymous>|\/|[a-z]:\\|\\\\).*?)(?::(\d+))?(?::(\d+))?\)?\s*$/i

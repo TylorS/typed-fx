@@ -4,8 +4,7 @@ import * as D from 'hkt-ts/Typeclass/Debug'
 import * as E from 'hkt-ts/Typeclass/Eq'
 import * as I from 'hkt-ts/Typeclass/Identity'
 
-import * as StackFrame from '@/StackFrame/index'
-import { StackFrames } from '@/StackFrame/index'
+import * as StackFrame from '@/StackFrame/index.js'
 
 export type Trace = EmptyTrace | StackFrameTrace
 
@@ -53,7 +52,7 @@ export type EmptyTrace = typeof EmptyTrace
 export class StackFrameTrace {
   readonly tag = 'StackFrameTrace'
 
-  constructor(readonly frames: StackFrames) {}
+  constructor(readonly frames: StackFrame.StackFrames) {}
 }
 
 export const Eq: E.Eq<Trace> = E.sum<Trace>()('tag')({

@@ -1,4 +1,4 @@
-import { RuntimeStackFrame } from './StackFrame'
+import { RuntimeStackFrame } from './StackFrame.js'
 
 const geckoRe =
   /^\s*(.*?)(?:\((.*?)\))?(?:^|@)((?:file|https?|blob|chrome|webpack|resource|\[native).*?|[^@]*bundle)(?::(\d+))?(?::(\d+))?\s*$/i

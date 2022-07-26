@@ -13,8 +13,8 @@ import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import { IdentityFlatten1 } from 'hkt-ts/Typeclass/IdentityFlatten'
 import * as T from 'hkt-ts/Typeclass/Top'
 
-import * as Cause from './Cause'
-import { Renderer, defaultRenderer, prettyPrint } from './Renderer'
+import * as Cause from './Cause.js'
+import { Renderer, defaultRenderer, prettyPrint } from './Renderer.js'
 
 export interface CauseHKT extends HKT {
   readonly type: Cause.Cause<this[Params.A]>

@@ -1,8 +1,8 @@
-import { Timer } from './Timer'
+import { Timer } from './Timer.js'
 
-import { Clock } from '@/Clock/Clock'
-import { DateClock } from '@/Clock/DateClock'
-import { Disposable } from '@/Fx/Disposable/Disposable'
+import { Clock } from '@/Clock/Clock.js'
+import { DateClock } from '@/Clock/DateClock.js'
+import { Disposable } from '@/Fx/Disposable/Disposable.js'
 
 export function SetTimeoutTimer(clock: Clock = DateClock()): Timer {
   return Timer(clock, (f, delay) => {

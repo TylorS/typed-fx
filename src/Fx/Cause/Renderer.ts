@@ -1,11 +1,11 @@
 import * as M from 'hkt-ts/Maybe'
 import { pipe } from 'hkt-ts/function'
 
-import { Cause, Died, Failed, Interrupted } from './Cause'
-import { prettyStringify } from './prettyStringify'
+import { Cause, Died, Failed, Interrupted } from './Cause.js'
+import { prettyStringify } from './prettyStringify.js'
 
-import { Debug as FiberIdDebug } from '@/Fx/FiberId'
-import { Trace, Debug as TraceDebug } from '@/Fx/Trace/index'
+import { Debug as FiberIdDebug } from '@/Fx/FiberId/index.js'
+import { Trace, Debug as TraceDebug } from '@/Fx/Trace/index.js'
 
 export interface Renderer<E> {
   readonly renderError: (error: E, hasTrace: boolean) => Lines

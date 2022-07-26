@@ -3,9 +3,9 @@ import { ok } from 'assert'
 
 import { isLeft } from 'hkt-ts/Either'
 
-import { prettyPrint } from '@/Fx/Cause/Renderer'
-import { Sync, ask, fail } from '@/Fx/Sync/Sync'
-import { runWith } from '@/Fx/Sync/run'
+import { prettyPrint } from '@/Fx/Cause/Renderer.js'
+import { Sync, ask, fail } from '@/Fx/Sync/Sync.js'
+import { runWith } from '@/Fx/Sync/run.js'
 
 const program = Sync(function* () {
   const a = yield* ask<number>('custom-trace')

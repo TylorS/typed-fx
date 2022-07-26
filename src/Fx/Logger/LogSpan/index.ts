@@ -1,1 +1,1 @@
-export * from './LogSpan'
+export * from './LogSpan.js'

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { Eff } from './Eff'
+import { Eff } from './Eff.js'
 
-import { StackTrace } from '@/Fx/StackTrace/StackTrace'
-import { Trace } from '@/Fx/Trace/Trace'
+import { StackTrace } from '@/Fx/StackTrace/StackTrace.js'
+import { Trace } from '@/Fx/Trace/Trace.js'
 
 export class AddTrace implements Eff<AddTrace, void, void> {
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -26,16 +26,21 @@ export const getTrace = new GetTrace()
 export function withTracing<Y, R, N>(
   eff: Eff<Y | AddTrace | GetTrace, R, N | Trace | Function>,
 ): Eff<Exclude<Y, AddTrace | GetTrace>, readonly [R, Trace], Exclude<N, Trace>> {
-  return Eff(function* () {
+  return Eff(function* tracing() {
     const gen = eff[Symbol.iterator]()
 
     let result = gen.next()
     let trace = new StackTrace()
+
+    trace = trace.push(Trace.runtime({}, tracing))
+
     while (!result.done) {
       const instr = result.value
 
       if (instr instanceof AddTrace) {
-        trace = trace.push(instr.trace)
+        if (instr.trace.tag === 'StackFrameTrace') {
+          trace = trace.trimExisting(instr.trace.frames)
+        }
 
         result = gen.next()
       } else if (instr instanceof GetTrace) {

@@ -1,2 +1,2 @@
-export * from './Cause'
-export * from './hkt'
+export * from './Cause.js'
+export * from './hkt.js'

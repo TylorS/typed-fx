@@ -1,6 +1,6 @@
 import { Associative } from 'hkt-ts/Typeclass/Associative'
 
-import { Delay } from '@/Time'
+import { Delay } from '@/Time/index.js'
 
 export type Decision = Continue | Done
 

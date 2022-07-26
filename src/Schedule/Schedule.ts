@@ -11,14 +11,14 @@ import {
   DecisionIntersectionAssociative,
   DecisionUnionAssociative,
   Done,
-} from './Decision'
+} from './Decision.js'
 import {
   ScheduleState,
   ScheduleStateIntersectionAssociative,
   ScheduleStateUnionAssociative,
-} from './ScheduleState'
+} from './ScheduleState.js'
 
-import { Delay, Time } from '@/Time'
+import { Delay, Time } from '@/Time/index.js'
 
 const asap = Delay(0)
 const max = Delay(Number.MAX_SAFE_INTEGER)
