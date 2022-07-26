@@ -12,11 +12,10 @@
     "build:package-exports": "node --loader @esbuild-kit/esm-loader ./tools/generatePackageExports.ts",
     "build": "concurrently npm:build:esm npm:build:cjs && npm run build:package-exports",
     "eslint": "NODE_OPTIONS=--max-old-space-size=4096 eslint --ext .ts,.js,.json,.yaml --fix --cache src",
-    "vitest": "vitest --config vite.config.ts run",
-    "vitest:watch": "vitest --config vite.config.ts",
-    "coverage": "vitest --config vite.config.ts run --coverage",
+    "mocha": "mocha 'src/**/*.test.ts'",
+    "coverage": "c8 --include 'src/**/*' --all npm run mocha",
     "typecheck": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit -p ./tsconfig.build.esm.json",
-    "test": "concurrently npm:eslint npm:vitest npm:typecheck",
+    "test": "concurrently npm:eslint npm:mocha npm:typecheck",
     "test:vite-plugin": "vite-node ./src/Tracing/test.ts",
     "test:vite-plugin:build": "vite build --ssr ./src/Tracing/test",
     "test:ttypescript-plugin": "ts-node -C ttypescript ./src/Tracing/test.ts",
@@ -78,7 +77,6 @@
     "typescript": "^4.7.4",
     "vite": "^3.0.3",
     "vite-node": "^0.19.1",
-    "vite-tsconfig-paths": "^3.5.0",
-    "vitest": "^0.19.1"
+    "vite-tsconfig-paths": "^3.5.0"
   }
 }
