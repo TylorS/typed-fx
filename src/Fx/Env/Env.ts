@@ -124,10 +124,10 @@ export class Environment<R> implements Env<R> {
 
       return Fx(function* () {
         const build = layers.get(s) as Of<S>
-        const fiber = yield* fork(build)
+        const fiber: Fiber.Live<never, S> = yield* fork(build)
         fibers.set(s, fiber)
 
-        const a = yield* join(fiber)
+        const a: S = yield* join(fiber)
 
         services.set(s, a)
         fibers.delete(s)
