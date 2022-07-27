@@ -1,0 +1,47 @@
+import { Exit } from '@/Fx/Exit/Exit.js'
+import { Fx } from '@/Fx/Fx/Fx.js'
+import { Branded } from 'hkt-ts/Branded'
+import { NonNegativeInteger } from 'hkt-ts/number'
+
+export interface Finalizer<R = never, E = never> {
+  (exit: Exit<any, any>): Fx<R, E, unknown>
+}
+
+export type FinalizerKey = Branded<{ readonly FinalizerKey: FinalizerKey }, symbol>
+export const FinalizerKey = Branded<FinalizerKey>()
+
+export type FinalizationStrategy = SequentialStrategy | ConcurrentStrategy | ConcurrentNStrategy
+
+export const SequentialStrategy = {
+  strategy: 'Sequential',
+} as const
+export type SequentialStrategy = typeof SequentialStrategy
+
+export const ConcurrentStrategy = {
+  strategy: 'Concurrent',
+} as const
+export type ConcurrentStrategy = typeof ConcurrentStrategy
+
+export interface ConcurrentNStrategy {
+  readonly strategy: 'ConcurrentN'
+  readonly concurrency: NonNegativeInteger
+}
+
+export const ConcurrentNStrategy = (concurency: NonNegativeInteger): ConcurrentNStrategy => ({
+  strategy: 'ConcurrentN',
+  concurrency: concurency,
+})
+
+export function finalizationStrategyToConcurrency(
+  strategy: FinalizationStrategy,
+): NonNegativeInteger {
+  if (strategy.strategy === 'Sequential') {
+    return NonNegativeInteger(1)
+  }
+
+  if (strategy.strategy === 'Concurrent') {
+    return NonNegativeInteger(Number.MAX_SAFE_INTEGER)
+  }
+
+  return strategy.concurrency
+}

@@ -3,23 +3,22 @@ import { AddTrace } from './Trace.js'
 
 import { Trace } from '@/Fx/Trace/index.js'
 
-export class Access<R, Y, R2, N> extends Eff.Instruction<
-  (resources: R) => Eff<Y, R2, N>,
-  R2,
-  N | R2
+export class Access<R, Y, R2> extends Eff.Instruction<
+  (resources: R) => Eff<Y, R2>,
+  R2
 > {}
 
-export function access<R, Y, R2, N>(
-  f: (resources: R) => Eff<Y, R2, N>,
+export function access<R, Y, R2>(
+  f: (resources: R) => Eff<Y, R2>,
   __trace?: string,
-): Eff<Y | Access<R, Y, R2, N>, R2, R2 | N> {
+): Eff<Y | Access<R, Y, R2>, R2> {
   return new Access(f, __trace)
 }
 
 export function provide<R2>(resources: R2) {
-  return <Y, R, N>(
-    eff: Eff<Y | Access<R2, any, any, any>, R, N>,
-  ): Eff<Exclude<Y, Access<R2, any, any, any>> | AddTrace, R, R2 | N> =>
+  return <Y, R>(
+    eff: Eff<Y | Access<R2, any, any>, R>,
+  ): Eff<Exclude<Y, Access<R2, any, any>> | AddTrace, R> =>
     Eff(function* () {
       const gen = eff[Symbol.iterator]()
       let result = gen.next()
@@ -27,14 +26,14 @@ export function provide<R2>(resources: R2) {
       while (!result.done) {
         const instr = result.value
 
-        if (instr instanceof Access<R2, any, any, any>) {
+        if (instr instanceof Access<R2, any, any>) {
           if (instr.__trace) {
             yield* new AddTrace(Trace.custom(instr.__trace))
           }
 
           result = gen.next(yield* instr.input(resources))
         } else {
-          result = gen.next((yield instr as any) as N)
+          result = gen.next(yield instr)
         }
       }
 

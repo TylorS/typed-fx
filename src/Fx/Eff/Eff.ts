@@ -2,28 +2,27 @@
  * Eff is a very thin abstraction over Generators which provides a synchronous, algebraic-effects-like,
  * way to represent effects.
  */
-export interface Eff<Y, R, N = unknown> {
-  readonly [Symbol.iterator]: () => Generator<Y, R, N>
+export interface Eff<Y, R> {
+  readonly [Symbol.iterator]: () => Generator<Y, R>
 }
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-export type YieldOf<T> = T extends Eff<infer _R, infer _E, infer _A> ? _R : never
-export type ReturnOf<T> = T extends Eff<infer _R, infer _E, infer _A> ? _E : never
-export type NextOf<T> = T extends Eff<infer _R, infer _E, infer _A> ? _A : never
+export type YieldOf<T> = T extends Eff<infer _Y, infer _A> ? _Y : never
+export type ReturnOf<T> = T extends Eff<infer _Y, infer _A> ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export function Eff<Y, R, N>(f: () => Generator<Y, R, N>): Eff<Y, R, N> {
+export function Eff<Y, R>(f: () => Generator<Y, R>): Eff<Y, R> {
   return {
     [Symbol.iterator]: f,
   }
 }
 
 export namespace Eff {
-  export class Instruction<I, R, N> implements Eff<Instruction<I, R, N>, R, R> {
+  export class Instruction<I, O> {
     constructor(readonly input: I, readonly __trace?: string) {}
 
-    *[Symbol.iterator]() {
-      return (yield this) as R
+    *[Symbol.iterator](): Generator<this, O> {
+      return (yield this) as O
     }
   }
 }
@@ -31,6 +30,12 @@ export namespace Eff {
 /**
  * Once all yields are provided you can run an Eff synchronously
  */
-export function runEff<R, N>(eff: Eff<never, R, N>) {
-  return eff[Symbol.iterator]().next().value
+export function runEff<R>(eff: Eff<never, R>) {
+  const result = eff[Symbol.iterator]().next()
+
+  if (!result.done) {
+    throw new Error(`Unknown instruction encountered: ${JSON.stringify(result.value, null, 2)}`)
+  }
+
+  return result.value
 }

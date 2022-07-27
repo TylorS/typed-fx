@@ -19,10 +19,17 @@ export const TimeOrd = Time.makeOrd(N.Ord)
 export const TimeBounded = Time.makeBounded({ ...N.Bounded, bottom: 0 })
 
 /**
- * Millisecond precision Unix Timestamp. Should be directly useable in `new Date(UnixTime)`
+ * Millisecond precision Unix Timestamp. MUST be directly useable in `new Date(UnixTime)`
  */
-export type UnixTime = Branded<{ readonly UnixTime: Time }, number>
+export type UnixTime = Branded<{ readonly UnixTime: UnixTime }, number>
 export const UnixTime = Branded<UnixTime>()
+
+declare global {
+  // Patch Date.now to return UnixTime
+  export interface DateConstructor {
+    now(): UnixTime
+  }
+}
 
 export const MIN_UNIX_TIME = UnixTime(0)
 export const MAX_UNIX_TIME = UnixTime(8.64e15) // WHAT WILL WE DO AFTER +275760-09-13T00:00:00.000Z???

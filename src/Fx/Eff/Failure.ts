@@ -7,15 +7,15 @@ import { Eff } from '@/Fx/Eff/Eff.js'
 import { Exit } from '@/Fx/Exit/Exit.js'
 import { Trace } from '@/Fx/Trace/Trace.js'
 
-export class Failure<E> extends Eff.Instruction<Cause.Cause<E>, never, never> {}
+export class Failure<E> extends Eff.Instruction<Cause.Cause<E>, never> {}
 
-export function failure<E>(cause: Cause.Cause<E>, __trace?: string): Eff<Failure<E>, never, never> {
+export function failure<E>(cause: Cause.Cause<E>, __trace?: string): Eff<Failure<E>, never> {
   return new Failure(cause, __trace)
 }
 
-export function attempt<Y, E, R, N>(
-  sync: Eff<Y | Failure<E>, R, N>,
-): Eff<Exclude<Y, Failure<E>> | AddTrace, Exit<E, R>, N> {
+export function attempt<Y, E, R>(
+  sync: Eff<Y | Failure<E>, R>,
+): Eff<Exclude<Y, Failure<E>> | AddTrace, Exit<E, R>> {
   return Eff(function* attempt() {
     try {
       const gen = sync[Symbol.iterator]()
@@ -36,7 +36,7 @@ export function attempt<Y, E, R, N>(
           return Left(instr.input)
         }
 
-        result = gen.next((yield instr as Exclude<Y, Failure<E>>) as N)
+        result = gen.next((yield instr as Exclude<Y, Failure<E>>))
       }
 
       return Right(result.value)

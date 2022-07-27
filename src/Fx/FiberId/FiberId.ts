@@ -1,9 +1,12 @@
+import { pipe } from 'hkt-ts'
 import * as A from 'hkt-ts/Array'
 import * as ASC from 'hkt-ts/Typeclass/Associative'
 import * as D from 'hkt-ts/Typeclass/Debug'
 import * as E from 'hkt-ts/Typeclass/Eq'
 import * as I from 'hkt-ts/Typeclass/Identity'
+import * as O from 'hkt-ts/Typeclass/Ord'
 import * as N from 'hkt-ts/number'
+import * as S from 'hkt-ts/string'
 
 import { Clock, toDate } from '@/Clock/Clock.js'
 import { Time } from '@/Time/index.js'
@@ -11,11 +14,11 @@ import { Time } from '@/Time/index.js'
 export type FiberId = FiberId.None | FiberId.Live | FiberId.Synthetic
 
 export namespace FiberId {
-  export const None = new (class None {
-    readonly tag = 'None' as const
-  })()
+  export interface None {
+    readonly tag: 'None'
+  }
 
-  export type None = typeof None
+  export const None: None = { tag: 'None' }
 
   export class Live {
     static readonly tag = 'Live'
@@ -77,6 +80,26 @@ export const Eq: E.Eq<FiberId> = E.sum<FiberId>()('tag')({
   Synthetic: E.struct({ tag: E.string, fiberIds: A.makeEq(E.lazy(() => Eq)) }),
 })
 
+export const Ord: O.Ord<FiberId> = O.sum<FiberId>()('tag')(
+  pipe(
+    N.Ord,
+    O.contramap((a) => (a === 'None' ? 0 : a === 'Live' ? 1 : 2)),
+  ),
+)({
+  None: O.struct<FiberId.None>({ tag: O.Static })(S.Ord),
+  Live: O.struct({
+    sequenceNumber: N.NonNegativeIntegerOrd,
+    startTime: Time.makeOrd(N.Ord),
+    tag: O.Static,
+  })(S.Ord),
+  Synthetic: O.struct<FiberId.Synthetic>({
+    startTime: Time.makeOrd(N.Ord),
+    fiberIds: A.makeOrd(O.lazy(() => Ord)),
+    clock: O.Static,
+    tag: O.Static,
+  })(S.Ord),
+})
+
 export const Associative: ASC.Associative<FiberId> = {
   concat: (f, s) => (f.tag === None.tag ? s : s.tag === None.tag ? f : Synthetic([f, s], f.clock)),
 }
@@ -88,16 +111,18 @@ export const Identity: I.Identity<FiberId> = {
 
 export const Debug: D.Debug<FiberId> = D.sum<FiberId>()('tag')({
   None: {
-    debug: () => '',
+    debug: () => 'FiberId.None',
   },
   Live: {
-    debug: (id) =>
-      `Fiber #${id.sequenceNumber} (started at ${toDate(id.startTime)(id.clock).toISOString()})`,
+    debug: (id) => `Fiber #${id.sequenceNumber} (started at ${idToIsoString(id)})`,
   },
   Synthetic: {
     debug: (id) =>
-      `Synthetic Fiber (started at ${toDate(id.startTime)(
-        id.clock,
-      ).toISOString()})\n  -${id.fiberIds.map(Debug.debug).join('\n  -')}`,
+      `Synthetic Fiber (started at ${idToIsoString(id)})\n  -${id.fiberIds
+        .map(Debug.debug)
+        .join('\n  -')}`,
   },
 })
+
+const idToIsoString = (id: FiberId.Live | FiberId.Synthetic) =>
+  toDate(id.startTime)(id.clock).toISOString()

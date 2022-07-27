@@ -3,7 +3,7 @@ import { Eq, NonNegativeInteger } from 'hkt-ts/number'
 import { Atomic } from './Atomic.js'
 
 export class AtomicCounter extends Atomic<NonNegativeInteger> {
-  constructor(initial: NonNegativeInteger) {
+  constructor(initial: NonNegativeInteger = NonNegativeInteger(0)) {
     super(initial, Eq)
   }
 

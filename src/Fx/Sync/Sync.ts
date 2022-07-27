@@ -14,9 +14,7 @@ import * as Eff from '@/Fx/Eff/index.js'
 import { Exit } from '@/Fx/Exit/Exit.js'
 import { Trace } from '@/Fx/Trace/index.js'
 
-export interface Sync<R, E, A> {
-  readonly [Symbol.iterator]: () => Generator<Instruction<R, E, any>, A>
-}
+export interface Sync<R, E, A> extends Eff.Eff<Instruction<R, E, any>, A> {}
 
 export type AnySync =
   | Sync<any, any, any>
@@ -48,7 +46,7 @@ export function Sync<G extends Generator<AnyInstruction, any>>(
 ): Sync<ResourcesFromGenerator<G>, ErrorsFromGenerator<G>, OutputFromGenerator<G>> {
   return {
     [Symbol.iterator]: f,
-  }
+  } as Sync<ResourcesFromGenerator<G>, ErrorsFromGenerator<G>, OutputFromGenerator<G>>
 }
 
 export const fromValue = Eff.fromValue as <A>(value: A) => Sync<never, never, A>

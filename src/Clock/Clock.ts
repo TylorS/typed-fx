@@ -25,6 +25,10 @@ export function toDate(time: Time) {
   return (clock: Clock): Date => new Date(clock.startTime + time)
 }
 
+export function toUnixTime(time: Time) {
+  return (clock: Clock): UnixTime => UnixTime(clock.startTime + time)
+}
+
 export function toTime(date: Date) {
   return (clock: Clock): Time => Time(clock.startTime - date.getTime())
 }
@@ -54,4 +58,10 @@ export const UnionIdentity: Identity<Clock> = {
 export const IntersectionIdentity: Identity<Clock> = {
   ...IntersectionAssociative,
   id: Clock(MIN_UNIX_TIME, () => Time(0)),
+}
+
+export function fork(clock: Clock): Clock {
+  const offset = clock.getCurrentTime()
+
+  return Clock(toUnixTime(offset)(clock), () => Time(clock.getCurrentTime() - offset))
 }

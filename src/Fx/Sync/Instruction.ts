@@ -1,17 +1,28 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Access } from '@/Fx/Eff/Access.js'
 import type { Failure } from '@/Fx/Eff/Failure.js'
 import type { AddTrace, GetTrace } from '@/Fx/Eff/Trace.js'
 
-export type Instruction<R, E, A> = Access<R, R, E, A> | Failure<E> | AddTrace | GetTrace
+export type Instruction<R, E, A> =
+  | Access<R, Instruction<R, E, any>, A>
+  | Failure<E>
+  | AddTrace
+  | GetTrace
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type ResourcesFromInstruction<T> = T extends Access<infer R, infer R2, infer _E, infer _A>
+export type ResourcesFromInstruction<T> = T extends Access<
+  infer R,
+  Instruction<infer R2, infer _E2, infer _A2>,
+  infer _A
+>
   ? R | R2
   : never
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type ErrorsFromInstruction<T> = T extends Access<infer _R, infer _R2, infer _E, infer _A>
-  ? _E
+export type ErrorsFromInstruction<T> = T extends Access<
+  infer _R,
+  Instruction<infer _R2, infer E2, infer _A2>,
+  infer _A
+>
+  ? E2
   : T extends Failure<infer E>
   ? E
   : never

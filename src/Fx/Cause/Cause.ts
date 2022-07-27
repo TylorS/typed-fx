@@ -1,6 +1,9 @@
+import { pipe } from 'hkt-ts'
 import { Associative } from 'hkt-ts/Typeclass'
 import * as EQ from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
+import * as ORD from 'hkt-ts/Typeclass/Ord'
+import * as N from 'hkt-ts/number'
 
 import * as FiberId from '@/Fx/FiberId/index.js'
 import * as Trace from '@/Fx/Trace/Trace.js'
@@ -149,4 +152,60 @@ export const makeEq = <E>(Eq: EQ.Eq<E>): EQ.Eq<Cause<E>> => {
 
   return eq
 }
-// TODO: ORD
+
+const tagOrd = pipe(
+  N.Ord,
+  ORD.contramap((x: Cause<any>['tag']) => {
+    switch (x) {
+      case 'Empty':
+        return 0
+      case 'Died':
+        return 1
+      case 'Failed':
+        return 2
+      case 'Interrupted':
+        return 3
+      case 'Parallel':
+        return 4
+      case 'Sequential':
+        return 5
+      case 'Traced':
+        return 6
+    }
+  }),
+)
+
+export const makeOrd = <E>(Eq: ORD.Ord<E>): ORD.Ord<Cause<E>> => {
+  const ord = ORD.sum<Cause<E>>()('tag')(tagOrd)({
+    Empty: ORD.Static,
+    Interrupted: ORD.struct({
+      fiberId: FiberId.Ord,
+      tag: ORD.Static,
+    })(ORD.Static),
+    Died: ORD.struct({
+      error: ORD.Static,
+      tag: ORD.Static,
+    })(ORD.Static),
+    Failed: ORD.struct({
+      error: Eq,
+      tag: ORD.Static,
+    })(ORD.Static),
+    Sequential: ORD.struct({
+      left: ORD.lazy(() => ord),
+      right: ORD.lazy(() => ord),
+      tag: ORD.Static,
+    })(ORD.Static),
+    Parallel: ORD.struct({
+      left: ORD.lazy(() => ord),
+      right: ORD.lazy(() => ord),
+      tag: ORD.Static,
+    })(ORD.Static),
+    Traced: ORD.struct({
+      cause: ORD.lazy(() => ord),
+      trace: Trace.Ord,
+      tag: ORD.Static,
+    })(ORD.Static),
+  })
+
+  return ord
+}

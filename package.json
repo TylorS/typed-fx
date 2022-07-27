@@ -41,6 +41,7 @@
     "tslib": "^2.4.0"
   },
   "optionalPeerDependencies": {
+    "ts-morph": "^15.1.0",
     "typescript": "^4.7.4",
     "vite": "^3.0.2"
   },

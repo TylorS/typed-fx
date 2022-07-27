@@ -1,5 +1,6 @@
 import * as D from 'hkt-ts/Typeclass/Debug'
 import * as E from 'hkt-ts/Typeclass/Eq'
+import * as O from 'hkt-ts/Typeclass/Ord'
 import * as N from 'hkt-ts/number'
 import * as S from 'hkt-ts/string'
 
@@ -46,6 +47,8 @@ export const Eq: E.Eq<StackFrame> = E.sum<StackFrame>()('tag')({
     trace: S.Eq,
   }),
 })
+
+export const Ord: O.Ord<StackFrame> = O.Static
 
 export const Debug: D.Debug<StackFrame> = {
   debug: (frame) =>
