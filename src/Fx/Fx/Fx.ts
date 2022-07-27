@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Cause } from '../Cause/Cause.js'
+
+import * as Cause from '../Cause/Cause.js'
 import type { Env } from '../Env/Env.js'
 import { Exit } from '../Exit/Exit.js'
+import { FiberId } from '../FiberId/FiberId.js'
 import { Trace } from '../Trace/Trace.js'
 
 import type * as Instruction from './Instruction/Instruction.js'
 
 import * as Eff from '@/Fx/Eff/index.js'
 import { addTrace } from '@/Fx/Eff/index.js'
-import type * as S from '@/Service/index.js'
+import * as S from '@/Service/index.js'
 
 export interface Fx<out R, out E, out A> extends Eff.Eff<Instruction.Instruction<R, E, any>, A> {}
 
@@ -63,7 +65,14 @@ export const getEnv = <R>(__trace?: string): Fx<R, never, Env<R>> =>
 export const ask = <S extends S.Key<any>>(
   service: S,
   __trace?: string,
-): Fx<S.ResourcesOf<S>, never, S.OutputOf<S>> => access((env) => env.get(service), __trace)
+): Fx<S.ResourcesOf<S>, never, S.OutputOf<S>> =>
+  access<any, never, never, S.OutputOf<S>>((env) => env.get(service), __trace)
+
+export const askMany = <S extends ReadonlyArray<S.Key<any>>>(
+  keys: readonly [...S],
+  __trace?: string,
+): Fx<S.ResourcesOf<S[number]>, never, { readonly [K in keyof S]: S.OutputOf<S[K]> }> =>
+  access<any, any, never, any>((env) => env.get(S.tuple(...keys)), __trace)
 
 export const provide =
   <R>(env: Env<R>) =>
@@ -72,4 +81,10 @@ export const provide =
 
 export const attempt = <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Exit<E, A>> => Eff.attempt(fx)
 
-export const failure = <E = never>(cause: Cause<E>): Fx<never, E, never> => Eff.failure(cause)
+export const failure = <E = never>(cause: Cause.Cause<E>, __trace?: string): Fx<never, E, never> =>
+  Eff.failure(cause, __trace)
+
+export const died = (error: unknown, __trace?: string) => failure(Cause.died(error), __trace)
+export const failed = <E>(error: E, __trace?: string) => failure(Cause.failed(error), __trace)
+export const interrupted = (id: FiberId, __trace?: string) =>
+  failure(Cause.interrupted(id), __trace)
