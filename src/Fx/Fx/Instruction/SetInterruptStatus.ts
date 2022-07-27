@@ -6,5 +6,8 @@ export class SetInterruptStatus<R, E, A> extends Eff.Instruction<
   A
 > {}
 
-export const uninterruptible = <R, E, A>(fx: Fx<R, E, A>, __trace?: string) => new SetInterruptStatus([fx, false], __trace)
-export const interruptible = <R, E, A>(fx: Fx<R, E, A>, __trace?: string) => new SetInterruptStatus([fx, true], __trace)
+export const uninterruptible = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, E, A> =>
+  new SetInterruptStatus([fx, false], __trace)
+
+export const interruptible = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, E, A> =>
+  new SetInterruptStatus([fx, true], __trace)

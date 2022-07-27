@@ -1,12 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { pipe } from 'hkt-ts'
+
 import * as Cause from '../Cause/Cause.js'
 import type { Env } from '../Env/Env.js'
-import { Exit } from '../Exit/Exit.js'
-import { FiberId } from '../FiberId/FiberId.js'
+import * as Exit from '../Exit/Exit.js'
+import type { FiberId } from '../FiberId/FiberId.js'
+import type { Layer } from '../Layer/Layer.js'
 import { Trace } from '../Trace/Trace.js'
 
 import type * as Instruction from './Instruction/Instruction.js'
+import { zipAll } from './Instruction/ZipAll.js'
 
 import * as Eff from '@/Fx/Eff/index.js'
 import { addTrace } from '@/Fx/Eff/index.js'
@@ -51,8 +55,8 @@ export function Fx<G extends Generator<AnyInstruction, any>>(
 export const lazy = <R, E, A>(f: () => Fx<R, E, A>, __trace?: string): Fx<R, E, A> =>
   Eff.lazy(f, __trace)
 export const fromLazy = <A>(f: () => A, __trace?: string): Of<A> => Eff.fromLazy(f, __trace)
-export const fromValue = <A>(value: A, __trace?: string): Of<A> => Eff.fromValue(value, __trace)
-export const unit = fromValue<void>(undefined)
+export const success = <A>(value: A, __trace?: string): Of<A> => Eff.fromValue(value, __trace)
+export const unit = success<void>(undefined)
 
 export const access = <R, R2, E, A>(
   f: (env: Env<R>) => Fx<R2, E, A>,
@@ -60,26 +64,42 @@ export const access = <R, R2, E, A>(
 ): Fx<R | R2, E, A> => Eff.access(f, __trace) as Fx<R | R2, E, A>
 
 export const getEnv = <R>(__trace?: string): Fx<R, never, Env<R>> =>
-  access((env: Env<R>) => fromValue(env), __trace)
+  access((env: Env<R>) => success(env), __trace)
 
-export const ask = <S extends S.Key<any>>(
+export const ask = <S extends S.Service<any>>(
   service: S,
   __trace?: string,
-): Fx<S.ResourcesOf<S>, never, S.OutputOf<S>> =>
+): Fx<S.OutputOf<S>, never, S.OutputOf<S>> =>
   access<any, never, never, S.OutputOf<S>>((env) => env.get(service), __trace)
 
-export const askMany = <S extends ReadonlyArray<S.Key<any>>>(
+export const askMany = <S extends ReadonlyArray<S.Service<any>>>(
   keys: readonly [...S],
   __trace?: string,
-): Fx<S.ResourcesOf<S[number]>, never, { readonly [K in keyof S]: S.OutputOf<S[K]> }> =>
-  access<any, any, never, any>((env) => env.get(S.tuple(...keys)), __trace)
+): Fx<S.OutputOf<S[number]>, never, { readonly [K in keyof S]: S.OutputOf<S[K]> }> =>
+  access<any, any, never, any>((env) => zipAll(keys.map((k) => env.get(k))), __trace)
 
 export const provide =
   <R>(env: Env<R>) =>
   <E, A>(fx: Fx<R, E, A>): Fx<never, E, A> =>
     Eff.provide(env)(fx) as Fx<never, E, A>
 
-export const attempt = <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Exit<E, A>> => Eff.attempt(fx)
+export const provideService =
+  <S, I extends S>(service: S.Service<S>, implementation: I) =>
+  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
+    access((env) => pipe(fx, provide((env as Env<R>).add(service, implementation))))
+
+export const provideLayer =
+  <R2, E2, S>(layer: Layer<R2, E2, S>) =>
+  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R | R2, S>, E, A> =>
+    access((env) =>
+      Fx(function* () {
+        const extended = yield* (env as Env<R | R2>).addLayer(layer)
+
+        return yield* pipe(fx, provide(extended))
+      }),
+    ) as Fx<Exclude<R | R2, S>, E, A>
+
+export const attempt = <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Exit.Exit<E, A>> => Eff.attempt(fx)
 
 export const failure = <E = never>(cause: Cause.Cause<E>, __trace?: string): Fx<never, E, never> =>
   Eff.failure(cause, __trace)

@@ -7,7 +7,7 @@ import { ScopeState } from './ScopeState.js'
 
 import { Empty } from '@/Fx/Cause/Cause.js'
 import { Exit } from '@/Fx/Exit/Exit.js'
-import { Of, fromLazy, fromValue, lazy } from '@/Fx/Fx/Fx.js'
+import { Of, fromLazy, lazy, success } from '@/Fx/Fx/Fx.js'
 import { async } from '@/Fx/Fx/Instruction/Async.js'
 import { Service } from '@/Service/index.js'
 
@@ -20,10 +20,10 @@ export const Closeable = Service<Closeable>('Closeable')
 
 export function wait(scope: Closeable) {
   return async<never, never, Exit<any, any>>((cb) => {
-    const finalizer = scope.ensuring((exit) => fromLazy(() => cb(fromValue(exit))))
+    const finalizer = scope.ensuring((exit) => fromLazy(() => cb(success(exit))))
 
     if (isNothing(finalizer)) {
-      return Right(fromValue(getExit(scope)))
+      return Right(success(getExit(scope)))
     }
 
     return Left(lazy(() => finalizer.value(getExit(scope))))

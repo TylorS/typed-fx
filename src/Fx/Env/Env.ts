@@ -1,22 +1,22 @@
 import { pipe } from 'hkt-ts'
 import { isLeft } from 'hkt-ts/Either'
 
-import { Fiber } from '../Fiber/Fiber.js'
-import { Fx, Of, attempt, fromValue, getEnv, lazy, provide } from '../Fx/Fx.js'
+import { Exit } from '../Exit/Exit.js'
+import * as Fiber from '../Fiber/index.js'
+import { Fx, Of, attempt, getEnv, lazy, provide, success } from '../Fx/Fx.js'
 import { never } from '../Fx/Instruction/Async.js'
 import { fork, fromExit, join } from '../Fx/Instruction/Fork.js'
-import { getScope } from '../Fx/Instruction/GetScope.js'
-import { zipAll } from '../Fx/Instruction/ZipAll.js'
+import { getFiberScope } from '../Fx/Instruction/GetFiberScope.js'
 import type { Layer } from '../Layer/Layer.js'
 
-import { Scope } from '@/Scope/Scope.js'
+import { Scope } from '@/Fx/Scope/Scope.js'
 import * as Service from '@/Service/index.js'
 
 export interface Env<R> {
   /**
    * Retrieve a Service from the environment
    */
-  readonly get: <S extends R>(service: Service.Key<S>) => Of<S>
+  readonly get: <S extends R>(service: Service.Service<S>) => Of<S>
 
   /**
    * Add a Service to the environment, creating a *new* Environment
@@ -41,43 +41,28 @@ export class Environment<R> implements Env<R> {
     readonly fibers: Map<Service.Service<any>, Fiber.Live<never, R>>,
   ) {}
 
-  readonly get = <S extends R>(s: Service.Key<S>): Of<S> =>
+  readonly get = <S extends R>(s: Service.Service<S>): Of<S> =>
     lazy(() => {
-      if (s.tag === 'Service') {
-        if (this.services.has(s)) {
-          return fromValue(this.services.get(s) as S)
-        }
-
-        if (this.fibers.has(s)) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          const fiber = this.fibers.get(s)!
-
-          return Fx(function* () {
-            return yield* fromExit(yield* fiber.exit)
-          })
-        }
-
-        if (this.layers.has(s)) {
-          return this.getLayer(s)
-        }
-
-        throw new Error(
-          `Unable to find an implementation or Layer for Service: ${Service.formatServiceId(s)}`,
-        )
+      if (this.services.has(s)) {
+        return success(this.services.get(s) as S)
       }
 
-      if (s.tag === 'Tuple') {
-        return zipAll(...s.services.map(this.get)) as any
+      if (this.fibers.has(s)) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const fiber = this.fibers.get(s)!
+
+        return Fx(function* () {
+          return yield* fromExit((yield* fiber.exit) as Exit<never, S>)
+        })
       }
 
-      const entries = Object.entries(s.services)
-      const getServices = zipAll(...entries.map((e) => this.get(e[1])))
+      if (this.layers.has(s)) {
+        return this.getLayer(s)
+      }
 
-      return Fx(function* () {
-        const services = yield* getServices
-
-        return Object.fromEntries<any>(services.map((s, i) => [entries[i][0], s])) as S
-      })
+      throw new Error(
+        `Unable to find an implementation or Layer for Service: ${Service.formatService(s)}`,
+      )
     })
 
   readonly add: Env<R>['add'] = (<S, I extends S>(
@@ -96,7 +81,7 @@ export class Environment<R> implements Env<R> {
     const { services, layers, fibers } = this
 
     return Fx(function* () {
-      const scope = yield* getScope()
+      const scope = yield* getFiberScope()
       const env = yield* getEnv<R2>()
       const withScope = env.add(Scope, scope.fork())
       const provider = Fx(function* () {

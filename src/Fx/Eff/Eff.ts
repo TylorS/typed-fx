@@ -3,7 +3,7 @@
  * way to represent effects.
  */
 export interface Eff<Y, R> {
-  readonly [Symbol.iterator]: () => Generator<Y, R>
+  readonly [Symbol.iterator]: () => Generator<Y, R, any>
 }
 
 /* eslint-disable @typescript-eslint/no-unused-vars */

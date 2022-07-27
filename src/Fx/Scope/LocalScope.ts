@@ -1,4 +1,5 @@
-import { Just, Maybe, Nothing, getOrElse } from 'hkt-ts/Maybe'
+import * as Maybe from 'hkt-ts/Maybe'
+import { First } from 'hkt-ts/Typeclass/Associative'
 import { pipe } from 'hkt-ts/function'
 import { toLowerCase } from 'hkt-ts/string'
 
@@ -6,16 +7,18 @@ import { Closeable, getExit } from './Closeable.js'
 import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 
 import { AtomicCounter } from '@/Atomic/AtomicCounter.js'
-import { Exit } from '@/Fx/Exit/Exit.js'
+import { Exit, makeSequentialAssociative } from '@/Fx/Exit/Exit.js'
 import {
   FinalizationStrategy,
   Finalizer,
   FinalizerKey,
   finalizationStrategyToConcurrency,
 } from '@/Fx/Finalizer/Finalizer.js'
-import { Fx, fromLazy, fromValue, lazy } from '@/Fx/Fx/Fx.js'
+import { Fx, fromLazy, lazy, success, unit } from '@/Fx/Fx/Fx.js'
 import { withConcurrency } from '@/Fx/Fx/Instruction/WithConcurrency.js'
 import { zipAll } from '@/Fx/Fx/Instruction/ZipAll.js'
+
+const { concat: concatExits } = makeSequentialAssociative<any, any>(First)
 
 export class LocalScope implements Closeable {
   #state: ScopeState = Open([], new Map())
@@ -27,19 +30,18 @@ export class LocalScope implements Closeable {
     return this.#state
   }
 
-  readonly ensuring: (finalizer: Finalizer<never, never>) => Maybe<Finalizer<never, never>> = (
-    finalizer,
-  ) => {
-    if (this.isNotOpen) {
-      return Nothing
+  readonly ensuring: (finalizer: Finalizer<never, never>) => Maybe.Maybe<Finalizer<never, never>> =
+    (finalizer) => {
+      if (this.isNotOpen) {
+        return Maybe.Nothing
+      }
+
+      const key = FinalizerKey(Symbol(finalizer.name))
+
+      this.addFinalizer(key, finalizer)
+
+      return Maybe.Just(() => fromLazy(() => this.removeFinalizer(key)))
     }
-
-    const key = FinalizerKey(Symbol(finalizer.name))
-
-    this.addFinalizer(key, finalizer)
-
-    return Just(() => fromLazy(() => this.removeFinalizer(key)))
-  }
 
   readonly fork = (strategy: FinalizationStrategy = this.strategy): LocalScope => {
     if (this.isNotOpen) {
@@ -60,16 +62,16 @@ export class LocalScope implements Closeable {
 
   readonly close = (exit: Exit<any, any>) =>
     lazy(() => {
-      this.setExitIfNotSet(exit)
+      this.setExit(exit)
 
       // Can't close while there is more references
       if (this.#refCount.decrement > 0) {
-        return fromValue(false)
+        return success(false)
       }
 
       this.#state = Closing(this.finalizers, exit)
       const releaseAll = pipe(
-        zipAll(...this.keys.map((key) => this.finalize(key, exit))),
+        zipAll(this.keys.map((key) => this.finalize(key, exit))),
         withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
       )
 
@@ -131,19 +133,23 @@ export class LocalScope implements Closeable {
     return this.#state.tag === 'Closed'
   }
 
+  /**
+   * Returns
+   */
   protected finalize(key: FinalizerKey, exit: Exit<any, any>) {
     if (this.#state.tag === 'Closed') {
-      return fromValue(undefined)
+      return unit
     }
 
     const finalizer = this.#state.finalizers.get(key)
 
     this.removeFinalizer(key)
 
-    return finalizer?.(exit) ?? fromValue(undefined)
+    return finalizer?.(exit) ?? unit
   }
 
-  protected setExitIfNotSet(exit: Exit<any, any>) {
+  // Accumulate Exit values
+  protected setExit(exit: Exit<any, any>) {
     const state = this.#state
 
     if (state.tag === 'Open') {
@@ -152,10 +158,15 @@ export class LocalScope implements Closeable {
         state.finalizers,
         pipe(
           state.exit,
-          getOrElse(() => exit),
-          Just,
+          Maybe.map((e) => concatExits(e, exit)),
+          Maybe.getOrElse(() => exit),
+          Maybe.Just,
         ),
       )
+    }
+
+    if (state.tag === 'Closing') {
+      this.#state = Closing(state.finalizers, concatExits(state.exit, exit))
     }
   }
 }

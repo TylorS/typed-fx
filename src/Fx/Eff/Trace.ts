@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
+import { pipe } from 'hkt-ts'
+
 import { Eff } from './Eff.js'
 
 import { StackTrace } from '@/Fx/StackTrace/StackTrace.js'
@@ -14,6 +16,15 @@ export class AddTrace implements Eff<AddTrace, void> {
 }
 
 export const addTrace = (trace: Trace) => new AddTrace(trace)
+
+export const addCustomTrace = (trace?: string): Eff<AddTrace, void> =>
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  trace ? pipe(trace, Trace.custom, addTrace) : Eff(function* () {})
+
+export const addRuntimeTrace = <E extends { readonly stack?: string }>(
+  error: E,
+  targetObject?: Function | undefined,
+) => pipe(Trace.runtime(error, targetObject), addTrace)
 
 export class GetTrace implements Eff<GetTrace, Trace> {
   *[Symbol.iterator]() {

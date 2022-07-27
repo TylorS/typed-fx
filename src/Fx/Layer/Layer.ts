@@ -1,7 +1,7 @@
 import { AnyInstruction, Fx, ask } from '../Fx/Fx.js'
 import { ErrorsFromInstruction, ResourcesFromInstruction } from '../Fx/Instruction/Instruction.js'
 
-import { Scope } from '@/Scope/Scope.js'
+import { Scope } from '@/Fx/Scope/Scope.js'
 import { Service } from '@/Service/index.js'
 
 export interface Layer<R, E, A> {

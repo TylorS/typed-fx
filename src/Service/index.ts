@@ -1,7 +1,3 @@
-import { HKT, Params, pipe } from 'hkt-ts'
-import { ReadonlyRecord, map } from 'hkt-ts/Record'
-import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
-
 import { Tagged } from '@/Tagged/index.js'
 
 /**
@@ -9,118 +5,29 @@ import { Tagged } from '@/Tagged/index.js'
  */
 export type Service<S> = Tagged<
   {
-    readonly ServiceKey: Service<S>
+    readonly Service: Service<S>
   },
-  { readonly tag: 'Service'; readonly id: symbol }
+  symbol
 >
 
 /**
  * Construct a Service, the provided name is used for debugging purposes and is required.
  */
-export const Service = <S>(name: string): Service<S> =>
-  Tagged<Service<S>>()({ tag: 'Service', id: Symbol(name) })
+export const Service = <S>(name: string): Service<S> => Tagged<Service<S>>()(Symbol(name))
 
 /**
  * Extract the output of a Service
  */
-export type OutputOf<T> = [T] extends [StructKey<infer S>]
-  ? { readonly [K in keyof S]: OutputOf<S[K]> }
-  : [T] extends [TupleKey<infer S>]
-  ? { readonly [K in keyof S]: OutputOf<S[K]> }
-  : [T] extends [Key<infer S>]
-  ? S
-  : never
-
-export type ResourcesOf<T> = T extends StructKey<ReadonlyRecord<string, Key<infer R>>>
-  ? R
-  : T extends TupleKey<infer Keys>
-  ? { readonly [K in keyof Keys]: ResourcesOf<Keys[K]> }[number]
-  : T extends Service<infer S>
-  ? S
-  : never
-
-/**
- * A Lookup key of a Service or multiple Services
- */
-export type Key<S> =
-  | Service<S>
-  | TupleKey<ReadonlyArray<Key<S>>>
-  | StructKey<{ readonly [key: string]: Key<S> }>
-
-export type TupleKey<S extends ReadonlyArray<Key<any>>> = Tagged<
-  {
-    readonly ServiceKey: TupleKey<S>
-  },
-  {
-    readonly tag: 'Tuple'
-    readonly services: ReadonlyArray<Key<any>>
-  }
->
-
-/**
- * Construct a Lookup key which returns a Tuple of Service instances.
- */
-export const tuple = <Services extends ReadonlyArray<Key<any>>>(
-  ...services: Services
-): TupleKey<Services> =>
-  Tagged<TupleKey<Services>>()({
-    tag: 'Tuple',
-    services,
-  })
-
-export interface ServiceKeyHKT extends HKT {
-  readonly type: Key<this[Params.A]>
-}
-
-export type StructKey<S extends ReadonlyRecord<string, Key<any>>> = Tagged<
-  {
-    readonly ServiceKey: StructKey<S>
-  },
-  {
-    readonly tag: 'Struct'
-    readonly services: S
-  }
->
-
-/**
- * Construct a Lookup Key which returns a struct of Service instances
- */
-export const struct = <Services extends ReadonlyRecord<string, Key<any>>>(
-  services: Services,
-): StructKey<Services> =>
-  Tagged<StructKey<Services>>()({
-    tag: 'Struct',
-    services,
-  })
-
-export const AssociativeBoth: AB.AssociativeBoth<ServiceKeyHKT> = {
-  both: (s) => (f) => tuple(f, s),
-}
-
-export const both = AssociativeBoth.both
+export type OutputOf<T> = [T] extends [Service<infer S>] ? S : never
 
 const symbolRegex = /^Symbol/i
 const serviceText = 'Service'
 
 /**
- * Format a Service's ID.
+ * Format a Service's into a string.
  */
-export function formatServiceId<A>(service: Service<A>) {
-  return service.id.toString().replace(symbolRegex, serviceText)
-}
-
-/**
- * Format a Key into a string
- */
-export function formatServiceKey<A>(service: Key<A>): string {
-  switch (service.tag) {
-    case 'Service':
-      return formatServiceId(service)
-    case 'Tuple':
-      return JSON.stringify(service.services.map(formatServiceKey), null, 2)
-    case 'Struct':
-      return JSON.stringify(pipe(service.services, map(formatServiceKey)), null, 2)
-  }
+export function formatService<A>(service: Service<A>) {
+  return service.toString().replace(symbolRegex, serviceText)
 }
 
 const idCache = new WeakMap<object, Service<any>>()

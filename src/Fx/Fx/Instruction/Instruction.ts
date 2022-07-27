@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Async } from './Async.js'
 import { Fork } from './Fork.js'
-import { GetScope } from './GetScope.js'
+import { GetFiberRefs } from './GetFiberRefs.js'
+import { GetFiberScope } from './GetFiberScope.js'
 import { SetInterruptStatus } from './SetInterruptStatus.js'
 import { WithConcurrency } from './WithConcurrency.js'
 import { ZipAll } from './ZipAll.js'
@@ -16,8 +17,9 @@ export type Instruction<R, E, A> =
   | AddTrace
   | Async<R, E, A>
   | Failure<E>
-  | Fork<R, unknown, A>
-  | GetScope
+  | Fork<R, any, A>
+  | GetFiberRefs
+  | GetFiberScope
   | GetTrace
   | SetInterruptStatus<R, E, A>
   | WithConcurrency<R, E, A>
@@ -36,6 +38,8 @@ export type ResourcesFromInstruction<T> = T extends Access<
   : T extends WithConcurrency<infer _R, infer _E, infer _A>
   ? _R
   : T extends ZipAll<infer _R, infer _E, infer _A>
+  ? _R
+  : T extends Fork<infer _R, infer _E, infer _A>
   ? _R
   : never
 
