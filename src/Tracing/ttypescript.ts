@@ -20,7 +20,8 @@ export const tracingPlugin = (program: ts.Program, config: { readonly root?: str
       function getTrace(node: ts.Node, exisingText?: string): ts.Expression {
         const nodeEnd = sourceFile.getLineAndCharacterOfPosition(node.getEnd())
 
-        // Must be an expression, so we create a binary expression to concatenate the 2 parts of the string.
+        // Must be an expression, so we create a binary expression to concatenate the 2 parts of the string
+        // and to handle existing expressions in existingText.
         const expression = ts.factory.createBinaryExpression(
           ts.factory.createStringLiteral(
             exisingText ? trimQuotations(exisingText) : node.getText(),
