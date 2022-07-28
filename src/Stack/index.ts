@@ -6,7 +6,6 @@ export class Stack<A> {
 
   readonly push = (value: A): Stack<A> => new Stack(value, this)
   readonly pop = (): Stack<A> | undefined => this.previous
-
   readonly replace = (f: (value: A) => A): Stack<A> => new Stack(f(this.value), this.previous);
 
   *[Symbol.iterator]() {
@@ -20,12 +19,12 @@ export class Stack<A> {
   }
 }
 
-type StackDto<A> = {
-  readonly value: A
-  readonly previous: Stack<A> | null
-}
-
 export const makeEq = <A>(A: E.Eq<A>): E.Eq<Stack<A>> => {
+  type StackDto<A> = {
+    readonly value: A
+    readonly previous: Stack<A> | null
+  }
+
   const eq: E.Eq<Stack<A>> = pipe(
     E.struct<StackDto<A>>({
       value: A,

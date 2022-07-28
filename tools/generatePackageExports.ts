@@ -1,9 +1,7 @@
-// TODO: update exports in package.json with all modules
+import fs from 'node:fs'
+import path, { extname } from 'node:path'
 
-import fs from 'fs'
-import path, { extname } from 'path'
-
-import { MODULES, ROOT_DIR, SOURCE_DIR, findFilePaths } from './common'
+import { MODULES, ROOT_DIR, SOURCE_DIR, findFilePaths } from './common.js'
 
 const TSX_REGEX = /.tsx?$/
 const INDEX_REGEX = /\/?index$/

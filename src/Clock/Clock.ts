@@ -1,48 +1,84 @@
 import { Lazy } from 'hkt-ts'
-import { Branded } from 'hkt-ts/Branded'
+import * as Associative from 'hkt-ts/Typeclass/Associative'
+import { Identity } from 'hkt-ts/Typeclass/Identity'
 
-import { CurrentDate } from '@/CurrentDate/CurrentDate'
-import { Service } from '@/Service/Service'
+import { Service } from '@/Service/index.js'
+import { Delay, MAX_UNIX_TIME, MIN_UNIX_TIME, Time, UnixTime } from '@/Time/index.js'
 
-/**
- * A Monotonic representation of time
- */
-export type Time = Branded<{ readonly Time: number }, number>
-export const Time = Branded<Time>()
+export interface Clock {
+  readonly startTime: UnixTime
+  readonly getCurrentTime: Lazy<Time>
+}
 
-/**
- * A Clock is an abstraction for retrieving a monotonic form of the current time.
- * It is instantiated with the startTime, such that the monotonic form can always be turned back into Wall Clock time.
- */
-export class Clock extends Service {
-  constructor(readonly startTime: Date, readonly currentTime: Lazy<Time>) {
-    super()
-  }
-
-  readonly toDate = (time: Time): Date => new Date(this.startTime.getTime() + time)
-
-  readonly fork = (): Clock => {
-    const offset = this.currentTime()
-
-    return new Clock(new Date(this.startTime.getTime() + offset), () =>
-      Time(this.currentTime() - offset),
-    )
+export function Clock(startTime: UnixTime, getCurrentTime: Lazy<Time>): Clock {
+  return {
+    startTime,
+    getCurrentTime,
   }
 }
 
-export class DateClock extends Clock {
-  constructor(
-    readonly startTime: Date = new Date(),
-    readonly currentDate: Lazy<Date> = () => new Date(),
-  ) {
-    const offset = startTime.getTime()
-
-    super(startTime, () => Time(currentDate().getTime() - offset))
-  }
+export namespace Clock {
+  export const service: Service<Clock> = Service<Clock>('Clock')
 }
 
-export const toDate = (time: Time) => Clock.asks((c) => c.toDate(time))
+export function delayToUnixTime(delay: Delay) {
+  return (clock: Clock): UnixTime => UnixTime(clock.startTime + clock.getCurrentTime() + delay)
+}
 
-export const live = Clock.layer(
-  CurrentDate.asks((c) => new DateClock(c.currentDate(), c.currentDate)),
-)
+export function timeToDate(time: Time) {
+  return (clock: Clock): Date => new Date(clock.startTime + time)
+}
+
+export function timeToUnixTime(time: Time) {
+  return (clock: Clock): UnixTime => UnixTime(clock.startTime + time)
+}
+
+export function dateToTime(date: Date) {
+  return (clock: Clock): Time => Time(clock.startTime - date.getTime())
+}
+
+export function addDelay(delay: Delay) {
+  return (clock: Clock): Time => Time(clock.getCurrentTime() + delay)
+}
+
+export function timeToDelay(time: Time) {
+  return (clock: Clock): Delay => Delay(Math.max(0, time - clock.getCurrentTime()))
+}
+
+export function unixTimeToDelay(time: UnixTime) {
+  return (clock: Clock): Delay =>
+    Delay(Math.max(0, time - timeToUnixTime(clock.getCurrentTime())(clock)))
+}
+
+export const UnionAssociative: Associative.Associative<Clock> = {
+  concat: (f, s) => (f.startTime <= s.startTime ? f : s),
+}
+
+export const IntersectionAssociative: Associative.Associative<Clock> =
+  Associative.reverse(UnionAssociative)
+
+export const or =
+  (second: Clock) =>
+  (first: Clock): Clock =>
+    UnionAssociative.concat(first, second)
+
+export const and =
+  (second: Clock) =>
+  (first: Clock): Clock =>
+    IntersectionAssociative.concat(first, second)
+
+export const UnionIdentity: Identity<Clock> = {
+  ...UnionAssociative,
+  id: Clock(MAX_UNIX_TIME, () => Time(0)),
+}
+
+export const IntersectionIdentity: Identity<Clock> = {
+  ...IntersectionAssociative,
+  id: Clock(MIN_UNIX_TIME, () => Time(0)),
+}
+
+export function fork(clock: Clock): Clock {
+  const offset = clock.getCurrentTime()
+
+  return Clock(timeToUnixTime(offset)(clock), () => Time(clock.getCurrentTime() - offset))
+}

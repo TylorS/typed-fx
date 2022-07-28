@@ -1,13 +1,13 @@
 import { Associative } from 'hkt-ts/Typeclass/Associative'
 
-import { Time } from '@/Clock/Clock'
+import { Delay } from '@/Time/index.js'
 
 export type Decision = Continue | Done
 
 export class Continue {
   readonly tag = 'Continue'
 
-  constructor(readonly delay: Time) {}
+  constructor(readonly delay: Delay) {}
 }
 
 export const Done = new (class Done {
@@ -29,7 +29,7 @@ export const DecisionUnionAssociative: Associative<Decision> = {
       return f
     }
 
-    return new Continue(Time(Math.min(f.delay, s.delay)))
+    return new Continue(Delay(Math.min(f.delay, s.delay)))
   },
 }
 
@@ -39,6 +39,6 @@ export const DecisionIntersectionAssociative: Associative<Decision> = {
       return Done
     }
 
-    return new Continue(Time(Math.max(f.delay, s.delay)))
+    return new Continue(Delay(Math.max(f.delay, s.delay)))
   },
 }

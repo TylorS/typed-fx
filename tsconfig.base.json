@@ -30,7 +30,7 @@
     ],
     "plugins": [
       {
-        "transform": "ts-macros"
+        "transform": "./src/Tracing/plugin.ts"
       }
     ]
   }

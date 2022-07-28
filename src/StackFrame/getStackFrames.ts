@@ -1,16 +1,16 @@
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 
-import type { StackFrame } from './StackFrame'
-import { parseChrome } from './parseChromeStack'
-import { parseGecko } from './parseGeckoStackFrame'
+import type { RuntimeStackFrame } from './StackFrame.js'
+import { parseChrome } from './parseChromeStack.js'
+import { parseGecko } from './parseGeckoStackFrame.js'
 
 const lineRegex = /\s+at\s(?:(?<method>.+?)\s\()?(?<file>.+?):(?<line>\d+):(?<char>\d+)\)?\s*$/
 
 export function getStackFrames<E extends { stack?: string } = Error>(
-  error: E = new Error() as unknown as E,
+  error: E = {} as E,
   // eslint-disable-next-line @typescript-eslint/ban-types
   targetObject?: Function,
-): ReadonlyArray<StackFrame> {
+): ReadonlyArray<RuntimeStackFrame> {
   if (!error.stack && Error.captureStackTrace) {
     Error.captureStackTrace(error, targetObject)
   }
@@ -42,7 +42,7 @@ export function getStackFrames<E extends { stack?: string } = Error>(
 export function getCurrentStackFrame(
   // eslint-disable-next-line @typescript-eslint/ban-types
   targetObject?: Function,
-): Maybe<StackFrame> {
+): Maybe<RuntimeStackFrame> {
   const error = new Error()
 
   if (Error.captureStackTrace) {
@@ -69,6 +69,7 @@ export function getCurrentStackFrame(
     }
 
     return Just({
+      tag: 'Runtime',
       method: match.groups.method || '',
       file: match.groups.file || '',
       line: +match.groups.line,

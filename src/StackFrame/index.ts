@@ -1,2 +1,2 @@
-export * from './getStackFrames'
-export * from './StackFrame'
+export * from './getStackFrames.js'
+export * from './StackFrame.js'

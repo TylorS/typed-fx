@@ -2,14 +2,16 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
     "outDir": "test"
   },
   "include": [
-    "src/test.ts"
-  ],
-  "exclude": [
-    "src/**/*.test.ts",
-    "tools"
+    "src/**/*.test.ts"
   ]
 }

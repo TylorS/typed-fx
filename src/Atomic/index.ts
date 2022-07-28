@@ -1,3 +1,3 @@
-export * from './Atomic'
-export * from './AtomicBoolean'
-export * from './AtomicCounter'
+export * from './Atomic.js'
+export * from './AtomicBoolean.js'
+export * from './AtomicCounter.js'
