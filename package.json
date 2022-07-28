@@ -6,6 +6,7 @@
   "main": "esm/index.js",
   "types": "cjs/index.d.ts",
   "typings": "cjs/index.d.ts",
+  "sideEffects": false,
   "scripts": {
     "build:cjs": "rm -rf cjs && tsc -p ./tsconfig.build.cjs.json  && tsconfig-replace-paths -p ./tsconfig.build.cjs.json",
     "build:esm": "rm -rf esm && ttsc -p ./tsconfig.build.esm.json && tsconfig-replace-paths -p ./tsconfig.build.esm.json",
