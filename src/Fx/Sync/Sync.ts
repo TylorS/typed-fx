@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { Lazy } from 'hkt-ts'
-import { U } from 'ts-toolbelt'
 
+import { Env } from './Env.js'
 import type {
   AnyInstruction,
   ErrorsFromInstruction,
@@ -13,6 +13,7 @@ import { Cause, died, failed } from '@/Fx/Cause/Cause.js'
 import * as Eff from '@/Fx/Eff/index.js'
 import { Exit } from '@/Fx/Exit/Exit.js'
 import { Trace } from '@/Fx/Trace/index.js'
+import { Service } from '@/Service/index.js'
 
 export interface Sync<R, E, A> extends Eff.Eff<Instruction<R, E, any>, A> {}
 
@@ -62,13 +63,21 @@ export const fail = <E>(error: E, __trace?: string) => failure(failed(error), __
 export const attempt = Eff.attempt as <R, E, A>(sync: Sync<R, E, A>) => Sync<R, never, Exit<E, A>>
 
 export const access = Eff.access as <R, R2, E, A>(
-  f: (r: R) => Sync<R2, E, A>,
+  f: (r: Env<R>) => Sync<R2, E, A>,
   __trace?: string,
 ) => Sync<R | R2, E, A>
-export const ask = <R>(__trace?: string | undefined): Sync<R, never, U.IntersectOf<R>> =>
-  access((r: R) => fromValue(r as U.IntersectOf<R>), __trace)
-export const asks = <R, A>(f: (r: R) => A, __trace?: string | undefined): Sync<R, never, A> =>
-  access((r: R) => fromLazy(() => f(r)), __trace)
+
+export const getEnv = <R>(__trace?: string) => access((r: Env<R>) => fromValue(r), __trace)
+
+export const ask = <R>(service: Service<R>, __trace?: string | undefined): Sync<R, never, R> =>
+  access((r: Env<R>) => fromValue(r.get(service)), __trace)
+
+export const asks = <R, A>(
+  service: Service<R>,
+  f: (r: R) => A,
+  __trace?: string | undefined,
+): Sync<R, never, A> => access((r: Env<R>) => fromLazy(() => f(r.get(service))), __trace)
+
 export const provide = Eff.provide as <R>(
   resources: R,
 ) => <E, A>(sync: Sync<R, E, A>) => Sync<never, E, A>

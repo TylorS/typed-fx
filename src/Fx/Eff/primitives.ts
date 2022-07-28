@@ -1,36 +1,14 @@
 import { Lazy } from 'hkt-ts'
 
 import { Eff } from './Eff.js'
-import { AddTrace } from './Trace.js'
+import { FromLazy, fromLazy } from './FromLazy.js'
 
-import { Trace } from '@/Fx/Trace/Trace.js'
-
-export function fromValue<A>(value: A, __trace?: string): Eff<AddTrace, A> {
-  return Eff(function* () {
-    if (__trace) {
-      yield* new AddTrace(Trace.custom(__trace))
-    }
-
-    return value
-  })
+export function fromValue<A>(value: A, __trace?: string): Eff<FromLazy<A>, A> {
+  return fromLazy(() => value, __trace)
 }
 
-export function fromLazy<A>(f: Lazy<A>, __trace?: string): Eff<AddTrace, A> {
+export function lazy<Y, A>(f: Lazy<Eff<Y, A>>, __trace?: string): Eff<Y | FromLazy<Eff<Y, A>>, A> {
   return Eff(function* () {
-    if (__trace) {
-      yield* new AddTrace(Trace.custom(__trace))
-    }
-
-    return f()
-  })
-}
-
-export function lazy<Y, A>(f: Lazy<Eff<Y, A>>, __trace?: string): Eff<Y | AddTrace, A> {
-  return Eff(function* () {
-    if (__trace) {
-      yield* new AddTrace(Trace.custom(__trace))
-    }
-
-    return yield* f()
+    return yield* yield* fromLazy(f, __trace)
   })
 }

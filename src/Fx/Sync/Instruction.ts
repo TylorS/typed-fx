@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { FromLazy } from '../Eff/FromLazy.js'
+
+import type { Env } from './Env.js'
+
 import type { Access } from '@/Fx/Eff/Access.js'
 import type { Failure } from '@/Fx/Eff/Failure.js'
 import type { AddTrace, GetTrace } from '@/Fx/Eff/Trace.js'
 
 export type Instruction<R, E, A> =
-  | Access<R, Instruction<R, E, any>, A>
+  | Access<Env<R>, Instruction<R, E, any>, A>
   | Failure<E>
+  | FromLazy<A>
   | AddTrace
   | GetTrace
 

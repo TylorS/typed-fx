@@ -34,14 +34,10 @@ export type ResourcesOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _R : n
 export type ErrorsOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _E : never
 export type OutputOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _A : never
 
-export function Fx<G extends Generator<AnyInstruction, any>>(
-  f: () => G,
+export function Fx<Y extends AnyInstruction, R>(
+  f: () => Generator<Y, R>,
   __trace?: string,
-): Fx<
-  Instruction.ResourcesFromInstruction<Eff.YieldOf<G>>,
-  Instruction.ErrorsFromInstruction<Eff.YieldOf<G>>,
-  Eff.ReturnOf<G>
-> {
+): Fx<Instruction.ResourcesFromInstruction<Y>, Instruction.ErrorsFromInstruction<Y>, R> {
   return Eff.Eff(function* () {
     // Allow creating custom traces for each Fx
     if (__trace) {
@@ -49,7 +45,7 @@ export function Fx<G extends Generator<AnyInstruction, any>>(
     }
 
     return yield* f()
-  })
+  }) as Fx<Instruction.ResourcesFromInstruction<Y>, Instruction.ErrorsFromInstruction<Y>, R>
 }
 
 export const lazy = <R, E, A>(f: () => Fx<R, E, A>, __trace?: string): Fx<R, E, A> =>

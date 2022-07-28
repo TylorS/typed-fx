@@ -17,10 +17,10 @@ export type Cause<E> =
   | Parallel<E, E>
   | Traced<E>
 
-export const Empty = new (class Empty {
-  readonly tag = 'Empty'
-})()
-export type Empty = typeof Empty
+export interface Empty {
+  readonly tag: 'Empty'
+}
+export const Empty: Empty = { tag: 'Empty' }
 
 export class Interrupted {
   readonly tag = 'Interrupted'

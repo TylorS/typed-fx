@@ -7,9 +7,11 @@ import { Fx, Of, attempt, getEnv, lazy, provide, success } from '../Fx/Fx.js'
 import { never } from '../Fx/Instruction/Async.js'
 import { fork, fromExit, join } from '../Fx/Instruction/Fork.js'
 import { getFiberScope } from '../Fx/Instruction/GetFiberScope.js'
+import { zipAll } from '../Fx/Instruction/ZipAll.js'
 import type { Layer } from '../Layer/Layer.js'
 
 import { Scope } from '@/Fx/Scope/Scope.js'
+import * as Sync from '@/Fx/Sync/index.js'
 import * as Service from '@/Service/index.js'
 
 export interface Env<R> {
@@ -28,6 +30,8 @@ export interface Env<R> {
    * but are intrinsically tied to the Scope in which they were constructed from.
    */
   readonly addLayer: <R2, E, S>(layer: Layer<R2, E, S>) => Fx<R2, E, Env<R | S>>
+
+  readonly toSync: Fx<R, never, Sync.Env<R>>
 }
 
 export function Env<A, I extends A>(service: Service.Service<A>, implementation: I): Env<A> {
@@ -102,6 +106,21 @@ export class Environment<R> implements Env<R> {
       >(services, new Map<any, any>([...layers, [layer.build, provider]]), fibers)
     })
   }
+
+  readonly toSync: Of<Sync.Env<R>> = lazy<never, never, Sync.Env<R>>(() => {
+    const { services, layers, getLayer } = this
+
+    return Fx(function* () {
+      // Ensure we have all Layers instantiated so they are all synchronously available.
+      yield* zipAll(
+        Array.from(layers.keys())
+          .filter((s) => !services.has(s))
+          .map(getLayer),
+      )
+
+      return new Sync.Environment<R>(services)
+    })
+  })
 
   protected getLayer = <S extends R>(s: Service.Service<S>): Of<S> =>
     lazy(() => {

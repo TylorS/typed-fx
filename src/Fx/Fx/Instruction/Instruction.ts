@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { Access } from './Access.js'
 import { Async } from './Async.js'
 import { Fork } from './Fork.js'
 import { GetFiberScope } from './GetFiberScope.js'
@@ -6,55 +7,58 @@ import { SetInterruptStatus } from './SetInterruptStatus.js'
 import { WithConcurrency } from './WithConcurrency.js'
 import { ZipAll } from './ZipAll.js'
 
-import { Access } from '@/Fx/Eff/Access.js'
 import { Failure } from '@/Fx/Eff/Failure.js'
+import { FromLazy } from '@/Fx/Eff/FromLazy.js'
 import { AddTrace, GetTrace } from '@/Fx/Eff/Trace.js'
-import { Env } from '@/Fx/Env/Env.js'
 
-export type Instruction<R, E, A> =
-  | Access<Env<R>, Instruction<R, E, any>, A>
+export type Instruction<R = never, E = never, A = never> =
+  | Access<R, R, E, A>
   | AddTrace
   | Async<R, E, A>
   | Failure<E>
   | Fork<R, any, A>
+  | FromLazy<A>
   | GetFiberScope
   | GetTrace
   | SetInterruptStatus<R, E, A>
   | WithConcurrency<R, E, A>
   | ZipAll<R, E, A>
 
-export type ResourcesFromInstruction<T> = T extends Access<
-  Env<infer _R>,
-  Instruction<infer _R2, infer _E, any>,
+export type ResourcefulInstruction<R, E, A> =
+  | Access<R, R, E, A>
+  | Async<R, E, A>
+  | Fork<R, E, A>
+  | SetInterruptStatus<R, E, A>
+  | WithConcurrency<R, E, A>
+  | ZipAll<R, E, A>
+
+export type FailureInstruction<R, E, A> =
+  | Access<R, R, E, A>
+  | Async<R, E, A>
+  | Failure<E>
+  | SetInterruptStatus<R, E, A>
+  | WithConcurrency<R, E, A>
+  | ZipAll<R, E, A>
+
+export type AnyFailureInstruction =
+  | FailureInstruction<any, any, any>
+  | FailureInstruction<never, never, any>
+  | FailureInstruction<never, any, any>
+  | FailureInstruction<any, never, any>
+
+export type VoidInstructions = AddTrace | GetFiberScope | GetTrace
+
+export type ResourcesFromInstruction<T> = Exclude<
+  T,
+  VoidInstructions
+> extends ResourcefulInstruction<infer _R, infer _E, infer _A>
+  ? _R
+  : never
+
+export type ErrorsFromInstruction<T> = Extract<T, AnyFailureInstruction> extends FailureInstruction<
+  infer _R,
+  infer _E,
   infer _A
 >
-  ? _R | _R2
-  : T extends Async<infer _R, infer _E, infer _A>
-  ? _R
-  : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
-  ? _R
-  : T extends WithConcurrency<infer _R, infer _E, infer _A>
-  ? _R
-  : T extends ZipAll<infer _R, infer _E, infer _A>
-  ? _R
-  : T extends Fork<infer _R, infer _E, infer _A>
-  ? _R
-  : never
-
-export type ErrorsFromInstruction<T> = T extends Failure<infer E>
-  ? E
-  : T extends Access<Env<infer _R>, Instruction<infer _R2, infer _E, any>, infer _A>
   ? _E
-  : T extends Async<infer _R, infer _E, infer _A>
-  ? _E
-  : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
-  ? _E
-  : T extends WithConcurrency<infer _R, infer _E, infer _A>
-  ? _E
-  : T extends ZipAll<infer _R, infer _E, infer _A>
-  ? _E
-  : never
-
-export type OutputOfFromInsruction<T> = T extends Instruction<infer _R, infer _E, infer _A>
-  ? _A
   : never
