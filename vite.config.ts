@@ -13,7 +13,7 @@ export default defineConfig({
       projects: [tsConfig],
     }),
     tracingPlugin({
-      tsconfig: tsConfig
+      tsconfig: tsConfig,
     }),
   ],
   build: {
@@ -24,5 +24,5 @@ export default defineConfig({
   },
   server: {
     port: 7777,
-  }
+  },
 })
