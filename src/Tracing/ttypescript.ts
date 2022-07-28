@@ -68,12 +68,13 @@ export const tracingPlugin = (program: ts.Program, config: { readonly root?: str
             ts.visitNode(node.expression, visitor), // Process the expression
             node.typeArguments,
             shouldAppendTrace
-              ? traceIsMissingLocation && !haveNotProvidedTrace // Ammend existing custom Trace with line numbers
-                ? [
+              ? haveNotProvidedTrace
+                ? [...node.arguments, getTrace(node.expression)] // Append new Trace
+                : [
+                    // Ammend existing custom Trace with line numbers
                     ...node.arguments.slice(0, -1),
                     getTrace(node.expression, lastParameter.getText(sourceFile)),
                   ]
-                : [...node.arguments, getTrace(node.expression)] // Append new Trace
               : node.arguments, // Don't do anything
           )
         }
