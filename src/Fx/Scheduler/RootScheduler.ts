@@ -14,15 +14,6 @@ import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { UnixTime } from '@/Time/index.js'
 
-class Task<R, E, A> {
-  protected future = pending<A, R, E>()
-
-  constructor(readonly fx: Fx.Fx<R, E, A>) {}
-
-  readonly wait = wait(this.future)
-  readonly complete: () => boolean = () => complete(this.future)(this.fx)
-}
-
 export function RootScheduler(timer: Timer.Timer): Scheduler {
   const timeline = new Timeline<Task<any, any, any>>(scheduleNextRun)
 
@@ -78,7 +69,7 @@ export function RootScheduler(timer: Timer.Timer): Scheduler {
   return scheduler
 }
 
-export function scheduled<R, E, A>(
+function scheduled<R, E, A>(
   fx: Fx.Fx<R, E, A>,
   schedule: Schedule,
   clock: Clock.Clock,
@@ -100,4 +91,15 @@ export function scheduled<R, E, A>(
     // Return the final state
     return state
   })
+}
+
+// A simple helper to create a Future around an existing Fx to be run
+// at a future time by the scheduler.
+class Task<R, E, A> {
+  protected future = pending<A, R, E>()
+
+  constructor(readonly fx: Fx.Fx<R, E, A>) {}
+
+  readonly wait = wait(this.future)
+  readonly complete: () => boolean = () => complete(this.future)(this.fx)
 }
