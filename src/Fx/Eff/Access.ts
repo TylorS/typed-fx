@@ -3,10 +3,7 @@ import { AddTrace } from './Trace.js'
 
 import { Trace } from '@/Fx/Trace/index.js'
 
-export class Access<R, Y, R2> extends Eff.Instruction<
-  (resources: R) => Eff<Y, R2>,
-  R2
-> {}
+export class Access<R, Y, R2> extends Eff.Instruction<(resources: R) => Eff<Y, R2>, R2> {}
 
 export function access<R, Y, R2>(
   f: (resources: R) => Eff<Y, R2>,

@@ -3,7 +3,7 @@ import * as Associative from 'hkt-ts/Typeclass/Associative'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
 import { Service } from '@/Service/index.js'
-import { MAX_UNIX_TIME, MIN_UNIX_TIME, Time, UnixTime } from '@/Time/index.js'
+import { Delay, MAX_UNIX_TIME, MIN_UNIX_TIME, Time, UnixTime } from '@/Time/index.js'
 
 export interface Clock {
   readonly startTime: UnixTime
@@ -21,16 +21,33 @@ export namespace Clock {
   export const service: Service<Clock> = Service<Clock>('Clock')
 }
 
-export function toDate(time: Time) {
+export function delayToUnixTime(delay: Delay) {
+  return (clock: Clock): UnixTime => UnixTime(clock.startTime + clock.getCurrentTime() + delay)
+}
+
+export function timeToDate(time: Time) {
   return (clock: Clock): Date => new Date(clock.startTime + time)
 }
 
-export function toUnixTime(time: Time) {
+export function timeToUnixTime(time: Time) {
   return (clock: Clock): UnixTime => UnixTime(clock.startTime + time)
 }
 
-export function toTime(date: Date) {
+export function dateToTime(date: Date) {
   return (clock: Clock): Time => Time(clock.startTime - date.getTime())
+}
+
+export function addDelay(delay: Delay) {
+  return (clock: Clock): Time => Time(clock.getCurrentTime() + delay)
+}
+
+export function timeToDelay(time: Time) {
+  return (clock: Clock): Delay => Delay(Math.max(0, time - clock.getCurrentTime()))
+}
+
+export function unixTimeToDelay(time: UnixTime) {
+  return (clock: Clock): Delay =>
+    Delay(Math.max(0, time - timeToUnixTime(clock.getCurrentTime())(clock)))
 }
 
 export const UnionAssociative: Associative.Associative<Clock> = {
@@ -63,5 +80,5 @@ export const IntersectionIdentity: Identity<Clock> = {
 export function fork(clock: Clock): Clock {
   const offset = clock.getCurrentTime()
 
-  return Clock(toUnixTime(offset)(clock), () => Time(clock.getCurrentTime() - offset))
+  return Clock(timeToUnixTime(offset)(clock), () => Time(clock.getCurrentTime() - offset))
 }

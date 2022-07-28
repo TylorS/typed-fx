@@ -25,7 +25,6 @@ export function fromLazy<A>(f: Lazy<A>, __trace?: string): Eff<AddTrace, A> {
   })
 }
 
-
 export function lazy<Y, A>(f: Lazy<Eff<Y, A>>, __trace?: string): Eff<Y | AddTrace, A> {
   return Eff(function* () {
     if (__trace) {

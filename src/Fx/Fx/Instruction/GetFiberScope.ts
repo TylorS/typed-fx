@@ -1,7 +1,7 @@
 import { Fx } from '../Fx.js'
 
 import { Eff } from '@/Fx/Eff/Eff.js'
-import { FiberScope } from '@/Fx/Fiber/FiberScope.js'
+import type { FiberScope } from '@/Fx/Fiber/FiberScope.js'
 
 export class GetFiberScope extends Eff.Instruction<void, FiberScope> {}
 

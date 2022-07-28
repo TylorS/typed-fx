@@ -7,6 +7,8 @@ import { Closeable } from '@/Fx/Scope/Closeable.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
 
+export type AnyFiber = Fiber<any, any> | Fiber<never, any>
+
 export interface Live<E, A> {
   readonly tag: 'Live'
   readonly id: FiberId.Live
@@ -36,15 +38,18 @@ export interface Synthetic<E, A> {
   readonly id: FiberId.Synthetic
   readonly exit: Of<Exit<E, A>>
   readonly inheritRefs: Of<void>
+  readonly fiberRefs: FiberRefs
 }
 
 export const Synthetic = <E, A>(
   id: FiberId.Synthetic,
   exit: Of<Exit<E, A>>,
   inheritRefs: Of<void>,
+  fiberRefs: FiberRefs,
 ): Synthetic<E, A> => ({
   tag: 'Synthetic',
   id,
   exit,
   inheritRefs,
+  fiberRefs,
 })

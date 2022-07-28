@@ -1,5 +1,6 @@
-import { Delay, Time, UnixTime } from '@/Time/index.js'
 import { Clock } from './Clock.js'
+
+import { Delay, Time, UnixTime } from '@/Time/index.js'
 
 /**
  * A Clock which provides imperative access to progressing Time forward.
@@ -15,10 +16,10 @@ export function TestClock(startTime: UnixTime = Date.now()): TestClock {
   return {
     ...Clock(startTime, () => time),
     progressTimeBy: (delay: Delay) => {
-      return time = Time(time + delay)
+      return (time = Time(time + delay))
     },
     progressTimeTo: (to: Time) => {
-      return time = to
+      return (time = to)
     },
   }
 }

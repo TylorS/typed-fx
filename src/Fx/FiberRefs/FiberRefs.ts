@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
 
-import { getFiberRefs } from '../Fx/Instruction/GetFiberRefs.js'
+import { getFiberScope } from '../Fx/Instruction/GetFiberScope.js'
 import { zipAll } from '../Fx/Instruction/ZipAll.js'
 
-import type { Fiber } from '@/Fx/Fiber/index.js'
+import { Atomic } from '@/Atomic/Atomic.js'
+import type { AnyFiber } from '@/Fx/Fiber/index.js'
 import * as FiberRef from '@/Fx/FiberRef/index.js'
+import { AnyFiberRef } from '@/Fx/FiberRef/index.js'
 import * as Fx from '@/Fx/Fx/Fx.js'
 import * as Fork from '@/Fx/Fx/Instruction/Fork.js'
 import { Lock, Semaphore, acquire } from '@/Fx/Semaphore/Semaphore.js'
@@ -33,6 +35,14 @@ export interface FiberRefs {
   readonly fork: Fx.Of<FiberRefs>
 
   /**
+   * Create a new FiberRefs instance with an override over a particular value
+   */
+  readonly locally: <R extends FiberRef.AnyFiberRef>(
+    ref: R,
+    value: FiberRef.OutputOf<R>,
+  ) => FiberRefs
+
+  /**
    * Join together 2 FiberRefs. If the FiberRef exists, its join functionality will be used to determine which value to keep.
    * If the FiberRef does not exist, it will upsert that provided value.
    */
@@ -47,15 +57,23 @@ export interface FiberRefs {
   readonly inherit: Fx.Of<void>
 }
 
+export interface FiberRefsState {
+  readonly references: ReadonlyMap<AnyFiberRef, any>
+  readonly fibers: ReadonlyMap<AnyFiberRef, AnyFiber>
+}
+
 /**
  * Constructs a new FiberRefs instance.
  */
-export function FiberRefs(references: Map<FiberRef.AnyFiberRef, any>): FiberRefs {
-  const fibers = new Map<FiberRef.AnyFiberRef, Fiber<any, any>>()
+export function FiberRefs(state: Atomic<FiberRefsState>): FiberRefs {
+  // Access is always localized
   const semaphores = new Map<FiberRef.AnyFiberRef, Semaphore>()
 
   const getMaybe = <R extends FiberRef.AnyFiberRef>(ref: R): Maybe<FiberRef.OutputOf<R>> =>
-    references.has(ref) ? Just(references.get(ref)) : Nothing
+    state.get.references.has(ref) ? Just(state.get.references.get(ref)) : Nothing
+
+  const setReference = <R extends FiberRef.AnyFiberRef>(ref: R, value: FiberRef.OutputOf<R>) =>
+    state.update((s) => ({ ...s, references: new Map([...s.references, [ref, value]]) }))
 
   const get: FiberRefs['get'] = (ref) =>
     Fx.Fx(function* () {
@@ -76,16 +94,19 @@ export function FiberRefs(references: Map<FiberRef.AnyFiberRef, any>): FiberRefs
       Fx.Fx(function* () {
         const [b, updated] = yield* f(yield* get(ref))
 
-        references.set(ref, updated)
+        setReference(ref, updated)
 
         return b
       }),
     )
 
+  const locally: FiberRefs['locally'] = (ref, value) =>
+    FiberRefs(state.fork((s) => ({ ...s, references: new Map([...s.references, [ref, value]]) })))
+
   const fork = Fx.fromLazy(() => {
     const forked = new Map<FiberRef.AnyFiberRef, any>()
 
-    for (const [k, v] of references) {
+    for (const [k, v] of state.get.references) {
       const maybe = k.fork(v)
 
       if (isJust(maybe)) {
@@ -93,25 +114,26 @@ export function FiberRefs(references: Map<FiberRef.AnyFiberRef, any>): FiberRefs
       }
     }
 
-    return FiberRefs(forked)
+    return FiberRefs(state.fork((s) => ({ ...s, references: forked })))
   })
 
   const join: FiberRefs['join'] = (ref, value) =>
     Fx.fromLazy(() => {
       const local = getMaybe(ref)
 
-      references.set(ref, isJust(local) ? local.value.join(value) : value)
+      setReference(ref, isJust(local) ? local.value.join(value) : value)
     })
 
   const inherit: FiberRefs['inherit'] = Fx.Fx(function* () {
-    const refs = yield* getFiberRefs()
+    const { fiberRefs } = yield* getFiberScope()
 
-    yield* zipAll(Array.from(references).map(([k, v]) => refs.join(k, v)))
+    yield* zipAll(Array.from(state.get.references).map(([k, v]) => fiberRefs.join(k, v)))
   })
 
   const fiberRefs: FiberRefs = {
     get,
     modify,
+    locally,
     fork,
     join,
     inherit,
@@ -123,13 +145,26 @@ export function FiberRefs(references: Map<FiberRef.AnyFiberRef, any>): FiberRefs
     ref: REF,
     fx: Fx.Fx<R, E, A>,
   ): Fx.Fx<R, E, A> {
-    const semaphore = semaphores.get(ref) ?? (semaphores.set(ref, new Lock()).get(ref) as Semaphore)
+    return acquire(getOrCreateSemaphore(ref))(fx)
+  }
 
-    return acquire(semaphore)(fx)
+  function getOrCreateSemaphore<REF extends FiberRef.AnyFiberRef>(ref: REF): Semaphore {
+    const current = semaphores.get(ref)
+
+    if (current) {
+      return current
+    }
+
+    const semaphore = new Lock()
+
+    semaphores.set(ref, semaphore)
+
+    return semaphore
   }
 
   // Initialize the FiberRef's data
   function* initializeFiberRef<R, E, A>(ref: FiberRef.FiberRef<R, E, A>) {
+    const { fibers } = state.get
     // Multiple accessors to this data
     if (fibers.has(ref)) {
       return yield* Fork.join(fibers.get(ref)!)
@@ -138,11 +173,11 @@ export function FiberRefs(references: Map<FiberRef.AnyFiberRef, any>): FiberRefs
     // Initial accessor to this data
     const fiber = yield* Fork.fork(ref.initial)
 
-    fibers.set(ref, fiber)
+    state.update((s) => ({ ...s, fibers: new Map([...s.fibers, [ref, fiber]]) }))
 
     const value = yield* Fork.join(fiber)
 
-    references.set(ref, value)
+    setReference(ref, value)
 
     return value
   }

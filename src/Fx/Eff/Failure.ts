@@ -36,7 +36,7 @@ export function attempt<Y, E, R>(
           return Left(instr.input)
         }
 
-        result = gen.next((yield instr as Exclude<Y, Failure<E>>))
+        result = gen.next(yield instr as Exclude<Y, Failure<E>>)
       }
 
       return Right(result.value)

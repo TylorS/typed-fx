@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Async } from './Async.js'
 import { Fork } from './Fork.js'
-import { GetFiberRefs } from './GetFiberRefs.js'
 import { GetFiberScope } from './GetFiberScope.js'
 import { SetInterruptStatus } from './SetInterruptStatus.js'
 import { WithConcurrency } from './WithConcurrency.js'
@@ -18,7 +17,6 @@ export type Instruction<R, E, A> =
   | Async<R, E, A>
   | Failure<E>
   | Fork<R, any, A>
-  | GetFiberRefs
   | GetFiberScope
   | GetTrace
   | SetInterruptStatus<R, E, A>

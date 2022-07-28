@@ -8,7 +8,7 @@ import * as O from 'hkt-ts/Typeclass/Ord'
 import * as N from 'hkt-ts/number'
 import * as S from 'hkt-ts/string'
 
-import { Clock, toDate } from '@/Clock/Clock.js'
+import { Clock, timeToDate } from '@/Clock/Clock.js'
 import { Time } from '@/Time/index.js'
 
 export type FiberId = FiberId.None | FiberId.Live | FiberId.Synthetic
@@ -125,4 +125,4 @@ export const Debug: D.Debug<FiberId> = D.sum<FiberId>()('tag')({
 })
 
 const idToIsoString = (id: FiberId.Live | FiberId.Synthetic) =>
-  toDate(id.startTime)(id.clock).toISOString()
+  timeToDate(id.startTime)(id.clock).toISOString()
