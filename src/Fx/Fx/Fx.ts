@@ -13,7 +13,6 @@ import type * as Instruction from './Instruction/Instruction.js'
 import { zipAll } from './Instruction/ZipAll.js'
 
 import * as Eff from '@/Fx/Eff/index.js'
-import { addTrace } from '@/Fx/Eff/index.js'
 import * as S from '@/Service/index.js'
 
 export interface Fx<out R, out E, out A> extends Eff.Eff<Instruction.Instruction<R, E, any>, A> {}
@@ -40,9 +39,7 @@ export function Fx<Y extends AnyInstruction, R>(
 ): Fx<Instruction.ResourcesFromInstruction<Y>, Instruction.ErrorsFromInstruction<Y>, R> {
   return Eff.Eff(function* () {
     // Allow creating custom traces for each Fx
-    if (__trace) {
-      yield* addTrace(Trace.custom(__trace))
-    }
+    yield* addCustomTrace(__trace)
 
     return yield* f()
   }) as Fx<Instruction.ResourcesFromInstruction<Y>, Instruction.ErrorsFromInstruction<Y>, R>
@@ -101,6 +98,19 @@ export const failure = <E = never>(cause: Cause.Cause<E>, __trace?: string): Fx<
   Eff.failure(cause, __trace)
 
 export const died = (error: unknown, __trace?: string) => failure(Cause.died(error), __trace)
-export const failed = <E>(error: E, __trace?: string) => failure(Cause.failed(error), __trace)
+export const fail = <E>(error: E, __trace?: string) => failure(Cause.failed(error), __trace)
 export const interrupted = (id: FiberId, __trace?: string) =>
   failure(Cause.interrupted(id), __trace)
+
+export const getTrace = Eff.getTrace as Fx<never, never, Trace>
+export const addTrace = Eff.addTrace as (trace: Trace) => Fx<never, never, void>
+export const addCustomTrace = Eff.addCustomTrace as (trace?: string) => Fx<never, never, void>
+export const addRuntimeTrace = Eff.addRuntimeTrace as <
+  E extends {
+    readonly stack?: string
+  },
+>(
+  error: E,
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  targetObject?: Function,
+) => Fx<never, never, void>

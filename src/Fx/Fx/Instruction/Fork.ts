@@ -7,11 +7,18 @@ import * as Failure from '@/Fx/Eff/Failure.js'
 import { addCustomTrace } from '@/Fx/Eff/Trace.js'
 import * as Exit from '@/Fx/Exit/Exit.js'
 import type * as Fiber from '@/Fx/Fiber/Fiber.js'
+import type { FiberScope } from '@/Fx/FiberScope/FiberScope.js'
 
-export class Fork<R, E, A> extends Eff.Instruction<Fx<R, E, A>, Fiber.Live<E, A>> {}
+export class Fork<R, E, A> extends Eff.Instruction<
+  readonly [Fx<R, E, A>, FiberScope?],
+  Fiber.Live<E, A>
+> {}
 
-export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
-  new Fork(fx, __trace)
+export const fork = <R, E, A>(
+  fx: Fx<R, E, A>,
+  scope?: FiberScope,
+  __trace?: string,
+): Fx<R, never, Fiber.Live<E, A>> => new Fork([fx, scope], __trace)
 
 export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): Fx<never, E, A> =>
   Fx(function* () {

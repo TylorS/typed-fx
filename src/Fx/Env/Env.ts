@@ -14,7 +14,7 @@ import { Scope } from '@/Fx/Scope/Scope.js'
 import * as Sync from '@/Fx/Sync/index.js'
 import * as Service from '@/Service/index.js'
 
-export interface Env<R> {
+export interface Env<in R> {
   /**
    * Retrieve a Service from the environment
    */

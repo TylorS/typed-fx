@@ -69,8 +69,17 @@ export const asks = <R, A>(
 ): Sync<R, never, A> => access((r: Env<R>) => fromLazy(() => f(r.get(service))), __trace)
 
 export const provide = Eff.provide as <R>(
-  resources: R,
+  resources: Env<R>,
 ) => <E, A>(sync: Sync<R, E, A>) => Sync<never, E, A>
 
 export const getTrace = Eff.getTrace as Sync<never, never, Trace>
 export const addTrace = Eff.addTrace as (trace: Trace) => Sync<never, never, void>
+export const addCustomTrace = Eff.addCustomTrace as (trace?: string) => Sync<never, never, void>
+export const addRuntimeTrace = Eff.addRuntimeTrace as <
+  E extends {
+    readonly stack?: string
+  },
+>(
+  error: E,
+  targetObject?: Function,
+) => Sync<never, never, void>
