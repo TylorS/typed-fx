@@ -40,7 +40,7 @@ export const tracingPlugin = (program: ts.Program, config: { readonly root?: str
           // Continue processing any arguments that might be CallExpressions
           const processedArguments = ts.visitNodes(node.arguments, visitor)
 
-          // Reolve signature to get the declaration parameters.
+          // Resolve signature to get the declaration parameters.
           const signature =
             checker.getResolvedSignature(node) ?? getSignatureIfSole(checker, node.expression)
           const signatureDeclaration = signature?.getDeclaration()
