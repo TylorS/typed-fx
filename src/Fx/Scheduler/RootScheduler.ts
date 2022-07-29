@@ -1,7 +1,5 @@
 import { Disposable } from '../Disposable/Disposable.js'
-import { pending } from '../Future/Future.js'
-import { complete } from '../Future/complete.js'
-import { wait } from '../Future/wait.js'
+import { Task } from '../Future/Task.js'
 import * as Fx from '../Fx/Fx.js'
 import { fork } from '../Fx/Instruction/Fork.js'
 import { Timeline } from '../Timeline/index.js'
@@ -23,7 +21,7 @@ export function RootScheduler(timer: Timer.Timer): Scheduler {
   const schedule: Scheduler['schedule'] = <R, E, A>(fx: Fx.Fx<R, E, A>, schedule: Schedule) =>
     fork(
       scheduled(fx, schedule, timer, (fx, time) => {
-        const task = new Task(fx)
+        const task = Task(fx)
         timeline.add(time, task)
         return task.wait
       }),
@@ -91,15 +89,4 @@ function scheduled<R, E, A>(
     // Return the final state
     return state
   })
-}
-
-// A simple helper to create a Future around an existing Fx to be run
-// at a future time by the scheduler.
-class Task<R, E, A> {
-  protected future = pending<A, R, E>()
-
-  constructor(readonly fx: Fx.Fx<R, E, A>) {}
-
-  readonly wait = wait(this.future)
-  readonly complete: () => boolean = () => complete(this.future)(this.fx)
 }
