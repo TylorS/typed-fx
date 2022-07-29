@@ -8,7 +8,7 @@ import * as Timer from '../Timer/Timer.js'
 import { Scheduler, make } from './Scheduler.js'
 
 import * as Clock from '@/Clock/Clock.js'
-import { Schedule } from '@/Schedule/Schedule.js'
+import { Schedule, once } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { UnixTime } from '@/Time/index.js'
 
@@ -18,14 +18,10 @@ export function RootScheduler(timer: Timer.Timer): Scheduler {
   let disposable: Disposable = Disposable.None
   let nextArrival: UnixTime | null = null
 
-  const schedule: Scheduler['schedule'] = <R, E, A>(fx: Fx.Fx<R, E, A>, schedule: Schedule) =>
-    fork(
-      scheduled(fx, schedule, timer, (fx, time) => {
-        const task = Task(fx)
-        timeline.add(time, task)
-        return task.wait
-      }),
-    )
+  const schedule: Scheduler['schedule'] = <R, E, A>(
+    fx: Fx.Fx<R, E, A>,
+    schedule: Schedule = once,
+  ) => fork(scheduled(fx, schedule, timer, scheduleTask))
 
   const scheduler: Scheduler = {
     startTime: timer.startTime,
@@ -33,6 +29,8 @@ export function RootScheduler(timer: Timer.Timer): Scheduler {
     schedule,
     fork: () => make(Clock.fork(timer), schedule),
   }
+
+  return scheduler
 
   function scheduleNextRun() {
     // If the timeline is empty, lets cleanup our resources
@@ -64,7 +62,11 @@ export function RootScheduler(timer: Timer.Timer): Scheduler {
     scheduleNextRun()
   }
 
-  return scheduler
+  function scheduleTask<R, E, A>(fx: Fx.Fx<R, E, A>, time: UnixTime) {
+    const task = Task(fx)
+    timeline.add(time, task)
+    return task.wait
+  }
 }
 
 function scheduled<R, E, A>(

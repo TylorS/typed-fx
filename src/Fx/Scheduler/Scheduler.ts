@@ -12,7 +12,7 @@ export interface Scheduler extends Clock.Clock {
    */
   readonly schedule: <R, E, A>(
     fx: Fx.Fx<R, E, A>,
-    schedule: Schedule,
+    schedule?: Schedule,
   ) => Fx.RIO<R, Fiber<E, ScheduleState>>
 
   /**
