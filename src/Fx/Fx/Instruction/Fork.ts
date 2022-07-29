@@ -15,14 +15,12 @@ export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, F
 
 export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): Fx<never, E, A> =>
   Fx(function* () {
-    yield* addCustomTrace(__trace)
-
     if (isLeft(exit)) {
       return yield* Failure.failure(exit.left)
     }
 
     return exit.right
-  })
+  }, __trace)
 
 export const fromEither = <E, A>(either: Either<E, A>) => fromExit(Exit.fromEither(either))
 

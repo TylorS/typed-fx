@@ -32,6 +32,12 @@ export type ResourcefulInstruction<R, E, A> =
   | WithConcurrency<R, E, A>
   | ZipAll<R, E, A>
 
+export type AnyResourcefulInstruction =
+  | ResourcefulInstruction<any, any, any>
+  | ResourcefulInstruction<never, never, any>
+  | ResourcefulInstruction<never, any, any>
+  | ResourcefulInstruction<any, never, any>
+
 export type FailureInstruction<R, E, A> =
   | Access<R, R, E, A>
   | Async<R, E, A>
@@ -48,17 +54,18 @@ export type AnyFailureInstruction =
 
 export type VoidInstructions = AddTrace | GetFiberScope | GetTrace
 
-export type ResourcesFromInstruction<T> = Exclude<
-  T,
-  VoidInstructions
-> extends ResourcefulInstruction<infer _R, infer _E, infer _A>
+export type ResourcesFromInstruction<T> = [Extract<T, AnyResourcefulInstruction>] extends [never]
+  ? never
+  : [Extract<T, AnyResourcefulInstruction>] extends ResourcefulInstruction<
+      infer _R,
+      infer _E,
+      infer _A
+    >
   ? _R
   : never
 
-export type ErrorsFromInstruction<T> = Extract<T, AnyFailureInstruction> extends FailureInstruction<
-  infer _R,
-  infer _E,
-  infer _A
->
+export type ErrorsFromInstruction<T> = [Extract<T, AnyFailureInstruction>] extends [never]
+  ? never
+  : [Extract<T, AnyFailureInstruction>] extends [FailureInstruction<infer _R, infer _E, infer _A>]
   ? _E
   : never

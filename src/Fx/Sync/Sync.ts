@@ -15,7 +15,7 @@ import { Exit } from '@/Fx/Exit/Exit.js'
 import { Trace } from '@/Fx/Trace/index.js'
 import { Service } from '@/Service/index.js'
 
-export interface Sync<R, E, A> extends Eff.Eff<Instruction<R, E, any>, A> {}
+export interface Sync<out R, out E, out A> extends Eff.Eff<Instruction<R, E, any>, A> {}
 
 export type AnySync =
   | Sync<any, any, any>
@@ -30,24 +30,14 @@ export type ErrorsOf<T> = T extends Sync<infer _R, infer _E, infer _A> ? _E : ne
 
 export type OutputOf<T> = T extends Sync<infer _R, infer _E, infer _A> ? _A : never
 
-export type ResourcesFromGenerator<T> = T extends Generator<infer Y, infer _R, infer _N>
-  ? ResourcesFromInstruction<Y>
-  : never
-
-export type ErrorsFromGenerator<T> = T extends Generator<infer Y, infer _R, infer _N>
-  ? ErrorsFromInstruction<Y>
-  : never
-
-export type OutputFromGenerator<T> = T extends Generator<AnyInstruction, infer A> ? A : never
-
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export function Sync<G extends Generator<AnyInstruction, any>>(
-  f: () => G,
-): Sync<ResourcesFromGenerator<G>, ErrorsFromGenerator<G>, OutputFromGenerator<G>> {
+export function Sync<Y extends AnyInstruction, R>(
+  f: () => Generator<Y, R>,
+): Sync<ResourcesFromInstruction<Y>, ErrorsFromInstruction<Y>, R> {
   return {
     [Symbol.iterator]: f,
-  } as Sync<ResourcesFromGenerator<G>, ErrorsFromGenerator<G>, OutputFromGenerator<G>>
+  }
 }
 
 export const fromValue = Eff.fromValue as <A>(value: A) => Sync<never, never, A>

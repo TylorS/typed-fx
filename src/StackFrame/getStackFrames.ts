@@ -32,8 +32,8 @@ export function getStackFrames<E extends { stack?: string } = Error>(
     })
 
   // Append all of the parents traces
-  if (error instanceof Error && error.causedBy) {
-    return [...stackFrames, ...getStackFrames(error.causedBy)]
+  if (error instanceof Error && error.cause) {
+    return [...stackFrames, ...getStackFrames(error.cause)]
   }
 
   return stackFrames
