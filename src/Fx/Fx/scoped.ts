@@ -2,9 +2,10 @@ import { pipe } from 'hkt-ts/function'
 
 import { Exit } from '../Exit/Exit.js'
 
-import { Fx, Of, ask, attempt, getEnv, provide, provideService } from './Fx.js'
+import { Fx, Of, ask, attempt, getEnv, provideService } from './Fx.js'
 import { fromExit } from './Instruction/Fork.js'
 import { getFiberScope } from './Instruction/GetFiberScope.js'
+import { provide } from './Instruction/Provide.js'
 import { uninterruptible } from './Instruction/SetInterruptStatus.js'
 
 import { Scope } from '@/Fx/Scope/Scope.js'

@@ -28,6 +28,8 @@ export namespace Eff {
       return (yield this) as O
     }
   }
+
+  export type AnyEff = Eff<any, any> | Eff<never, never> | Eff<never, any> | Eff<any, never>
 }
 
 /**

@@ -10,6 +10,7 @@ import type { Layer } from '../Layer/Layer.js'
 import { Trace } from '../Trace/Trace.js'
 
 import type * as Instruction from './Instruction/Instruction.js'
+import { provide } from './Instruction/Provide.js'
 import { zipAll } from './Instruction/ZipAll.js'
 
 import * as Eff from '@/Fx/Eff/index.js'
@@ -71,11 +72,6 @@ export const askMany = <S extends ReadonlyArray<S.Service<any>>>(
 ): Fx<S.OutputOf<S[number]>, never, { readonly [K in keyof S]: S.OutputOf<S[K]> }> =>
   access<any, any, never, any>((env) => zipAll(keys.map((k) => env.get(k))), __trace)
 
-export const provide =
-  <R>(env: Env<R>) =>
-  <E, A>(fx: Fx<R, E, A>): Fx<never, E, A> =>
-    Eff.provide(env)(fx) as Fx<never, E, A>
-
 export const provideService =
   <S, I extends S>(service: S.Service<S>, implementation: I) =>
   <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
@@ -92,7 +88,8 @@ export const provideLayer =
       }),
     ) as Fx<Exclude<R | R2, S>, E, A>
 
-export const attempt = <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Exit.Exit<E, A>> => Eff.attempt(fx)
+export const attempt = <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Exit.Exit<E, A>> =>
+  Eff.attempt(fx) as Fx<R, never, Exit.Exit<E, A>>
 
 export const failure = <E = never>(cause: Cause.Cause<E>, __trace?: string): Fx<never, E, never> =>
   Eff.failure(cause, __trace)

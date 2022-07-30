@@ -3,10 +3,11 @@ import { isLeft } from 'hkt-ts/Either'
 
 import { Exit } from '../Exit/Exit.js'
 import * as Fiber from '../Fiber/index.js'
-import { Fx, Of, attempt, getEnv, lazy, provide, success } from '../Fx/Fx.js'
+import { Fx, Of, attempt, getEnv, lazy, success } from '../Fx/Fx.js'
 import { never } from '../Fx/Instruction/Async.js'
 import { fork, fromExit, join } from '../Fx/Instruction/Fork.js'
 import { getFiberScope } from '../Fx/Instruction/GetFiberScope.js'
+import { provide } from '../Fx/Instruction/Provide.js'
 import { zipAll } from '../Fx/Instruction/ZipAll.js'
 import type { Layer } from '../Layer/Layer.js'
 

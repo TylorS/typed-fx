@@ -13,8 +13,8 @@ export function fromFx<R, E, A>(fx: Fx.Fx<R, E, A>): Stream<R, E, A> {
 
 export class FromFx<R, E, A> extends Stream<R, E, A> {
   constructor(readonly fx: Fx.Fx<R, E, A>) {
-    super((sink, scope) =>
-      scope.scheduler.schedule(
+    super((sink, context) =>
+      context.scheduler.schedule(
         Fx.Fx(function* () {
           const exit = yield* Fx.attempt(fx)
 

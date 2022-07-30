@@ -6,7 +6,9 @@ import { Fx } from '@/Fx/Fx/Fx.js'
 export class WithConcurrency<R, E, A> extends Eff.Instruction<
   readonly [fx: Fx<R, E, A>, concurrencyLevel: NonNegativeInteger],
   A
-> {}
+> {
+  readonly tag = 'WithConcurrency'
+}
 
 export const withConcurrency =
   (concurrencyLevel: NonNegativeInteger, __trace?: string) =>

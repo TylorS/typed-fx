@@ -1,15 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Access } from './Access.js'
-import { Async } from './Async.js'
-import { Fork } from './Fork.js'
-import { GetFiberScope } from './GetFiberScope.js'
-import { SetInterruptStatus } from './SetInterruptStatus.js'
-import { WithConcurrency } from './WithConcurrency.js'
-import { ZipAll } from './ZipAll.js'
+import type { Access } from './Access.js'
+import type { Async } from './Async.js'
+import type { Fork } from './Fork.js'
+import type { GetFiberContext } from './GetFiberContext.js'
+import type { GetFiberScope } from './GetFiberScope.js'
+import type { Provide } from './Provide.js'
+import type { SetInterruptStatus } from './SetInterruptStatus.js'
+import type { WithConcurrency } from './WithConcurrency.js'
+import type { ZipAll } from './ZipAll.js'
 
-import { Failure } from '@/Fx/Eff/Failure.js'
-import { FromLazy } from '@/Fx/Eff/FromLazy.js'
-import { AddTrace, GetTrace } from '@/Fx/Eff/Trace.js'
+import type { Failure } from '@/Fx/Eff/Failure.js'
+import type { FromLazy } from '@/Fx/Eff/FromLazy.js'
+import type { AddTrace, GetTrace } from '@/Fx/Eff/Trace.js'
 
 export type Instruction<R = never, E = never, A = never> =
   | Access<R, R, E, A>
@@ -18,8 +20,10 @@ export type Instruction<R = never, E = never, A = never> =
   | Failure<E>
   | Fork<R, any, A>
   | FromLazy<A>
+  | GetFiberContext
   | GetFiberScope
   | GetTrace
+  | Provide<any, E, A>
   | SetInterruptStatus<R, E, A>
   | WithConcurrency<R, E, A>
   | ZipAll<R, E, A>
@@ -52,7 +56,7 @@ export type AnyFailureInstruction =
   | FailureInstruction<never, any, any>
   | FailureInstruction<any, never, any>
 
-export type VoidInstructions = AddTrace | GetFiberScope | GetTrace
+export type VoidInstructions = AddTrace | GetFiberContext | GetTrace
 
 export type ResourcesFromInstruction<T> = [Extract<T, AnyResourcefulInstruction>] extends [never]
   ? never

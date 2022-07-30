@@ -3,7 +3,9 @@ import { Lazy, pipe } from 'hkt-ts'
 import { Eff } from './Eff.js'
 import { handle } from './handle.js'
 
-export class FromLazy<A> extends Eff.Instruction<Lazy<A>, A> {}
+export class FromLazy<A> extends Eff.Instruction<Lazy<A>, A> {
+  readonly tag = 'FromLazy'
+}
 
 export const fromLazy = <A>(f: Lazy<A>, __trace?: string): Eff<FromLazy<A>, A> =>
   new FromLazy(f, __trace)

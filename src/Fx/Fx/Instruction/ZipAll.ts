@@ -2,7 +2,9 @@ import type { AnyFx, ErrorsOf, Fx, OutputOf, ResourcesOf } from '../Fx.js'
 
 import { Eff } from '@/Fx/Eff/Eff.js'
 
-export class ZipAll<R, E, A> extends Eff.Instruction<ReadonlyArray<Fx<R, E, any>>, A> {}
+export class ZipAll<R, E, A> extends Eff.Instruction<ReadonlyArray<Fx<R, E, any>>, A> {
+  readonly tag = 'ZipAll'
+}
 
 export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   fx: readonly [...FX],

@@ -15,25 +15,29 @@ import { handleFromLazy } from '@/Fx/Eff/FromLazy.js'
 import { withTracing } from '@/Fx/Eff/Trace.js'
 import { Exit } from '@/Fx/Exit/Exit.js'
 
-export function runWith<R, E, A>(sync: Sync<R, E, A>, env: Env<R>): Exit<E, A> {
+export function runWith<R, E, A>(
+  sync: Sync<R, E, A>,
+  env: Env<R>,
+  parentTrace?: Trace.Trace,
+): Exit<E, A> {
   const [exit, trace] = pipe(
     sync,
     provide<Env<R>>(env),
     attempt,
-    withTracing,
     handleFromLazy,
+    withTracing(parentTrace),
     runEff,
   )
 
   return pipe(exit, mapLeft(traced(trace)))
 }
 
-export function run<E, A>(sync: Sync<never, E, A>): Exit<E, A> {
-  return runWith(sync, new Environment())
+export function run<E, A>(sync: Sync<never, E, A>, parentTrace?: Trace.Trace): Exit<E, A> {
+  return runWith(sync, new Environment(), parentTrace)
 }
 
-export function runOrThrow<E, A>(sync: Sync<never, E, A>): A {
-  const exit = run(sync)
+export function runOrThrow<E, A>(sync: Sync<never, E, A>, parentTrace?: Trace.Trace): A {
+  const exit = run(sync, parentTrace)
 
   if (isLeft(exit)) {
     throw new CauseError(exit.left)

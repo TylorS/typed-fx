@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
 
-import { getFiberScope } from '../Fx/Instruction/GetFiberScope.js'
+import { getFiberContext } from '../Fx/Instruction/GetFiberContext.js'
 import { zipAll } from '../Fx/Instruction/ZipAll.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
@@ -125,7 +125,7 @@ export function FiberRefs(state: Atomic<FiberRefsState>): FiberRefs {
     })
 
   const inherit: FiberRefs['inherit'] = Fx.Fx(function* () {
-    const { fiberRefs } = yield* getFiberScope()
+    const { fiberRefs } = yield* getFiberContext()
 
     yield* zipAll(Array.from(state.get.references).map(([k, v]) => fiberRefs.join(k, v)))
   })

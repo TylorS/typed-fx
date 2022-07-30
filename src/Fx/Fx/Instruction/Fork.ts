@@ -6,19 +6,26 @@ import { Eff } from '@/Fx/Eff/Eff.js'
 import * as Failure from '@/Fx/Eff/Failure.js'
 import { addCustomTrace } from '@/Fx/Eff/Trace.js'
 import * as Exit from '@/Fx/Exit/Exit.js'
-import type * as Fiber from '@/Fx/Fiber/Fiber.js'
-import type { FiberScope } from '@/Fx/FiberScope/FiberScope.js'
+import * as Fiber from '@/Fx/Fiber/Fiber.js'
+import type { FiberContext } from '@/Fx/FiberContext/FiberContext.js'
+import { Scope } from '@/Fx/Scope/Scope.js'
 
 export class Fork<R, E, A> extends Eff.Instruction<
-  readonly [Fx<R, E, A>, FiberScope?],
+  readonly [Fx<R, E, A>, ForkParams?],
   Fiber.Live<E, A>
-> {}
+> {
+  readonly tag = 'Fork'
+}
+
+export interface ForkParams extends Partial<FiberContext> {
+  readonly forkScope?: Scope
+}
 
 export const fork = <R, E, A>(
   fx: Fx<R, E, A>,
-  scope?: FiberScope,
+  params?: ForkParams,
   __trace?: string,
-): Fx<R, never, Fiber.Live<E, A>> => new Fork([fx, scope], __trace)
+): Fx<R, never, Fiber.Live<E, A>> => new Fork([fx, params], __trace)
 
 export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): Fx<never, E, A> =>
   Fx(function* () {
@@ -38,7 +45,7 @@ export const join = <E, A>(fiber: Fiber.Fiber<E, A>, __trace?: string): Fx<never
     const exit = yield* fiber.exit
 
     if (isRight(exit)) {
-      yield* fiber.inheritRefs
+      yield* Fiber.inheritRefs(fiber)
     }
 
     return yield* fromExit(exit)

@@ -5,8 +5,12 @@ import { Eff } from './Eff.js'
 
 import { StackTrace } from '@/Fx/StackTrace/StackTrace.js'
 import { Trace } from '@/Fx/Trace/Trace.js'
+import { Stack } from '@/Stack/index.js'
+import { StrictExclude } from '@/internal.js'
 
 export class AddTrace implements Eff<AddTrace, void> {
+  readonly tag = 'AddTrace'
+
   // eslint-disable-next-line @typescript-eslint/ban-types
   constructor(readonly trace: Trace) {}
 
@@ -27,6 +31,8 @@ export const addRuntimeTrace = <E extends { readonly stack?: string }>(
 ) => pipe(Trace.runtime(error, targetObject), addTrace)
 
 export class GetTrace implements Eff<GetTrace, Trace> {
+  readonly tag = 'GetTrace';
+
   *[Symbol.iterator]() {
     return (yield this) as Trace
   }
@@ -34,33 +40,32 @@ export class GetTrace implements Eff<GetTrace, Trace> {
 
 export const getTrace = new GetTrace()
 
-export function withTracing<Y, R, N>(
-  eff: Eff<Y | AddTrace | GetTrace, R>,
-): Eff<Exclude<Y, AddTrace | GetTrace>, readonly [R, Trace]> {
-  return Eff(function* tracing() {
-    const gen = eff[Symbol.iterator]()
+export function withTracing(parentTrace?: Trace) {
+  return <Y, R, N>(
+    eff: Eff<Y, R>,
+  ): Eff<StrictExclude<StrictExclude<Y, AddTrace>, GetTrace>, readonly [R, Trace]> => {
+    return Eff(function* tracing() {
+      const gen = eff[Symbol.iterator]()
 
-    let result = gen.next()
-    let trace = new StackTrace()
+      let result = gen.next()
+      let trace = new StackTrace(new Stack<Trace>(parentTrace ?? Trace.runtime({}, tracing)))
 
-    trace = trace.push(Trace.runtime({}, tracing))
+      while (!result.done) {
+        const instr = result.value
 
-    while (!result.done) {
-      const instr = result.value
-
-      if (instr instanceof AddTrace) {
-        if (instr.trace.tag === 'StackFrameTrace') {
-          trace = trace.trimExisting(instr.trace.frames)
+        if (instr instanceof AddTrace) {
+          trace = trace.push(instr.trace)
+          result = gen.next()
+        } else if (instr instanceof GetTrace) {
+          result = gen.next(trace.flatten())
+        } else {
+          result = gen.next(
+            (yield instr as StrictExclude<StrictExclude<Y, AddTrace>, GetTrace>) as N,
+          )
         }
-
-        result = gen.next()
-      } else if (instr instanceof GetTrace) {
-        result = gen.next(trace.flatten())
-      } else {
-        result = gen.next((yield instr as Exclude<Y, AddTrace | GetTrace>) as N)
       }
-    }
 
-    return [result.value, trace.flatten()] as const
-  })
+      return [result.value, trace.flatten()] as const
+    })
+  }
 }

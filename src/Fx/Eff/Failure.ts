@@ -7,7 +7,9 @@ import { Eff } from '@/Fx/Eff/Eff.js'
 import { Exit } from '@/Fx/Exit/Exit.js'
 import { Trace } from '@/Fx/Trace/Trace.js'
 
-export class Failure<E> extends Eff.Instruction<Cause.Cause<E>, never> {}
+export class Failure<E> extends Eff.Instruction<Cause.Cause<E>, never> {
+  readonly tag = 'Failure'
+}
 
 export function failure<E>(cause: Cause.Cause<E>, __trace?: string): Eff<Failure<E>, never> {
   return new Failure(cause, __trace)

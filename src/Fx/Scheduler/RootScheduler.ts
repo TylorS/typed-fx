@@ -1,7 +1,7 @@
 import { Disposable } from '../Disposable/Disposable.js'
 import { Task } from '../Future/Task.js'
 import * as Fx from '../Fx/Fx.js'
-import { fork } from '../Fx/Instruction/Fork.js'
+import { ForkParams, fork } from '../Fx/Instruction/Fork.js'
 import { Timeline } from '../Timeline/index.js'
 import * as Timer from '../Timer/Timer.js'
 
@@ -21,13 +21,13 @@ export function RootScheduler(timer: Timer.Timer): Scheduler {
   const schedule: Scheduler['schedule'] = <R, E, A>(
     fx: Fx.Fx<R, E, A>,
     schedule: Schedule = once,
-  ) => fork(scheduled(fx, schedule, timer, scheduleTask))
+    params?: ForkParams,
+  ) => fork(scheduled(fx, schedule, timer, scheduleTask), params)
 
   const scheduler: Scheduler = {
-    startTime: timer.startTime,
-    getCurrentTime: timer.getCurrentTime,
+    ...timer,
     schedule,
-    fork: () => make(Clock.fork(timer), schedule),
+    fork: () => make(Timer.fork(timer), schedule),
   }
 
   return scheduler

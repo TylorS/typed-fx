@@ -1,9 +1,10 @@
-import { Exit } from '../Exit/Exit.js'
-import { FiberId } from '../FiberId/FiberId.js'
-import { FiberRefs } from '../FiberRefs/FiberRefs.js'
-import { Of } from '../Fx/Fx.js'
+import type { Exit } from '../Exit/Exit.js'
+import type { FiberContext } from '../FiberContext/FiberContext.js'
+import type { FiberId } from '../FiberId/FiberId.js'
+import type { FiberRefs } from '../FiberRefs/FiberRefs.js'
+import { Fx, Of } from '../Fx/Fx.js'
 
-import { Closeable } from '@/Fx/Scope/Closeable.js'
+import type { Closeable } from '@/Fx/Scope/Closeable.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
 
@@ -12,25 +13,22 @@ export type AnyFiber = Fiber<any, any> | Fiber<never, any>
 export interface Live<E, A> {
   readonly tag: 'Live'
   readonly id: FiberId.Live
+  readonly context: Of<FiberContext>
   readonly exit: Of<Exit<E, A>>
-  readonly inheritRefs: Of<void>
   readonly scope: Closeable
-  readonly fiberRefs: FiberRefs
 }
 
 export const Live = <E, A>(
   id: FiberId.Live,
+  context: Of<FiberContext>,
   exit: Of<Exit<E, A>>,
-  inheritRefs: Of<void>,
   scope: Closeable,
-  fiberRefs: FiberRefs,
 ): Live<E, A> => ({
   tag: 'Live',
   id,
+  context,
   exit,
-  inheritRefs,
   scope,
-  fiberRefs,
 })
 
 export interface Synthetic<E, A> {
@@ -53,3 +51,15 @@ export const Synthetic = <E, A>(
   inheritRefs,
   fiberRefs,
 })
+
+export function inheritRefs<E, A>(fiber: Fiber<E, A>) {
+  if (fiber.tag === 'Synthetic') {
+    return fiber.inheritRefs
+  }
+
+  return Fx(function* () {
+    const context = yield* fiber.context
+
+    yield* context.fiberRefs.inherit
+  })
+}
