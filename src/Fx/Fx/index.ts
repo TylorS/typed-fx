@@ -1,3 +1,6 @@
-export * from './FromSync.js'
+export * from './DefaultRuntime.js'
+export * from './fromSync.js'
 export * from './Fx.js'
+export * from './getRuntime.js'
 export * from './Instruction/index.js'
+export * from './scoped.js'

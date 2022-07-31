@@ -2,22 +2,27 @@ import { Either, pipe } from 'hkt-ts'
 import { makeAssociative } from 'hkt-ts/Array'
 import { isLeft } from 'hkt-ts/Either'
 import { Just } from 'hkt-ts/Maybe'
+import { isNonEmpty } from 'hkt-ts/NonEmptyArray'
+
+import { interrupted, makeSequentialAssociative } from '../Cause/Cause.js'
+import { Failure } from '../Eff/Failure.js'
 import { Exit, makeParallelAssociative } from '../Exit/Exit.js'
 import { FiberContext } from '../FiberContext/FiberContext.js'
 import { FiberId } from '../FiberId/FiberId.js'
-import { FiberRefs } from '../FiberRefs/FiberRefs.js'
-import { complete } from '../Future/complete.js'
 import { pending } from '../Future/Future.js'
+import { complete } from '../Future/complete.js'
 import { wait } from '../Future/wait.js'
+import { AnyFx, Fx, success } from '../Fx/Fx.js'
 import { Instruction } from '../Fx/Instruction/Instruction.js'
-import { Fx, AnyFx, success, zipAll } from '../index.js'
-import { Platform } from '../Platform/Platform.js'
+import { zipAll } from '../Fx/Instruction/ZipAll.js'
 import { Closeable } from '../Scope/Closeable.js'
-import { acquire, Semaphore } from '../Semaphore/Semaphore.js'
-import { FiberRuntime, make, toFiber } from './FiberRuntime.js'
+import { Semaphore, acquire } from '../Semaphore/Semaphore.js'
 
+// eslint-disable-next-line import/no-cycle
+import { FiberRuntime, make, toFiber } from './FiberRuntime.js'
 import { RuntimeFiberContext } from './RuntimeFiberContext.js'
 import {
+  GetContext,
   PopContext,
   PushContext,
   PushInstruction,
@@ -27,16 +32,18 @@ import {
   ScheduleCallback,
 } from './RuntimeInstruction.js'
 
+const { concat: concatSeq } = makeSequentialAssociative<never>()
+
 // eslint-disable-next-line require-yield
 export function* fxInstructionToRuntimeInstruction<R, E>(
   instr: Instruction<R, E, any>,
   runtimeCtx: RuntimeFiberContext,
+  interruptedBy: ReadonlyArray<FiberId>,
   ctx: FiberContext,
   scope: Closeable,
-  platform: Platform,
 ): RuntimeIterable<RuntimeFiberContext, AnyFx, E, any> {
   // Yield to other fibers cooperatively
-  if (runtimeCtx.instructionCount === platform.maxOpCount) {
+  if (runtimeCtx.instructionCount === ctx.platform.maxOpCount) {
     yield new PushContext({ ...runtimeCtx, instructionCount: 0 })
     yield new RuntimePromise(() => Promise.resolve())
   }
@@ -62,13 +69,11 @@ export function* fxInstructionToRuntimeInstruction<R, E>(
     }
     case 'Fork': {
       const [fx, params] = instr.input
-      const fiberRefs: FiberRefs = params?.fiberRefs ?? (yield new PushInstruction(ctx.fiberRefs.fork))
       const runtime = make(
         acquire(runtimeCtx.concurrencyLevel)(fx),
         runtimeCtx.env,
-        forkFiberContext(toFiberContext(runtimeCtx, { ...ctx, ...params }), fiberRefs, platform),
+        forkFiberContext(toFiberContext(runtimeCtx, { ...ctx, ...params })),
         params?.forkScope?.fork() ?? scope.fork(),
-        platform,
       )
 
       yield new ScheduleCallback(() => runtime.start())
@@ -93,6 +98,14 @@ export function* fxInstructionToRuntimeInstruction<R, E>(
 
       yield new PopContext()
 
+      const updated: RuntimeFiberContext = yield new GetContext()
+
+      // If things are no interruptable, exit with interrupted Fibers.
+      if (updated.interruptStatus && isNonEmpty(interruptedBy)) {
+        // Fold all interrupted Ids into one Cause.
+        return yield new Failure(interruptedBy.map(interrupted).reduce(concatSeq))
+      }
+
       return a
     }
     case 'WithConcurrency': {
@@ -115,9 +128,8 @@ export function* fxInstructionToRuntimeInstruction<R, E>(
         make(
           acquire(runtimeCtx.concurrencyLevel)(fx),
           runtimeCtx.env,
-          forkFiberContext(toFiberContext(runtimeCtx, ctx), ctx.fiberRefs, platform),
+          forkFiberContext(toFiberContext(runtimeCtx, ctx)),
           scope.fork(),
-          platform,
         ),
       )
 
@@ -142,21 +154,17 @@ function toFiberContext(runtimeCtx: RuntimeFiberContext, ctx: FiberContext): Fib
   }
 }
 
-function forkFiberContext(
-  ctx: FiberContext,
-  fiberRefs: FiberRefs,
-  platform: Platform,
-): FiberContext {
+export function forkFiberContext(ctx: FiberContext): FiberContext {
   const scheduler = ctx.scheduler.fork()
 
   return {
     ...ctx,
     id: new FiberId.Live(
-      platform.sequenceNumber.increment,
+      ctx.platform.sequenceNumber.increment,
       ctx.scheduler,
       ctx.scheduler.getCurrentTime(),
     ),
-    fiberRefs,
+    fiberRefs: ctx.fiberRefs.fork(),
     scheduler,
     parent: Just(ctx),
   }

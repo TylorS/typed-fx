@@ -3,7 +3,7 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { MutableFutureQueue } from '@/Fx/Future/MutableFutureQueue.js'
 import { wait } from '@/Fx/Future/wait.js'
-import { Fx, Of, fromLazy, unit } from '@/Fx/Fx/index.js'
+import { Fx, Of, fromLazy, unit } from '@/Fx/Fx/Fx.js'
 import { managed, scoped } from '@/Fx/Fx/scoped.js'
 
 export class Semaphore {

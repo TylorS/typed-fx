@@ -7,7 +7,7 @@ import type { Env } from '../Env/Env.js'
 import * as Exit from '../Exit/Exit.js'
 import type { FiberId } from '../FiberId/FiberId.js'
 import type { Layer } from '../Layer/Layer.js'
-import { Trace } from '../Trace/Trace.js'
+import type { Trace } from '../Trace/Trace.js'
 
 import type * as Instruction from './Instruction/Instruction.js'
 import { provide } from './Instruction/Provide.js'

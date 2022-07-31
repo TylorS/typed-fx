@@ -8,10 +8,10 @@ import { getCurrentStackFrame, getStackFrames } from './getStackFrames.js'
 const filename = new URL(import.meta.url).pathname
 const root = dirname(dirname(dirname(filename))) + '/'
 
-describe(filename, () => {
-  describe(getStackFrames.name, () => {
-    it('returns stack frames from an error', () => {
-      const frame = getCurrentStackFrame(this) // Provide this for some consistency in the return
+describe(filename, function () {
+  describe(getStackFrames.name, function () {
+    it('returns stack frames from an error', function test() {
+      const frame = getCurrentStackFrame() // Provide this for some consistency in the return
 
       ok(isJust(frame))
 

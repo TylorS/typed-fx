@@ -10,8 +10,8 @@ import { FiberId } from '../FiberId/FiberId.js'
 import { pending } from '../Future/Future.js'
 import { complete } from '../Future/complete.js'
 import { wait } from '../Future/wait.js'
+import { success } from '../Fx/Fx.js'
 import { Timer } from '../Timer/Timer.js'
-import { success } from '../index.js'
 
 import { Observer, Observers } from './Observers.js'
 import {
@@ -39,6 +39,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   protected _observers: Observers<any, any> = new Observers()
   protected _context: Stack<Ctx> = new Stack(this.initialContext)
   protected _settable: Settable = settable()
+  protected _interruptedBy: Array<FiberId> = []
 
   constructor(
     readonly initialContext: Ctx,
@@ -47,12 +48,15 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     readonly onInstruction: (
       instruction: Eff.YieldOf<T>,
       context: Ctx,
+      interruptedBy: ReadonlyArray<FiberId>,
     ) => RuntimeIterable<Ctx, T, any, any>,
     readonly onExit: (exit: Exit<any, any>) => Eff.Eff<Eff.YieldOf<T>, boolean>,
     readonly waitForExit: (cb: (exit: Exit<any, any>) => void) => Eff.Eff<Eff.YieldOf<T>, unknown>,
     readonly ensureEff: (eff: T, ctx: Ctx) => unknown,
     readonly interruptEff: (ctx: Ctx, id: FiberId) => Maybe<Eff.Eff<Eff.YieldOf<T>, unknown>>,
-  ) {}
+  ) {
+    this._current = new InitialNode(eff)
+  }
 
   get status(): FiberStatus {
     return this._status
@@ -65,7 +69,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   readonly start = () => {
     this.running()
 
-    while (this._current && this._status.tag !== 'Done') {
+    while (this._current) {
       this.processNode(this._current)
     }
 
@@ -75,6 +79,9 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   readonly addObserver = (observer: Observer<any, any>) => this._observers.addObserver(observer)
 
   readonly interrupt = (id: FiberId) => {
+    // Add interrupt ID to stack
+    this._interruptedBy.push(id)
+
     const maybe = this.interruptEff(this._context.value, id)
 
     // If is Interruptible, go ahead and process whatever is remaining
@@ -98,8 +105,9 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   }
 
   protected processNode(node: RuntimeNode<Ctx, T, Eff.YieldOf<T>>) {
+    console.log(node.tag)
+
     switch (node.tag) {
-      // Most common nodes to process
       case 'Generator':
         return this.processGeneratorNode(node)
       case 'Instruction':
@@ -108,7 +116,6 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
         return this.processRuntimeGeneratorNode(node)
       case 'RuntimeInstruction':
         return this.processRuntimeInstructionNode(node)
-      // Only processed once in a Fiber
       case 'Initial':
         return this.processInitial(node)
       case 'Exit':
@@ -224,7 +231,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   }
 
   protected processInstruction(node: InstructionNode<Ctx, T, Eff.YieldOf<T>>) {
-    const iterable = this.onInstruction(node.instruction, this._context.value)
+    const iterable = this.onInstruction(node.instruction, this._context.value, this._interruptedBy)
     this._current = new RuntimeGeneratorNode(iterable[Symbol.iterator](), node)
   }
 
@@ -274,6 +281,10 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     const instr = node.instruction
 
     switch (instr.tag) {
+      case 'PushInstruction': {
+        this._current = new GeneratorNode(instr.eff[Symbol.iterator](), node.previous)
+        return
+      }
       case 'Async':
         return this.processAsync(instr, node.previous)
       case 'Promise':

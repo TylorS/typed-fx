@@ -12,14 +12,14 @@ export type AnyFiber = Fiber<any, any> | Fiber<never, any>
 
 export interface Live<E, A> {
   readonly tag: 'Live'
-  readonly id: FiberId.Live
+  readonly id: FiberId
   readonly context: Of<FiberContext>
   readonly exit: Of<Exit<E, A>>
   readonly scope: Closeable
 }
 
 export const Live = <E, A>(
-  id: FiberId.Live,
+  id: FiberId,
   context: Of<FiberContext>,
   exit: Of<Exit<E, A>>,
   scope: Closeable,
@@ -33,14 +33,14 @@ export const Live = <E, A>(
 
 export interface Synthetic<E, A> {
   readonly tag: 'Synthetic'
-  readonly id: FiberId.Synthetic
+  readonly id: FiberId
   readonly exit: Of<Exit<E, A>>
   readonly inheritRefs: Of<void>
   readonly fiberRefs: FiberRefs
 }
 
 export const Synthetic = <E, A>(
-  id: FiberId.Synthetic,
+  id: FiberId,
   exit: Of<Exit<E, A>>,
   inheritRefs: Of<void>,
   fiberRefs: FiberRefs,

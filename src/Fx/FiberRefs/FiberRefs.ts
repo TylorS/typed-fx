@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
+import { Strict } from 'hkt-ts/Typeclass/Eq'
 
 import { getFiberContext } from '../Fx/Instruction/GetFiberContext.js'
 import { zipAll } from '../Fx/Instruction/ZipAll.js'
@@ -32,7 +33,7 @@ export interface FiberRefs {
   /**
    * Create a new FiberRefs instance that forks each FiberRef it contains based on the user provided semantics.
    */
-  readonly fork: Fx.Of<FiberRefs>
+  readonly fork: () => FiberRefs
 
   /**
    * Create a new FiberRefs instance with an override over a particular value
@@ -65,7 +66,15 @@ export interface FiberRefsState {
 /**
  * Constructs a new FiberRefs instance.
  */
-export function FiberRefs(state: Atomic<FiberRefsState>): FiberRefs {
+export function FiberRefs(
+  state: Atomic<FiberRefsState> = new Atomic<FiberRefsState>(
+    {
+      references: new Map(),
+      fibers: new Map(),
+    },
+    Strict,
+  ),
+): FiberRefs {
   // Access is always localized
   const semaphores = new Map<FiberRef.AnyFiberRef, Semaphore>()
 
@@ -103,7 +112,7 @@ export function FiberRefs(state: Atomic<FiberRefsState>): FiberRefs {
   const locally: FiberRefs['locally'] = (ref, value) =>
     FiberRefs(state.fork((s) => ({ ...s, references: new Map([...s.references, [ref, value]]) })))
 
-  const fork = Fx.fromLazy(() => {
+  const fork = () => {
     const forked = new Map<FiberRef.AnyFiberRef, any>()
 
     for (const [k, v] of state.get.references) {
@@ -115,7 +124,7 @@ export function FiberRefs(state: Atomic<FiberRefsState>): FiberRefs {
     }
 
     return FiberRefs(state.fork((s) => ({ ...s, references: forked })))
-  })
+  }
 
   const join: FiberRefs['join'] = (ref, value) =>
     Fx.fromLazy(() => {

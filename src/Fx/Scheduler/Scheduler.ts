@@ -1,7 +1,7 @@
 import type { Fiber } from '../Fiber/Fiber.js'
 import * as Fx from '../Fx/Fx.js'
+import { ForkParams } from '../Fx/Instruction/Fork.js'
 import * as Timer from '../Timer/Timer.js'
-import { ForkParams } from '../index.js'
 
 import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
