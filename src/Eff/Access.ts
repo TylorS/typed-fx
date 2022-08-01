@@ -20,13 +20,13 @@ export class Provide<Y, R, R2> extends Eff.Instruction<
   readonly tag = 'Provide'
 }
 
+export const provide =
+  <R2>(resources: R2, __trace?: string) =>
+  <Y, R>(eff: Eff<Y, R>): Eff<StrictExclude<Y, AnyAccess<R2>> | Provide<Y, R, R2>, R> =>
+    new Provide([eff, resources], __trace)
+
 type AnyAccess<R> =
   | Access<R, any, any>
   | Access<R, never, never>
   | Access<R, never, any>
   | Access<R, any, never>
-
-export const provide =
-  <R2>(resources: R2, __trace?: string) =>
-  <Y, R>(eff: Eff<Y, R>): Eff<StrictExclude<Y, AnyAccess<R2>> | Provide<Y, R, R2>, R> =>
-    new Provide([eff, resources], __trace)

@@ -1,6 +1,6 @@
 /**
- * Eff is a very thin abstraction over Generators which provides a synchronous, algebraic-effects-like,
- * way to represent effects.
+ * Eff is a very thin abstraction over Generators which provides a way to
+ * construct Effects that are interpreted.
  */
 export interface Eff<Y, R> {
   readonly [Symbol.iterator]: () => Generator<Y, R, any>
@@ -21,8 +21,8 @@ export namespace Eff {
   export class Instruction<I, O> {
     constructor(readonly input: I, readonly __trace?: string) {}
 
-    *[Symbol.iterator](): Generator<this, O> {
-      return (yield this) as O
+    *[Symbol.iterator](): Generator<this, O, O> {
+      return yield this
     }
   }
 
