@@ -23,6 +23,7 @@ import { FiberRuntime, make, toFiber } from './FiberRuntime.js'
 import { RuntimeFiberContext } from './RuntimeFiberContext.js'
 import {
   GetContext,
+  ModifyContext,
   PopContext,
   PushContext,
   PushInstruction,
@@ -44,9 +45,11 @@ export function* fxInstructionToRuntimeInstruction<R, E>(
 ): RuntimeIterable<RuntimeFiberContext, AnyFx, E, any> {
   // Yield to other fibers cooperatively
   if (runtimeCtx.instructionCount === ctx.platform.maxOpCount) {
-    yield new PushContext({ ...runtimeCtx, instructionCount: 0 })
+    yield new ModifyContext({ ...runtimeCtx, instructionCount: 0 })
     yield new RuntimePromise(() => Promise.resolve())
   }
+
+  console.log('Fx', instr.tag)
 
   switch (instr.tag) {
     case 'Access':
@@ -56,7 +59,11 @@ export function* fxInstructionToRuntimeInstruction<R, E>(
 
       yield new PushContext({ ...runtimeCtx, env })
 
-      return yield new PushInstruction(fx)
+      const a = yield new PushInstruction(fx)
+
+      yield new PopContext()
+
+      return a
     }
     case 'AddTrace': {
       return yield new PushContext({ ...runtimeCtx, trace: runtimeCtx.trace.push(instr.trace) })
@@ -155,8 +162,6 @@ function toFiberContext(runtimeCtx: RuntimeFiberContext, ctx: FiberContext): Fib
 }
 
 export function forkFiberContext(ctx: FiberContext): FiberContext {
-  const scheduler = ctx.scheduler.fork()
-
   return {
     ...ctx,
     id: new FiberId.Live(
@@ -165,7 +170,7 @@ export function forkFiberContext(ctx: FiberContext): FiberContext {
       ctx.scheduler.getCurrentTime(),
     ),
     fiberRefs: ctx.fiberRefs.fork(),
-    scheduler,
+    scheduler: ctx.scheduler.fork(),
     parent: Just(ctx),
   }
 }

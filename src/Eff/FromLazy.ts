@@ -1,7 +1,13 @@
 import { Lazy } from 'hkt-ts'
 
 import { Eff } from './Eff.js'
-import { FromLazy, fromLazy } from './FromLazy.js'
+
+export class FromLazy<A> extends Eff.Instruction<Lazy<A>, A> {
+  readonly tag = 'FromLazy'
+}
+
+export const fromLazy = <A>(f: Lazy<A>, __trace?: string): Eff<FromLazy<A>, A> =>
+  new FromLazy(f, __trace)
 
 export function fromValue<A>(value: A, __trace?: string): Eff<FromLazy<A>, A> {
   return fromLazy(() => value, __trace)

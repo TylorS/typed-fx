@@ -9,6 +9,7 @@ export type RuntimeInstruction<Ctx, T, E, A> =
   | GetContext
   | PushContext<Ctx>
   | PopContext
+  | ModifyContext<Ctx>
   | RuntimePromise<A>
   | RuntimeAsync<T>
   | Failure<E>
@@ -33,6 +34,12 @@ export class GetContext {
 
 export class PushContext<Ctx> {
   readonly tag = 'PushContext'
+
+  constructor(readonly context: Ctx) {}
+}
+
+export class ModifyContext<Ctx> {
+  readonly tag = 'ModifyContext'
 
   constructor(readonly context: Ctx) {}
 }

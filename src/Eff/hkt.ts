@@ -7,7 +7,7 @@ import { IdentityFlatten2 } from 'hkt-ts/Typeclass/IdentityFlatten'
 import { Top2 } from 'hkt-ts/Typeclass/Top'
 
 import { Eff } from './Eff.js'
-import { fromValue } from './primitives.js'
+import { fromValue } from './FromLazy.js'
 
 export interface EffHKT extends HKT2 {
   readonly type: Eff<this[Params.E], this[Params.A]>

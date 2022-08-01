@@ -19,9 +19,6 @@ export function Eff<Y, R>(f: () => Generator<Y, R>): Eff<Y, R> {
 
 export namespace Eff {
   export class Instruction<I, O> {
-    readonly __RESOURCES__: unknown
-    readonly __ERRORS__: unknown
-
     constructor(readonly input: I, readonly __trace?: string) {}
 
     *[Symbol.iterator](): Generator<this, O> {
@@ -44,3 +41,7 @@ export function runEff<R>(eff: Eff<never, R>) {
 
   return result.value
 }
+
+export const unit = Eff(function* () {
+  // return void 0
+})

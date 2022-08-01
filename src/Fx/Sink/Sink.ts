@@ -1,9 +1,9 @@
 import { Cause } from '../Cause/Cause.js'
 
-import { Of } from '@/Fx/Fx/Fx.js'
+import { IO } from '@/Fx/Fx/Fx.js'
 
 export interface Sink<E, A> {
-  readonly event: (a: A) => Of<unknown>
-  readonly error: (cause: Cause<E>) => Of<unknown>
-  readonly end: Of<unknown>
+  readonly event: (a: A) => IO<E, unknown>
+  readonly error: (cause: Cause<E>) => IO<E, unknown>
+  readonly end: IO<E, unknown>
 }

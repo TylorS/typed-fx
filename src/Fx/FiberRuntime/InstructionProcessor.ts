@@ -5,8 +5,8 @@ import { First } from 'hkt-ts/Typeclass/Associative'
 import { Settable, settable } from '../Disposable/Disposable.js'
 import * as Eff from '../Eff/Eff.js'
 import { Exit, die, makeSequentialAssociative } from '../Exit/Exit.js'
-import { Done, FiberStatus, Running, Suspended } from '../Fiber/FiberStatus.js'
 import { FiberId } from '../FiberId/FiberId.js'
+import { Done, FiberStatus, Running, Suspended } from '../FiberStatus/index.js'
 import { pending } from '../Future/Future.js'
 import { complete } from '../Future/complete.js'
 import { wait } from '../Future/wait.js'
@@ -34,7 +34,7 @@ import { Stack } from '@/Stack/index.js'
 import { Delay } from '@/Time/index.js'
 
 export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
-  protected _current: RuntimeNode<Ctx, T, Eff.YieldOf<T>> | undefined
+  protected _current: RuntimeNode<Ctx, T> | undefined
   protected _status: FiberStatus = Suspended
   protected _observers: Observers<any, any> = new Observers()
   protected _context: Stack<Ctx> = new Stack(this.initialContext)
@@ -104,9 +104,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     return wait(future)
   }
 
-  protected processNode(node: RuntimeNode<Ctx, T, Eff.YieldOf<T>>) {
-    console.log(node.tag)
-
+  protected processNode(node: RuntimeNode<Ctx, T>) {
     switch (node.tag) {
       case 'Generator':
         return this.processGeneratorNode(node)
@@ -126,7 +124,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   /**
    * Process a Generator node, unwinding the stack in case of failures.
    */
-  protected processGeneratorNode(node: GeneratorNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processGeneratorNode(node: GeneratorNode<Ctx, T>) {
     try {
       return this.processGenerator(node)
     } catch (e) {
@@ -137,7 +135,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   /**
    * Process an instruction, unwinding the stack in case of failures.
    */
-  protected processInstructionNode(node: InstructionNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processInstructionNode(node: InstructionNode<Ctx, T>) {
     try {
       return this.processInstruction(node)
     } catch (e) {
@@ -145,7 +143,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     }
   }
 
-  protected processRuntimeGeneratorNode(node: RuntimeGeneratorNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processRuntimeGeneratorNode(node: RuntimeGeneratorNode<Ctx, T>) {
     try {
       return this.processRuntimeGenerator(node)
     } catch (e) {
@@ -153,7 +151,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     }
   }
 
-  protected processRuntimeInstructionNode(node: RuntimeInstructionNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processRuntimeInstructionNode(node: RuntimeInstructionNode<Ctx, T>) {
     try {
       return this.processRuntimeInstruction(node)
     } catch (e) {
@@ -167,7 +165,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
    * Generator,  Eff.YieldOf<T>,f the Eff has completed - start the exit process, otherwise notify
    * any observers of the Exit.
    */
-  protected processGenerator(node: GeneratorNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processGenerator(node: GeneratorNode<Ctx, T>) {
     const result = tryGetResult(node)
 
     if (!result.done) {
@@ -208,7 +206,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     )
   }
 
-  protected processGeneratorFailure(node: GeneratorNode<Ctx, T, Eff.YieldOf<T>>, error: unknown) {
+  protected processGeneratorFailure(node: GeneratorNode<Ctx, T>, error: unknown) {
     // If a random failure, or we're at the end of the line, go ahead and close things up.
     if (!node.previous || node.previous.tag === 'Initial') {
       this._current = new ExitNode(die(error))
@@ -230,21 +228,18 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     this._current = node.previous
   }
 
-  protected processInstruction(node: InstructionNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processInstruction(node: InstructionNode<Ctx, T>) {
     const iterable = this.onInstruction(node.instruction, this._context.value, this._interruptedBy)
     this._current = new RuntimeGeneratorNode(iterable[Symbol.iterator](), node)
   }
 
-  protected processInstructionFailure(
-    node: InstructionNode<Ctx, T, Eff.YieldOf<T>>,
-    error: unknown,
-  ) {
+  protected processInstructionFailure(node: InstructionNode<Ctx, T>, error: unknown) {
     node.previous.method.set('throw')
     node.previous.next.set(error)
     this._current = node.previous
   }
 
-  protected processRuntimeGenerator(node: RuntimeGeneratorNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processRuntimeGenerator(node: RuntimeGeneratorNode<Ctx, T>) {
     const result = tryGetResult(node)
 
     if (!result.done) {
@@ -259,10 +254,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     )
   }
 
-  protected processRuntimeGeneratorFailure(
-    node: RuntimeGeneratorNode<Ctx, T, Eff.YieldOf<T>>,
-    error: unknown,
-  ) {
+  protected processRuntimeGeneratorFailure(node: RuntimeGeneratorNode<Ctx, T>, error: unknown) {
     // If a random failure, or we're at the end of the line, go ahead and close things up.
     if (node.previous.tag === 'Instruction') {
       return this.processInstructionFailure(node.previous, error)
@@ -277,7 +269,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     this._current = node.previous
   }
 
-  protected processRuntimeInstruction(node: RuntimeInstructionNode<Ctx, T, Eff.YieldOf<T>>) {
+  protected processRuntimeInstruction(node: RuntimeInstructionNode<Ctx, T>) {
     const instr = node.instruction
 
     switch (instr.tag) {
@@ -306,6 +298,12 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
           (this._context = this._context.pop() ?? this._context),
         )
       }
+      case 'ModifyContext': {
+        return this.toPrevious(
+          node.previous,
+          (this._context = new Stack(instr.context, this._context.previous)),
+        )
+      }
       case 'ScheduleCallback': {
         this.scheduleCallback(instr.cb)
         return this.toPrevious(node.previous, undefined)
@@ -313,19 +311,13 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     }
   }
 
-  protected processRuntimeInstructionFailure(
-    node: RuntimeInstructionNode<Ctx, T, Eff.YieldOf<T>>,
-    error: unknown,
-  ) {
+  protected processRuntimeInstructionFailure(node: RuntimeInstructionNode<Ctx, T>, error: unknown) {
     node.previous.method.set('throw')
     node.previous.next.set(error)
     this._current = node.previous
   }
 
-  protected processAsync(
-    instr: RuntimeAsync<T>,
-    previous: RuntimeGeneratorNode<Ctx, T, Eff.YieldOf<T>>,
-  ) {
+  protected processAsync(instr: RuntimeAsync<T>, previous: RuntimeGeneratorNode<Ctx, T>) {
     const either = instr.register((eff) => {
       this._current = new RuntimeGeneratorNode(eff[Symbol.iterator](), previous)
       this.start()
@@ -339,10 +331,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     this._current = undefined
   }
 
-  protected processPromise(
-    instr: RuntimePromise<any>,
-    previous: RuntimeGeneratorNode<Ctx, T, Eff.YieldOf<T>>,
-  ) {
+  protected processPromise(instr: RuntimePromise<any>, previous: RuntimeGeneratorNode<Ctx, T>) {
     void instr.promise().then(
       (a) => {
         this.toPrevious(previous, a)
@@ -355,10 +344,7 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
     )
   }
 
-  protected toPrevious(
-    previous: GeneratorNode<Ctx, T, Eff.YieldOf<T>> | RuntimeGeneratorNode<Ctx, T, Eff.YieldOf<T>>,
-    value: any,
-  ) {
+  protected toPrevious(previous: GeneratorNode<Ctx, T> | RuntimeGeneratorNode<Ctx, T>, value: any) {
     previous.next.set(value)
     this._current = previous
   }
@@ -406,12 +392,12 @@ export class InstructionProcessor<Ctx, T extends Eff.Eff.AnyEff> {
   }
 }
 
-function tryGetResult<Ctx, T, I>(node: GeneratorNode<Ctx, T, I>): IteratorResult<I, any>
-function tryGetResult<Ctx, T, I>(
-  node: RuntimeGeneratorNode<Ctx, T, I>,
+function tryGetResult<Ctx, T>(node: GeneratorNode<Ctx, T>): IteratorResult<Eff.YieldOf<T>, any>
+function tryGetResult<Ctx, T>(
+  node: RuntimeGeneratorNode<Ctx, T>,
 ): IteratorResult<RuntimeInstruction<Ctx, T, any, any>, any>
 
-function tryGetResult<Ctx, T, I>(node: GeneratorNode<Ctx, T, I> | RuntimeGeneratorNode<Ctx, T, I>) {
+function tryGetResult<Ctx, T>(node: GeneratorNode<Ctx, T> | RuntimeGeneratorNode<Ctx, T>) {
   const method = node.method.getAndSet('next')
 
   // If we're unwinding the stack, don't bother calling throw twice

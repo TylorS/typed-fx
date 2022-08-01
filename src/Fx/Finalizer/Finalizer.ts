@@ -1,11 +1,12 @@
 import { Branded } from 'hkt-ts/Branded'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { Exit } from '@/Fx/Exit/Exit.js'
-import { Fx } from '@/Fx/Fx/Fx.js'
+import { Eff } from '../Eff/Eff.js'
 
-export interface Finalizer<R = never, E = never> {
-  (exit: Exit<any, any>): Fx<R, E, unknown>
+import { Exit } from '@/Fx/Exit/Exit.js'
+
+export interface Finalizer<Y> {
+  (exit: Exit<any, any>): Eff<Y, unknown>
 }
 
 export type FinalizerKey = Branded<{ readonly FinalizerKey: FinalizerKey }, symbol>
