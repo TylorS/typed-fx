@@ -36,16 +36,22 @@ export type AnyInstruction =
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 export type ResourcesFromInstruction<T> = T extends AnyInstruction
-  ? ReturnType<NonNullable<T['__R']>> // Attempt to shortcut the inference process
-  : ExtractEffResources<T>
+  ? '__R' extends keyof T
+    ? ReturnType<NonNullable<T['__R']>> // Attempt to shortcut the inference process
+    : ExtractEffResources<T>
+  : never
 
 export type ErrorsFromInstruction<T> = T extends AnyInstruction
-  ? ReturnType<NonNullable<T['__E']>> // Attempt to shortcut the inference process
-  : ExtractEffErrors<T>
+  ? '__E' extends keyof T
+    ? ReturnType<NonNullable<T['__E']>> // Attempt to shortcut the inference process
+    : ExtractEffErrors<T>
+  : never
 
 export type OutputFromInstruction<T> = T extends AnyInstruction
-  ? ReturnType<NonNullable<T['__A']>> // Attempt to shortcut the inference process
-  : ReturnOf<T>
+  ? '__A' extends keyof T
+    ? ReturnType<NonNullable<T['__A']>> // Attempt to shortcut the inference process
+    : ReturnOf<T>
+  : never
 
 type ExtractEffResources<T, R = never> = U.ListOf<T> extends readonly [infer Head, ...infer Tail]
   ? ExtractEffResources<Tail[number], R | ExtractEffResources_<Head>>
