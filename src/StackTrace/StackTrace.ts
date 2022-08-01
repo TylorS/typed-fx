@@ -1,55 +1,85 @@
 import * as A from 'hkt-ts/Array'
 import { isNonEmpty } from 'hkt-ts/NonEmptyArray'
-import * as E from 'hkt-ts/Typeclass/Eq'
+import { NonNegativeInteger } from 'hkt-ts/number'
 
 import * as Stack from '@/Stack/index.js'
 import * as StackFrame from '@/StackFrame/index.js'
 import * as Trace from '@/Trace/Trace.js'
 
-export const Eq: E.Eq<StackTrace> = E.struct({
-  trace: Stack.makeEq(Trace.Eq),
-})
+const containsStackFrame = A.contains(StackFrame.Eq)
 
 export class StackTrace {
-  constructor(
-    readonly trace: Stack.Stack<Trace.Trace> = new Stack.Stack<Trace.Trace>(
-      new Trace.StackFrameTrace([]),
-    ),
-  ) {}
+  protected stack: Stack.Stack<Trace.Trace> | undefined
 
-  readonly push = (trace: Trace.Trace): StackTrace =>
-    trace.tag === 'EmptyTrace' ? this : new StackTrace(this.trace.push(trace))
+  constructor(readonly maxTraceCount: NonNegativeInteger) {}
+
+  readonly push = (trace: Trace.Trace) => {
+    if (trace.tag === 'StackFrameTrace') {
+      this.trimExisting(trace.frames)
+    }
+  }
 
   /**
    * Pop the last
    */
-  readonly pop = (): StackTrace => new StackTrace(this.trace.pop())
+  readonly pop = (): void => {
+    if (this.stack) {
+      this.stack = this.stack.pop()
+    }
+  }
 
   /**
    * Flatten a StackTrace into a single Trace
    */
-  readonly flatten = (): Trace.Trace => A.foldLeft(Trace.Identity)(Array.from(this.trace))
+  readonly flatten = (): Trace.Trace => {
+    const frames = getUpTo(this.stack, this.maxTraceCount)
+
+    return isNonEmpty(frames) ? new Trace.StackFrameTrace(frames) : Trace.EmptyTrace
+  }
 
   /**
    * Push StackFrames onto the Stack but trim them to avoid repetition
    */
-  readonly trimExisting = (frames: ReadonlyArray<StackFrame.StackFrame>): StackTrace => {
-    const current = this.flatten()
+  protected trimExisting = (frames: ReadonlyArray<StackFrame.StackFrame>): void => {
+    const current = getUpTo(this.stack, frames.length)
+    const remaining = trimOverlappingTraces(current, frames)
 
-    if (current.tag === 'EmptyTrace') {
-      return this.push(isNonEmpty(frames) ? new Trace.StackFrameTrace(frames) : Trace.EmptyTrace)
+    if (isNonEmpty(remaining)) {
+      const trace = new Trace.StackFrameTrace(remaining)
+      this.stack = this.stack?.push(trace) ?? new Stack.Stack<Trace.Trace>(trace)
+    }
+  }
+}
+
+function getUpTo(
+  stack: Stack.Stack<Trace.Trace> | undefined,
+  amount: number,
+): ReadonlyArray<StackFrame.StackFrame> {
+  const frames: Array<StackFrame.StackFrame> = []
+
+  let current = stack
+
+  while (current && frames.length < amount) {
+    const trace = current.value
+
+    if (trace.tag === 'StackFrameTrace') {
+      frames.push(...trace.frames)
     }
 
-    const existing = A.intersection(StackFrame.Eq)(frames)(current.frames.slice(0, frames.length))
-    const contains = A.contains(StackFrame.Eq)
-    const containsFrame = (x: StackFrame.StackFrame) => contains(x)(existing)
-    const remaining =
-      existing.length === 0
-        ? frames
-        : frames.filter((x) => (x.tag === 'Runtime' ? !containsFrame(x) : true))
-
-    return this.push(
-      isNonEmpty(remaining) ? new Trace.StackFrameTrace(remaining) : Trace.EmptyTrace,
-    )
+    current = current.pop()
   }
+
+  return frames.slice(0, amount)
+}
+
+function trimOverlappingTraces(
+  current: ReadonlyArray<StackFrame.StackFrame>,
+  incoming: ReadonlyArray<StackFrame.StackFrame>,
+) {
+  const existing = A.intersection(StackFrame.Eq)(incoming)(current)
+  const containsFrame = (x: StackFrame.StackFrame) => containsStackFrame(x)(existing)
+
+  return existing.length === 0
+    ? incoming
+    : incoming.filter((x) => (x.tag === 'Runtime' ? !containsFrame(x) : true))
 }

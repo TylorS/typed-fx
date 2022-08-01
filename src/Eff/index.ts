@@ -1,7 +1,6 @@
 export * from './Access.js'
 export * from './Async.js'
 export * from './Eff.js'
-export * from './Ensuring.js'
 export * from './Failure.js'
 export * from './FromLazy.js'
 export * from './handle.js'
