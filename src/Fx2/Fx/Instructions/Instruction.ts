@@ -1,3 +1,5 @@
+import { U } from 'ts-toolbelt'
+
 import type { Fx } from '../Fx.js'
 
 import { Access } from './Access.js'
@@ -10,6 +12,8 @@ import { Provide } from './Provide.js'
 import { SetInterruptStatus } from './SetInterruptStatus.js'
 import { WithConcurrency } from './WithConcurrency.js'
 import { ZipAll } from './ZipAll.js'
+
+import { ReturnOf, YieldOf } from '@/Eff/Eff.js'
 
 export type Instruction<R, E, A> =
   | Access<R, R, E, A>
@@ -31,16 +35,52 @@ export type AnyInstruction =
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-export type ResourcesFromInstruction<T> = T extends Instruction<infer _R, infer _E, infer _A>
-  ? ReturnType<NonNullable<T['__R']>>
+export type ResourcesFromInstruction<T> = T extends AnyInstruction
+  ? ReturnType<NonNullable<T['__R']>> // Attempt to shortcut the inference process
+  : ExtractEffResources<T>
+
+export type ErrorsFromInstruction<T> = T extends AnyInstruction
+  ? ReturnType<NonNullable<T['__E']>> // Attempt to shortcut the inference process
+  : ExtractEffErrors<T>
+
+export type OutputFromInstruction<T> = T extends AnyInstruction
+  ? ReturnType<NonNullable<T['__A']>> // Attempt to shortcut the inference process
+  : ReturnOf<T>
+
+type ExtractEffResources<T, R = never> = U.ListOf<T> extends readonly [infer Head, ...infer Tail]
+  ? ExtractEffResources<Tail[number], R | ExtractEffResources_<Head>>
+  : R
+
+type ExtractEffErrors<T, R = never> = U.ListOf<T> extends readonly [infer Head, ...infer Tail]
+  ? ExtractEffErrors<Tail[number], R | ExtractEffErrors_<Head>>
+  : R
+
+type ExtractEffResources_<T> = T extends Access<infer R, infer R2, infer _E, infer _A>
+  ? R | R2
+  : T extends Async<infer _R, infer _E, infer _A>
+  ? _R
+  : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
+  ? _R
+  : T extends WithConcurrency<infer _R, infer _E, infer _A>
+  ? _R
+  : T extends ZipAll<infer FX>
+  ? ExtractEffResources<YieldOf<FX[number]>>
   : never
 
-export type ErrorsFromInstruction<T> = T extends Instruction<infer _R, infer _E, infer _A>
-  ? ReturnType<NonNullable<T['__E']>>
-  : never
-
-export type OutputFromInstruction<T> = T extends Instruction<infer _R, infer _E, infer _A>
-  ? ReturnType<NonNullable<T['__A']>>
+type ExtractEffErrors_<T> = T extends Access<infer _R, infer _R2, infer _E, infer _A>
+  ? _E
+  : T extends Async<infer _R, infer _E, infer _A>
+  ? _E
+  : T extends Failure<infer _E>
+  ? _E
+  : T extends Provide<infer _R, infer _E, infer _A>
+  ? _E
+  : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
+  ? _E
+  : T extends WithConcurrency<infer _R, infer _E, infer _A>
+  ? _E
+  : T extends ZipAll<infer FX>
+  ? ExtractEffResources<YieldOf<FX[number]>>
   : never
 
 /* eslint-enable @typescript-eslint/no-unused-vars */
