@@ -1,31 +1,41 @@
 import { Disposable } from '@/Disposable/Disposable.js'
 import { MAX_UNIX_TIME, UnixTime } from '@/Time/index.js'
 
+/**
+ * A Timeline is a time-ordered queue, which uses a binary search to quickly insert/remove values.
+ * It allows de-queuing all values from the Queue that are at or before a specific time.
+ */
 export interface Timeline<A> {
+  /**
+   * Returns the UnixTime at which a Task should be run.
+   */
   readonly nextArrival: () => UnixTime
+
+  /**
+   * Returns true if the Timeline has no tasks
+   */
   readonly isEmpty: () => boolean
+
+  /**
+   * Add a task to the timeline, returns a Dispsoable to remove
+   * the task from the timeline.
+   */
   readonly add: (time: UnixTime, a: A) => Disposable
-  readonly remove: (time: UnixTime, a: A) => boolean
+
+  /**
+   * Extract all of the values held in the queue that is at or before the specified Time.
+   */
   readonly getReadyTasks: (t: UnixTime) => readonly A[]
-  readonly addListener: (listener: () => void) => Disposable
 }
 
-/**
- * A Timeline is a time-ordered queue, which uses a binary search to quickly insert new values and removals.
- * getReadyTasks allows you to extract all of the values held in the queue that is at or before the specified Time.
- */
-export class Timeline<A> implements Timeline<A> {
-  readonly listeners = new Set<() => void>()
+export function make<A>(onUpdated?: () => void): Timeline<A> {
+  return new TimelineImpl(onUpdated)
+}
 
-  constructor(readonly onUpdated?: () => void, readonly timeSlots: Array<TimeSlot<A>> = []) {
-    this.timeSlots = []
-  }
+class TimelineImpl<A> implements Timeline<A> {
+  protected timeSlots: TimeSlot<A>[] = []
 
-  readonly addListener = (listener: () => void): Disposable => {
-    this.listeners.add(listener)
-
-    return Disposable(() => this.listeners.delete(listener))
-  }
+  constructor(readonly onUpdated?: () => void) {}
 
   readonly nextArrival = (): UnixTime => {
     if (this.isEmpty()) {
@@ -46,7 +56,7 @@ export class Timeline<A> implements Timeline<A> {
     return Disposable(() => this.remove(time, a))
   }
 
-  readonly remove = (time: UnixTime, a: A): boolean => {
+  protected remove = (time: UnixTime, a: A): boolean => {
     const i = binarySearch(time, this.timeSlots)
 
     if (i >= 0 && i < this.timeSlots.length) {

@@ -4,7 +4,7 @@ import { AtomicCounter } from '@/Atomic/AtomicCounter.js'
 
 export class Platform {
   constructor(
-    readonly sequenceNumber: AtomicCounter = new AtomicCounter(),
+    readonly sequenceNumber: AtomicCounter = AtomicCounter(),
     readonly maxOpCount: NonNegativeInteger = NonNegativeInteger(500),
   ) {}
 }

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /**
- * Branded is a module to help you construct Branded types.
+ * Tagged is a module to help you construct Tagged types, which
+ * are a means of creating nominal-like types in TypeScript.
  */
 
 import { Constrain, HKT2, Params, Variance } from 'hkt-ts/HKT'

@@ -1,4 +1,4 @@
-import { Clock } from './Clock.js'
+import { Clock, make } from './Clock.js'
 
 import { Delay, Time, UnixTime } from '@/Time/index.js'
 
@@ -14,7 +14,7 @@ export function TestClock(startTime: UnixTime = Date.now()): TestClock {
   let time: Time = Time(0)
 
   return {
-    ...Clock(startTime, () => time),
+    ...make(startTime, () => time),
     progressTimeBy: (delay: Delay) => {
       return (time = Time(time + delay))
     },

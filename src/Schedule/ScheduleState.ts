@@ -40,7 +40,7 @@ export class ScheduleState {
     readonly cumulativeDelay: Delay = Delay(0),
   ) {}
 
-  readonly next = (now: Time, delay: Maybe<Delay> = Nothing): ScheduleState =>
+  readonly step = (now: Time, delay: Maybe<Delay> = Nothing): ScheduleState =>
     new ScheduleState(
       Just(now),
       NonNegativeInteger(this.iteration + 1),

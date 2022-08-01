@@ -10,15 +10,13 @@ export interface Clock {
   readonly getCurrentTime: Lazy<Time>
 }
 
-export function Clock(startTime: UnixTime, getCurrentTime: Lazy<Time>): Clock {
+export const Clock = Service<Clock>('Clock')
+
+export function make(startTime: UnixTime, getCurrentTime: Lazy<Time>): Clock {
   return {
     startTime,
     getCurrentTime,
   }
-}
-
-export namespace Clock {
-  export const service: Service<Clock> = Service<Clock>('Clock')
 }
 
 export function delayToUnixTime(delay: Delay) {
@@ -69,16 +67,16 @@ export const and =
 
 export const UnionIdentity: Identity<Clock> = {
   ...UnionAssociative,
-  id: Clock(MAX_UNIX_TIME, () => Time(0)),
+  id: make(MAX_UNIX_TIME, () => Time(0)),
 }
 
 export const IntersectionIdentity: Identity<Clock> = {
   ...IntersectionAssociative,
-  id: Clock(MIN_UNIX_TIME, () => Time(0)),
+  id: make(MIN_UNIX_TIME, () => Time(0)),
 }
 
 export function fork(clock: Clock): Clock {
   const offset = clock.getCurrentTime()
 
-  return Clock(timeToUnixTime(offset)(clock), () => Time(clock.getCurrentTime() - offset))
+  return make(timeToUnixTime(offset)(clock), () => Time(clock.getCurrentTime() - offset))
 }

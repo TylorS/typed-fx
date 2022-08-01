@@ -49,18 +49,18 @@ export function Schedule(step: Schedule['step']): Schedule {
   return schedule
 }
 
-export const never: Schedule = Schedule((now, state) => [state.next(now), Done])
+export const never: Schedule = Schedule((now, state) => [state.step(now), Done])
 
 export const forever: Schedule = Schedule((now, state) => [
-  state.next(now, Just(asap)),
+  state.step(now, Just(asap)),
   new Continue(asap),
 ])
 
 export const recurring = (amount: NonNegativeInteger): Schedule =>
-  Schedule((now, state) => [state.next(now), state.iteration < amount ? new Continue(asap) : Done])
+  Schedule((now, state) => [state.step(now), state.iteration < amount ? new Continue(asap) : Done])
 
 export const periodic = (delay: Delay): Schedule =>
-  Schedule((now, state) => [state.next(now, Just(delay)), new Continue(delay)])
+  Schedule((now, state) => [state.step(now, Just(delay)), new Continue(delay)])
 
 export const delayed = (delay: Delay): Schedule => periodic(delay).and(once)
 
@@ -74,19 +74,19 @@ export const spaced = (delay: Delay): Schedule =>
       ),
     )
 
-    return [state.next(now, Just(spacedDelay)), new Continue(spacedDelay)]
+    return [state.step(now, Just(spacedDelay)), new Continue(spacedDelay)]
   })
 
 export const exponential = (delay: Delay): Schedule =>
   Schedule((now, state) => {
     const exponentialDelay = Delay(delay ** (state.iteration + 1))
 
-    return [state.next(now, Just(exponentialDelay)), new Continue(exponentialDelay)]
+    return [state.step(now, Just(exponentialDelay)), new Continue(exponentialDelay)]
   })
 
 export const retries = (retries: NonNegativeInteger): Schedule =>
   Schedule((now, state) => {
-    const next = state.next(now)
+    const next = state.step(now)
 
     // If we've reached our retry limit, lets return Done.
     if (next.iteration === retries) {
@@ -123,7 +123,7 @@ export const UnionAssociative: Associative.Associative<Schedule> = {
 
 export const UnionIdentity: Identity<Schedule> = {
   ...UnionAssociative,
-  id: Schedule((now, state) => [state.next(now, Just(max)), new Continue(max)]),
+  id: Schedule((now, state) => [state.step(now, Just(max)), new Continue(max)]),
 }
 
 export const IntersectionAssociative: Associative.Associative<Schedule> = {

@@ -3,7 +3,7 @@ import { ok } from 'assert'
 
 import { isLeft } from 'hkt-ts/Either'
 
-import { prettyPrint } from '@/Fx/Cause/Renderer.js'
+import { prettyPrint } from '@/Cause/Renderer.js'
 import { Env } from '@/Fx/Sync/Env.js'
 import { Sync, ask, fail } from '@/Fx/Sync/Sync.js'
 import { runWith } from '@/Fx/Sync/run.js'
