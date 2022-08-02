@@ -1,5 +1,6 @@
+import { identity, pipe } from 'hkt-ts'
 import { Endomorphism } from 'hkt-ts/Endomorphism'
-import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
+import { Just, Maybe, Nothing, isJust, match } from 'hkt-ts/Maybe'
 
 /**
  * A Heap is a glorified Map of `HeakKey`s to their values.
@@ -78,15 +79,37 @@ export class Heap {
 
     return new Heap(map)
   }
+
+  readonly join = (other: Heap) => {
+    for (const [k, v] of other) {
+      this.set(
+        k,
+        pipe(
+          this.get(k),
+          match(
+            () => v,
+            (c) => k.join(c, v),
+          ),
+        ),
+      )
+    }
+  }
 }
 
 /**
  * A HeapKey uses reference as ID, and describes
- * how to Fork a value into a new Heap.
+ * how to Fork a value into a new Heap and for how
+ * to rejoin them.
  */
 export interface HeapKey<A> {
   readonly fork: (a: A) => Maybe<A>
+  readonly join: (first: A, second: A) => A
 }
-export const HeapKey = <A>(fork: (a: A) => Maybe<A>) => ({
+
+export const HeapKey = <A>(
+  fork: HeapKey<A>['fork'] = Just,
+  join: HeapKey<A>['join'] = identity,
+): HeapKey<A> => ({
   fork,
+  join,
 })
