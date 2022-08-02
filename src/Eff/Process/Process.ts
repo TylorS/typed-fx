@@ -169,7 +169,7 @@ export class Process<Y, A> {
       return Eff.of(Left(died(new Error(`Unable to run an Eff in a finished Process.`))))
     }
 
-    if (!this._status.isInterruptable) {
+    if (this._status.isInterruptable) {
       return this.runArbitraryEff(eff)
     }
 
