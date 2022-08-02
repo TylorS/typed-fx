@@ -29,11 +29,10 @@ export type AnyInstruction =
   | Instruction<never, never, any>
   | Instruction<any, never, never>
 
-export type ErrorsFromInstruction<T, R = never> = U.ListOf<T> extends readonly [
-  infer Head,
-  ...infer Tail,
-]
-  ? Head extends Failure<infer E>
+export type ErrorsFromInstruction<T, R = never> = [T] extends [never]
+  ? never
+  : U.ListOf<T> extends readonly [infer Head, ...infer Tail]
+  ? [Head] extends [Failure<infer E>]
     ? ErrorsFromInstruction<Tail[number], R | E>
     : ErrorsFromInstruction<Tail[number], R>
   : R

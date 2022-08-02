@@ -1,3 +1,5 @@
+import { Lazy } from 'hkt-ts/function'
+
 /**
  * Eff is a very thin abstraction over Generators which provides a way to
  * construct Effects that are interpreted.
@@ -22,6 +24,12 @@ export namespace Eff {
     // eslint-disable-next-line require-yield
     Eff(function* () {
       return value
+    })
+
+  export const fromLazy = <A>(f: Lazy<A>) =>
+    // eslint-disable-next-line require-yield
+    Eff(function* () {
+      return f()
     })
 
   export class Instruction<I, O> {

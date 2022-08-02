@@ -172,7 +172,7 @@ function setExit<Y, R>(
 export class FinalizerNode<Y, R> {
   readonly tag = 'Finalizer'
 
-  protected _finalized = false
+  protected finalized: Maybe.Maybe<Exit<any, any>> = Maybe.Nothing
 
   constructor(
     readonly eff: Eff<Y, R>,
@@ -186,16 +186,16 @@ export class FinalizerNode<Y, R> {
 
   readonly back = (exit: Exit<any, any> | Exit<never, any>): ProcessorStack<Y, any> | undefined => {
     // If we've already run our finalizer, continue backwards
-    if (this._finalized) {
+    if (Maybe.isJust(this.finalized)) {
       if (this.previous.tag === 'Initial') {
         return
       }
 
-      return this.previous.back(exit)
+      return this.previous.back(this.finalized.value)
     }
 
     // The first time around we need to add our Finalizer to the Stack to be processed.
-    this._finalized = true
+    this.finalized = Maybe.Just(exit)
 
     return new InstructionGeneratorNode(this.finalizer(exit)[Symbol.iterator](), this, this.trace)
   }

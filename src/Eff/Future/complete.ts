@@ -1,5 +1,8 @@
+import { pipe } from 'hkt-ts/function'
+
 import { Future, Resolved } from './Future.js'
 
+import { getAndSet } from '@/Atomic/Atomic.js'
 import { Eff } from '@/Eff/Eff.js'
 
 export function complete<Y, R>(future: Future<Y, R>) {
@@ -10,7 +13,7 @@ export function complete<Y, R>(future: Future<Y, R>) {
       }
 
       // Clear Observers and return the Eff
-      s.observers.getAndSet(new Set()).forEach((f) => f(eff))
+      pipe(s.observers, getAndSet(new Set<any>())).forEach((f) => f(eff))
 
       return [true, new Resolved(eff)]
     })

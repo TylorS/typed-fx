@@ -12,3 +12,8 @@ export class Ensuring<Y, R, Y2> extends Eff.Instruction<
 > {
   readonly tag = 'Ensuring'
 }
+
+export function ensuring<Y2>(finalizer: Finalizer<Y2>, __trace?: string) {
+  return <Y, R>(eff: Eff<Y, R>): Eff<Ensuring<Y, R, Y2>, R> =>
+    new Ensuring([eff, finalizer], __trace)
+}

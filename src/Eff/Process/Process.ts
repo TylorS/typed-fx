@@ -57,6 +57,9 @@ export interface ProcessParams {
   readonly trace: Maybe<Trace.Trace>
 }
 
+// TODO: Handle race condition running an ArbitraryEff while the Process is suspended - where to return errors?
+// TODO: Handle Finalization with ArbitraryEff
+
 /**
  * Process is an interpreter for any arbitrary Eff. It has some built-in support for
  * a few instructions of its own when are intended to help write other interpreters that
@@ -93,6 +96,14 @@ export class Process<Y, A> {
    * Current number of running arbitary Effs
    */
   protected _runningArbitary = 0
+
+  /**
+   * Incrementing ID for each Async operation.
+   */
+  protected _asyncID = 0
+  protected _asyncToPreviousState = new Map<number, ProcessorStack<Y, any>>()
+  protected _previousInstruction: any
+
   /**
    * Keeps track of an Arbitrary Effs that need to be run when this process can be interrupted.
    */
@@ -165,15 +176,16 @@ export class Process<Y, A> {
   readonly runEff = <B>(
     eff: Eff<Y, B>,
   ): Eff<Async<never, any, never>, Exit<ErrorsFromInstruction<Y>, B>> => {
-    if (this._status.tag === 'Done') {
-      return Eff.of(Left(died(new Error(`Unable to run an Eff in a finished Process.`))))
-    }
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const that = this
 
-    if (this._status.isInterruptable) {
-      return this.runArbitraryEff(eff)
-    }
+    return Eff(function* () {
+      if (that._status.tag === 'Done' || that.status.isInterruptable) {
+        return yield* that.runArbitraryEff(eff)
+      }
 
-    return this.whenInterruptable(eff)
+      return yield* that.whenInterruptable(eff)
+    })
   }
 
   readonly fork = <B>(eff: Eff<Y, B>): Process<Y, B> =>
@@ -198,26 +210,47 @@ export class Process<Y, A> {
   protected runArbitraryEff = <B>(
     eff: Eff<Y, B>,
   ): Eff<Async<never, any, never>, Exit<ErrorsFromInstruction<Y>, B>> => {
-    const future = pending<never, Exit<ErrorsFromInstruction<Y>, B>>()
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const that = this
 
-    this._runningArbitary++
-    this._current = new ArbitraryEffNode<Y, B>(eff, this._current, (exit) => {
-      this._runningArbitary--
+    return Eff(function* () {
+      const future = pending<never, Exit<ErrorsFromInstruction<Y>, B>>()
 
-      complete(future)(Eff.of(exit))
+      that._runningArbitary++
+      that._current = new ArbitraryEffNode<Y, B>(
+        eff,
+        // If we don't have somewhere to return to already, we must be waiting on an Async operation
+        // So we'll grab the previously unfinshed Async stack to continue to
+        that._current ?? that.getUnfinishedAsync(),
+        (exit) => {
+          that._runningArbitary--
+
+          complete(future)(Eff.of(exit))
+        },
+      )
+
+      that.run()
+
+      return yield* wait(future)
     })
+  }
 
-    if (this._status.tag === 'Suspended') {
-      this.run()
+  protected getUnfinishedAsync() {
+    let id = this._asyncID
+
+    while (id > -1) {
+      if (this._asyncToPreviousState.has(id)) {
+        return this._asyncToPreviousState.get(id)
+      }
+
+      --id
     }
-
-    return wait(future)
   }
 
   protected run = (): void => {
     this.running()
 
-    while (this._current && this._status.tag !== 'Done') {
+    while (this._current) {
       this.processStack(this._current)
     }
 
@@ -235,11 +268,18 @@ export class Process<Y, A> {
         return this.processRuntimeGenerator(current)
       case 'Instruction': {
         this.processInstruction(current)
+        this._previousInstruction = current.instruction
         return this.yieldNowIfNeeded()
       }
       case 'RuntimeInstruction': {
         this.processRuntimeInstruction(current)
-        return this.yieldNowIfNeeded()
+
+        // Avoid counting a single Instruction twice
+        if (this._previousInstruction !== current.instruction) {
+          this.yieldNowIfNeeded()
+        }
+
+        return
       }
       case 'Finalizer':
         return this.processFinalizer(current)
@@ -341,34 +381,48 @@ export class Process<Y, A> {
 
   protected processAsync(instr: Async<Y, any, Y>, current: ProcessorStack<Y, any>) {
     let returnedSynchronously = false
-    let registeredFinalizer: Eff<Y, unknown> | undefined
 
+    const id = this._asyncID++
     const either = instr.input((eff) => {
       returnedSynchronously = true
 
-      this._current = new InstructionGeneratorNode(
-        eff[Symbol.iterator](),
-        registeredFinalizer
-          ? new FinalizerNode(eff, constant(registeredFinalizer), Nothing, current)
-          : current,
-        Nothing,
-      )
+      // If things are still suspended, continue processing
+      if (!this._current) {
+        this._current = new InstructionGeneratorNode(
+          eff[Symbol.iterator](),
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          this._asyncToPreviousState.get(id)!,
+          Nothing,
+        )
 
-      if (registeredFinalizer) {
+        this._asyncToPreviousState.delete(id)
+
         this.run()
+      } else {
+        this._asyncToPreviousState.set(
+          id,
+          new InstructionGeneratorNode(
+            eff[Symbol.iterator](),
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            this._asyncToPreviousState.get(id)!,
+            Nothing,
+          ),
+        )
       }
     })
 
     // If we can continue synchronously, lets do so
     if (isRight(either)) {
-      this._current = new InstructionGeneratorNode(
+      return (this._current = new InstructionGeneratorNode(
         either.right[Symbol.iterator](),
         current,
         Nothing,
-      )
+      ))
     } else {
-      // If we should register a Finalizer make it available when the instruction continues later.
-      registeredFinalizer = either.left
+      this._asyncToPreviousState.set(
+        id,
+        new FinalizerNode(Eff.of('never called'), constant(either.left), Nothing, current),
+      )
     }
 
     // If the register was actually synchronous, just let things continue processing
@@ -376,7 +430,7 @@ export class Process<Y, A> {
       return
     }
 
-    // Otherwise clear the stack and wait for the Async process to continue
+    // Otherwise clear the stack and wait for the Async process to resume
     this._current = undefined
   }
 
@@ -504,22 +558,16 @@ export class Process<Y, A> {
         this.run()
       }
 
-      const inner = settable()
+      this.setTimer(() => {
+        // If another Eff has begun running
+        if (this._current !== undefined) {
+          this._suspended.addObserver(() => {
+            restart()
+          })
+        }
 
-      inner.add(
-        this.params.platform.timer.setTimer(() => {
-          inner.dispose()
-
-          // If another Eff has begun running
-          if (this._current !== undefined) {
-            this._suspended.addObserver(() => {
-              restart()
-            })
-          }
-
-          restart()
-        }, Delay(0)),
-      )
+        restart()
+      })
     }
   }
 
@@ -527,7 +575,7 @@ export class Process<Y, A> {
     this._status = Done
     this._settable.dispose()
     this._observers.notify(exit)
-    this._suspended.clear()
+    this._suspended.notify(Right(undefined))
   }
 
   protected forkParams(): ProcessParams {
@@ -536,6 +584,19 @@ export class Process<Y, A> {
       heap: this.params.heap.fork(),
       trace: this._current ? Just(this.getTrace(this._current)) : Nothing,
     }
+  }
+
+  protected setTimer(f: () => void) {
+    const inner = settable()
+
+    inner.add(
+      this._settable.add(
+        this.params.platform.timer.setTimer(() => {
+          inner.dispose()
+          f()
+        }, Delay(0)),
+      ),
+    )
   }
 }
 
