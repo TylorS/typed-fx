@@ -1,4 +1,4 @@
-import { Eff } from './Eff.js'
+import { Eff } from '../Eff.js'
 
 import * as Cause from '@/Cause/Cause.js'
 

@@ -1,4 +1,4 @@
-import { Eff, ReturnOf, YieldOf } from './Eff.js'
+import { Eff, ReturnOf, YieldOf } from '../Eff.js'
 
 export class ZipAll<Effs extends ReadonlyArray<Eff.AnyEff>> extends Eff.Instruction<
   Effs,

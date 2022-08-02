@@ -1,5 +1,5 @@
 import { Either } from 'hkt-ts/Either'
-import { Lazy, pipe } from 'hkt-ts/function'
+import { Lazy } from 'hkt-ts/function'
 
 import type { Env } from '../Env/Env.js'
 
@@ -19,7 +19,7 @@ import { Cause } from '@/Cause/Cause.js'
 import * as Eff from '@/Eff/index.js'
 import * as Exit from '@/Exit/Exit.js'
 import { FiberId } from '@/FiberId/FiberId.js'
-import { EmptyTrace, Trace } from '@/Trace/Trace.js'
+import { Trace } from '@/Trace/Trace.js'
 
 export interface Fx<out R, out E, out A> extends Eff.Eff<Instruction<R, E, any>, A> {}
 
@@ -47,16 +47,24 @@ export const access = <R, R2, E, A>(
   __trace?: string,
 ): Fx<R | R2, E, A> => new Access(f, __trace)
 
-export const addTrace = (trace: Trace, __trace?: string): Of<Trace> => new AddTrace(trace, __trace)
+export const addTrace =
+  (trace: Trace) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    new AddTrace([fx, trace])
 
-export const addCustomTrace = (trace?: string): Of<Trace> =>
-  trace ? pipe(trace, Trace.custom, addTrace) : fromValue(EmptyTrace)
+export const addCustomTrace =
+  (trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    trace ? addTrace(Trace.custom(trace))(fx) : fx
 
-export const addRuntimeTrace = <E extends { readonly stack?: string }>(
-  error: E = new Error() as any,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  targetObject?: Function,
-): Of<Trace> => pipe(Trace.runtime(error, targetObject), addTrace)
+export const addRuntimeTrace =
+  <E extends { readonly stack?: string }>(
+    error: E = new Error() as any,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    targetObject?: Function,
+  ) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    addTrace(Trace.runtime(error, targetObject))(fx)
 
 export const async = <R, E, A>(register: AsyncRegister<R, E, A>, __trace?: string): Fx<R, E, A> =>
   new Async(register, __trace)
@@ -82,6 +90,11 @@ export const fromEither = <E, A>(either: Either<E, A>, __trace?: string) =>
 export const fromLazy = <A>(f: Lazy<A>, __trace?: string): Of<A> => new FromLazy(f, __trace)
 
 export const fromValue = <A>(value: A, __trace?: string): Of<A> => fromLazy(() => value, __trace)
+
+export const lazy = <R, E, A>(f: () => Fx<R, E, A>, __trace?: string) =>
+  Fx(function* () {
+    return yield* yield* fromLazy(f, __trace)
+  })
 
 export const success = fromValue
 

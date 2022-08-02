@@ -50,7 +50,7 @@ export function modify<A, B>(f: (a: A) => readonly [B, A]) {
  * Set the value of Atomic but return the previous state.
  */
 export const getAndSet =
-  <A>(updated: A) =>
+  <A, B extends A>(updated: B) =>
   (atomic: Atomic<A>): A =>
     atomic.modify((a) => [a, updated])
 
@@ -58,7 +58,7 @@ export const getAndSet =
  * Set the state of an Atomic and return that value.
  */
 export const set =
-  <A>(updated: A) =>
+  <A, B extends A>(updated: B) =>
   (atomic: Atomic<A>): A =>
     atomic.modify(() => [updated, updated])
 

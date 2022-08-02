@@ -18,6 +18,12 @@ export function Eff<Y, R>(f: () => Generator<Y, R>): Eff<Y, R> {
 }
 
 export namespace Eff {
+  export const of = <A>(value: A) =>
+    // eslint-disable-next-line require-yield
+    Eff(function* () {
+      return value
+    })
+
   export class Instruction<I, O> {
     constructor(readonly input: I, readonly __trace?: string) {}
 

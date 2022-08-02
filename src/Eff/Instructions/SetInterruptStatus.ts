@@ -1,4 +1,4 @@
-import { Eff } from './Eff.js'
+import { Eff } from '../Eff.js'
 
 export class SetInterruptStatus<Y, R> extends Eff.Instruction<
   readonly [eff: Eff<Y, R>, interruptStatus: boolean],

@@ -1,6 +1,6 @@
 import { Lazy } from 'hkt-ts'
 
-import { Eff } from './Eff.js'
+import { Eff } from '../Eff.js'
 
 export class FromLazy<A> extends Eff.Instruction<Lazy<A>, A> {
   readonly tag = 'FromLazy'

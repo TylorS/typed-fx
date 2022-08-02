@@ -90,7 +90,7 @@ export const Associative: ASSOC.Associative<Trace> = {
       return f
     }
 
-    return new StackFrameTrace([...s.frames, ...f.frames])
+    return new StackFrameTrace([...f.frames, ...s.frames])
   },
 }
 

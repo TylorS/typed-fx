@@ -1,5 +1,3 @@
-import { Strict } from 'hkt-ts/Typeclass/Eq'
-
 import { Atomic } from '@/Atomic/Atomic.js'
 import { Eff } from '@/Eff/Eff.js'
 
@@ -35,8 +33,7 @@ export function isResolvedState<Y, R>(state: FutureState<Y, R>): state is Resolv
 }
 
 export const pending = <Y, R>(): Future<Y, R> => ({
-  state: new Atomic<FutureState<Y, R>>(
-    new Pending(new Atomic<ReadonlySet<(eff: Eff<Y, R>) => void>>(new Set(), Strict)),
-    Strict,
+  state: Atomic<FutureState<Y, R>>(
+    new Pending(Atomic<ReadonlySet<(eff: Eff<Y, R>) => void>>(new Set())),
   ),
 })

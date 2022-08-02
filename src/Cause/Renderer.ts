@@ -79,7 +79,10 @@ export function renderFailed<E>(cause: Failed<E>, trace: M.Maybe<Trace>, rendere
     Failure([
       'An expected error has occurred.',
       '',
-      ...renderer.renderError(cause.error, M.isJust(trace)),
+      ...renderer.renderError(
+        cause.error,
+        M.isJust(trace) && trace.value.tag !== 'EmptyTrace' && trace.value.frames.length > 0,
+      ),
       ...renderTrace(trace, renderer),
     ]),
   ])
@@ -193,7 +196,7 @@ export function renderTrace<E>(trace: M.Maybe<Trace>, renderer: Renderer<E>): Li
     trace,
     M.match(
       () => [],
-      (trace) => lines(renderer.renderTrace(trace)),
+      (trace) => lines(addPadding(renderer.renderTrace(trace))),
     ),
   )
 }
@@ -262,7 +265,13 @@ export function defaultErrorToLines(error: unknown, hasTrace = false): Lines {
 export const defaultRenderer: Renderer<unknown> = {
   renderError: defaultErrorToLines,
   renderUnknown: defaultErrorToLines,
-  renderTrace: (t) => '    ' + TraceDebug.debug(t).replace(/\n/g, '\n    '),
+  // Add 4 spaces of padding like most JS runtimes.
+  renderTrace: TraceDebug.debug,
+}
+
+// Add 4-spaces of padding like most JS runtimes do for stack traces.
+function addPadding(s: string): string {
+  return '    ' + s.replace(/\n/g, '\n    ')
 }
 
 export function prettyPrint<E>(cause: Cause<E>, renderer: Renderer<E> = defaultRenderer): string {

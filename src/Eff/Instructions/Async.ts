@@ -1,6 +1,6 @@
 import { Either, Left } from 'hkt-ts/Either'
 
-import { Eff, unit } from './Eff.js'
+import { Eff, unit } from '../Eff.js'
 
 export class Async<Y, R, Y2> extends Eff.Instruction<AsyncRegister<Y, R, Y2>, R> {
   readonly tag = 'Async'
