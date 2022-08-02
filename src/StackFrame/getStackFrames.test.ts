@@ -16,12 +16,12 @@ describe(filename, function () {
       ok(isJust(frame))
 
       deepEqual(
-        { ...frame.value, file: frame.value.file.replace(root, '') },
+        { ...frame.value, file: frame.value.file.replace(`${root}`, '') },
         {
           tag: 'Runtime',
           file: 'src/StackFrame/getStackFrames.ts',
           method: 'getCurrentStackFrame',
-          line: 49,
+          line: 47,
           column: 11,
         },
       )

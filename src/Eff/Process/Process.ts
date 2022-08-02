@@ -122,7 +122,7 @@ export class Process<Y, A> {
     /**
      * The processor responsible for using the Heap to convert Instructions into a ProcessEff
      */
-    readonly processYield: <Y>(
+    readonly processYield: (
       instruction: Y,
       heap: Heap,
     ) => ProcessorEff<Y, ErrorsFromInstruction<Y>, any>,
@@ -296,14 +296,10 @@ export class Process<Y, A> {
 
   protected processInstruction(current: InstructionNode<Y, any>) {
     // console.log('Instruction', current.instruction)
-    try {
-      this._current = new RuntimeGeneratorNode(
-        this.processYield(current.instruction, this.params.heap)[Symbol.iterator](),
-        current,
-      )
-    } catch (e) {
-      this._current = current.back(this.getErrorExit(e, current))
-    }
+    this._current = new RuntimeGeneratorNode(
+      this.processYield(current.instruction, this.params.heap)[Symbol.iterator](),
+      current,
+    )
   }
 
   protected processRuntimeGenerator(current: RuntimeGeneratorNode<Y, any>) {
@@ -321,31 +317,25 @@ export class Process<Y, A> {
   }
 
   protected processRuntimeInstruction(current: RuntimeInstructionNode<Y, any>) {
-    try {
-      const instr = current.instruction
+    const instr = current.instruction
 
-      // console.log('Runtime Instruction', instr.tag)
-
-      switch (instr.tag) {
-        case 'FromLazy':
-          return this.processFromLazy(instr, current)
-        case 'PushInstruction':
-          return this.processPushInstruction(instr, current)
-        case 'Failure':
-          return this.processFailure(instr, current)
-        case 'Ensuring':
-          return this.processEnsuring(instr, current)
-        case 'SetInterruptStatus':
-          return this.processInterruptStatus(instr, current)
-        case 'Async':
-          return this.processAsync(instr, current)
-        case 'AddTrace':
-          return this.processAddTrace(instr, current)
-        case 'GetTrace':
-          return this.processGetTrace(instr, current)
-      }
-    } catch (e) {
-      this._current = current.back(this.getErrorExit(e, current))
+    switch (instr.tag) {
+      case 'FromLazy':
+        return this.processFromLazy(instr, current)
+      case 'PushInstruction':
+        return this.processPushInstruction(instr, current)
+      case 'Failure':
+        return this.processFailure(instr, current)
+      case 'Ensuring':
+        return this.processEnsuring(instr, current)
+      case 'SetInterruptStatus':
+        return this.processInterruptStatus(instr, current)
+      case 'Async':
+        return this.processAsync(instr, current)
+      case 'AddTrace':
+        return this.processAddTrace(instr, current)
+      case 'GetTrace':
+        return this.processGetTrace(instr, current)
     }
   }
 
@@ -407,7 +397,9 @@ export class Process<Y, A> {
       ? Trace.Associative.concat(new Trace.StackFrameTrace(remaining), currentTrace)
       : currentTrace
 
-    this._current = current.back(Left(traced(trace)(instr.input)))
+    this._current = current.back(
+      Left(trace.tag !== 'EmptyTrace' ? traced(trace)(instr.input) : instr.input),
+    )
   }
 
   protected processEnsuring(
@@ -475,7 +467,13 @@ export class Process<Y, A> {
   }
 
   protected getErrorExit(e: unknown, stack: ProcessorStack<Y, any>) {
-    return e instanceof CauseError ? Left(died(e)) : Left(traced(this.getTrace(stack))(died(e)))
+    if (e instanceof CauseError) {
+      return Left(e.causedBy)
+    }
+
+    const trace = this.getTrace(stack)
+
+    return Left(trace.tag === 'EmptyTrace' ? died(e) : traced(trace)(died(e)))
   }
 
   protected running() {
@@ -554,16 +552,12 @@ function findAllTraces<Y, R>(stack: ProcessorStack<Y, R>, amount: number): Trace
 
   let current: ProcessorStack<Y, any> | undefined = stack
 
-  while (current && current.tag !== 'Initial' && frames.length < amount) {
-    if (current.tag === 'Instruction') {
-      traces.push(
-        ...toArray(current.trace).flatMap((x) => (x.tag === 'EmptyTrace' ? [] : x.frames)),
-      )
-    } else if (current.tag === 'RuntimeInstruction') {
-      traces.push(
-        ...toArray(current.trace).flatMap((x) => (x.tag === 'EmptyTrace' ? [] : x.frames)),
-      )
-    } else if (current.tag === 'InstructionGenerator') {
+  while (current && current.tag !== 'Initial' && traces.length < amount) {
+    if (
+      current.tag === 'Instruction' ||
+      current.tag === 'RuntimeInstruction' ||
+      current.tag === 'InstructionGenerator'
+    ) {
       traces.push(
         ...toArray(current.trace).flatMap((x) => (x.tag === 'EmptyTrace' ? [] : x.frames)),
       )

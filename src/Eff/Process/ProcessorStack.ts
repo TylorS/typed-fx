@@ -35,6 +35,7 @@ export class InstructionGeneratorNode<Y, R> {
   readonly tag = 'InstructionGenerator'
 
   protected _done = false
+  protected _hasThrown = false
 
   readonly value: Atomic<any> = Atomic(undefined)
   readonly method: Atomic<GeneratorMethod> = Atomic<GeneratorMethod>('next')
@@ -47,10 +48,15 @@ export class InstructionGeneratorNode<Y, R> {
 
   readonly next = (): IteratorResult<Y, R> => {
     const method = pipe(this.method, getAndSet('next'))
+
+    if (method === 'throw') {
+      this._done = true
+    }
+
     const result =
       method === 'throw'
-        ? this.generator.throw(this.value.get)
-        : tryGetResult(this.generator, this.value.get)
+        ? this.generator.throw(this.value.get())
+        : tryGetResult(this.generator, this.value.get())
 
     this._done = result.done ?? true
 
@@ -61,24 +67,17 @@ export class InstructionGeneratorNode<Y, R> {
     new InstructionNode(instruction, trace, this)
 
   readonly back = (exit: Exit<any, any> | Exit<never, any>): ProcessorStack<Y, any> | undefined => {
-    // Find the correct Generator to continue to
-    const prev = this.getPreviousNode(exit)
-
-    // Should bail out
-    if (prev.tag === 'Initial') {
-      return
-    }
-
-    return prev.back(exit)
-  }
-
-  protected getPreviousNode(exit: Exit<any, any> | Exit<never, any>): ProcessorStack<Y, any> {
     if (!this._done) {
-      setExit(this, exit)
+      setExit<Y, R>(this, exit)
+
       return this
     }
 
-    return this.previous
+    if (!this.previous || this.previous.tag === 'Initial') {
+      return
+    }
+
+    return this.previous.back(exit)
   }
 }
 
@@ -91,10 +90,8 @@ export class InstructionNode<Y, R> {
     readonly previous: InstructionGeneratorNode<Y, any>,
   ) {}
 
-  readonly back = (exit: Exit<any, R> | Exit<never, R>): InstructionGeneratorNode<Y, any> => {
-    setExit(this.previous, exit)
-
-    return this.previous
+  readonly back = (exit: Exit<any, R> | Exit<never, R>): ProcessorStack<Y, any> | undefined => {
+    return this.previous.back(exit)
   }
 }
 
@@ -114,10 +111,14 @@ export class RuntimeGeneratorNode<Y, R> {
   readonly next = (): IteratorResult<Instruction<Y, any, any>, R> => {
     const method = pipe(this.method, getAndSet('next'))
 
+    if (method === 'throw') {
+      this._done = true
+    }
+
     const result =
       method === 'throw'
-        ? this.generator.throw(this.value.get)
-        : tryGetResult(this.generator, this.value.get)
+        ? this.generator.throw(this.value.get())
+        : tryGetResult(this.generator, this.value.get())
 
     this._done = result.done ?? true
 
@@ -129,20 +130,14 @@ export class RuntimeGeneratorNode<Y, R> {
     trace: Maybe.Maybe<Trace>,
   ): RuntimeInstructionNode<Y, any> => new RuntimeInstructionNode(instruction, trace, this)
 
-  readonly back = (
-    exit: Exit<any, any> | Exit<never, any>,
-  ): RuntimeGeneratorNode<Y, R> | InstructionGeneratorNode<Y, any> => {
+  readonly back = (exit: Exit<any, any> | Exit<never, any>): ProcessorStack<Y, any> | undefined => {
     if (!this._done) {
       setExit<Y, R>(this, exit)
 
       return this
     }
 
-    const previous = this.previous.tag === 'Instruction' ? this.previous.previous : this.previous
-
-    setExit<Y, R>(previous, exit)
-
-    return previous
+    return this.previous.back(exit)
   }
 }
 
@@ -155,11 +150,7 @@ export class RuntimeInstructionNode<Y, R> {
     readonly previous: RuntimeGeneratorNode<Y, R>,
   ) {}
 
-  readonly back = (exit: Exit<any, R> | Exit<never, R>): RuntimeGeneratorNode<Y, R> => {
-    setExit(this.previous, exit)
-
-    return this.previous
-  }
+  readonly back = this.previous.back
 }
 
 function tryGetResult<Y, R>(gen: Generator<Y, R>, next: any) {
@@ -194,6 +185,7 @@ export class FinalizerNode<Y, R> {
     new InstructionGeneratorNode(this.eff[Symbol.iterator](), this, this.trace)
 
   readonly back = (exit: Exit<any, any> | Exit<never, any>): ProcessorStack<Y, any> | undefined => {
+    // If we've already run our finalizer, continue backwards
     if (this._finalized) {
       if (this.previous.tag === 'Initial') {
         return
@@ -202,6 +194,7 @@ export class FinalizerNode<Y, R> {
       return this.previous.back(exit)
     }
 
+    // The first time around we need to add our Finalizer to the Stack to be processed.
     this._finalized = true
 
     return new InstructionGeneratorNode(this.finalizer(exit)[Symbol.iterator](), this, this.trace)
@@ -221,9 +214,13 @@ export class ArbitraryEffNode<Y, R> {
   readonly forward = (): InstructionGeneratorNode<Y, R> =>
     new InstructionGeneratorNode(this.eff[Symbol.iterator](), this, this.trace)
 
-  readonly back = (exit: Exit<any, R>) => {
+  readonly back = (exit: Exit<any, R>): ProcessorStack<Y, any> | undefined => {
     this.onExit(exit)
 
-    return this.previous
+    if (!this.previous || this.previous.tag === 'Initial') {
+      return
+    }
+
+    return this.previous.back(exit)
   }
 }
