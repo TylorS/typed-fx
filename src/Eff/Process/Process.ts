@@ -104,11 +104,11 @@ export class Process<Y, A> {
   /**
    * Keeps track of an observers of this Process' exit value.
    */
-  protected readonly _observers: Observers<ErrorsFromInstruction<Y>, A> = new Observers()
+  protected readonly _observers: Observers<ErrorsFromInstruction<Y>, A> = new Observers(true)
   /**
    * Keeps track of an observers of this Process' exit value.
    */
-  protected readonly _suspended: Observers<never, void> = new Observers()
+  protected readonly _suspended: Observers<never, void> = new Observers(false)
 
   constructor(
     /**

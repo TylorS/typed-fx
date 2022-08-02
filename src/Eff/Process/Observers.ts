@@ -1,4 +1,4 @@
-import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
+import { Just, Maybe, Nothing, isJust, isNothing } from 'hkt-ts/Maybe'
 
 import { Disposable } from '@/Disposable/Disposable.js'
 import { Exit } from '@/Exit/Exit.js'
@@ -7,8 +7,10 @@ export class Observers<E, A> {
   protected observers = new Set<Observer<E, A>>()
   protected exit: Maybe<Exit<E, A>> = Nothing
 
+  constructor(readonly memoize: boolean) {}
+
   readonly addObserver = (observer: Observer<E, A>): Disposable => {
-    if (isJust(this.exit)) {
+    if (this.memoize && isJust(this.exit)) {
       observer(this.exit.value)
 
       return Disposable.None
@@ -20,8 +22,11 @@ export class Observers<E, A> {
   }
 
   readonly notify = (exit: Exit<E, A>) => {
-    this.exit = Just(exit)
-    this.observers.forEach((o) => o(exit))
+    if (this.memoize && isNothing(this.exit)) {
+      this.exit = Just(exit)
+    }
+
+    this.observers.forEach((o) => o(this.memoize ? (this.exit as Just<Exit<E, A>>).value : exit))
     this.observers.clear()
   }
 
