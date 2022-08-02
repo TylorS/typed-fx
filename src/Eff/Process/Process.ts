@@ -225,6 +225,7 @@ export class Process<Y, A> {
   }
 
   protected processStack(current: ProcessorStack<Y, any>) {
+    // console.log('Stack', current.tag)
     switch (current.tag) {
       // Roughly ordered based on order of occurence, though it really depends on
       // the Eff's usage on RuntimeInstructions to operate
@@ -294,6 +295,7 @@ export class Process<Y, A> {
   }
 
   protected processInstruction(current: InstructionNode<Y, any>) {
+    // console.log('Instruction', current.instruction)
     try {
       this._current = new RuntimeGeneratorNode(
         this.processYield(current.instruction, this.params.heap)[Symbol.iterator](),
@@ -321,6 +323,8 @@ export class Process<Y, A> {
   protected processRuntimeInstruction(current: RuntimeInstructionNode<Y, any>) {
     try {
       const instr = current.instruction
+
+      // console.log('Runtime Instruction', instr.tag)
 
       switch (instr.tag) {
         case 'FromLazy':

@@ -9,7 +9,7 @@ import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
 export class Heap {
   protected readonly map: Map<HeapKey<any>, any>
 
-  constructor(readonly entries: Iterable<readonly [HeapKey<any>, any]>) {
+  constructor(readonly entries: Iterable<readonly [HeapKey<any>, any]> = []) {
     this.map = new Map(entries)
   }
 

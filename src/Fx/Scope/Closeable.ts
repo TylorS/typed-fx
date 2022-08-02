@@ -5,10 +5,9 @@ import { pipe } from 'hkt-ts/function'
 import { Scope } from './Scope.js'
 import { ScopeState } from './ScopeState.js'
 
-import { Empty } from '@/Fx/Cause/Cause.js'
-import { Exit } from '@/Fx/Exit/Exit.js'
-import { Of, fromLazy, lazy, success } from '@/Fx/Fx/Fx.js'
-import { async } from '@/Fx/Fx/Instruction/Async.js'
+import { Empty } from '@/Cause/Cause.js'
+import { Exit } from '@/Exit/Exit.js'
+import { Of, async, fromLazy, lazy, success } from '@/Fx2/Fx/Fx.js'
 import { Service } from '@/Service/index.js'
 
 export interface Closeable extends Scope {

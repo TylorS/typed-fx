@@ -26,7 +26,11 @@ export class Observers<E, A> {
       this.exit = Just(exit)
     }
 
-    this.observers.forEach((o) => o(this.memoize ? (this.exit as Just<Exit<E, A>>).value : exit))
+    const toSend = this.memoize ? (this.exit as Just<Exit<E, A>>).value : exit
+
+    this.observers.forEach((o) => {
+      o(toSend)
+    })
     this.observers.clear()
   }
 
