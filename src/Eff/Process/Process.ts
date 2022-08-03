@@ -2,6 +2,8 @@ import { constant, pipe } from 'hkt-ts'
 import * as A from 'hkt-ts/Array'
 import { Left, Right, isRight } from 'hkt-ts/Either'
 import { Just, Maybe, Nothing, toArray } from 'hkt-ts/Maybe'
+import { reverse } from 'hkt-ts/Typeclass/Ord'
+import * as N from 'hkt-ts/number'
 
 import { Eff, unit } from '../Eff.js'
 import { pending } from '../Future/Future.js'
@@ -101,7 +103,16 @@ export class Process<Y, A> {
    * Incrementing ID for each Async operation.
    */
   protected _asyncID = 0
+  /**
+   * Async ID to the previous Stack state to resume to. Also utilized when an Arbitrary Eff is run
+   * while an Async operation is Suspended.
+   */
   protected _asyncToPreviousState = new Map<number, ProcessorStack<Y, any>>()
+
+  /**
+   * Pointer to the last Instruction ran. Used to avoid counting an Instruction that is also a RuntimeInstruction twice
+   * to avoid yielding cooperatively prematurely.
+   */
   protected _previousInstruction: any
 
   /**
@@ -117,7 +128,7 @@ export class Process<Y, A> {
    */
   protected readonly _observers: Observers<ErrorsFromInstruction<Y>, A> = new Observers(true)
   /**
-   * Keeps track of an observers of this Process' exit value.
+   * Keeps track of when this Process has been suspended for Asynchrony.
    */
   protected readonly _suspended: Observers<never, void> = new Observers(false)
 
@@ -236,15 +247,16 @@ export class Process<Y, A> {
   }
 
   protected getUnfinishedAsync() {
-    let id = this._asyncID
-
-    while (id > -1) {
-      if (this._asyncToPreviousState.has(id)) {
-        return this._asyncToPreviousState.get(id)
-      }
-
-      --id
+    if (this._asyncToPreviousState.size === 0) {
+      return
     }
+
+    const [newestKey] = A.sort(reverse(N.Ord))(Array.from(this._asyncToPreviousState.keys()))
+    const stack = this._asyncToPreviousState.get(newestKey)
+
+    this._asyncToPreviousState.delete(newestKey)
+
+    return stack
   }
 
   protected run = (): void => {
