@@ -1,4 +1,5 @@
 import { Maybe, pipe } from 'hkt-ts'
+import { isLeft } from 'hkt-ts/Either'
 import { Nothing } from 'hkt-ts/Maybe'
 
 import { Eff } from '../Eff.js'
@@ -221,6 +222,7 @@ export class ArbitraryEffNode<Y, R> {
       return
     }
 
-    return this.previous.back(exit)
+    // Only forward back failures, otherwise allow it to be processed forward.
+    return isLeft(exit) ? this.previous.back(exit) : this.previous
   }
 }
