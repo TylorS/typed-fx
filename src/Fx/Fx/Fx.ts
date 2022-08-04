@@ -10,11 +10,13 @@ import type { Closeable } from '../Scope/Closeable.js'
 import { Access, Provide } from './Instructions/Access.js'
 import { AddTrace } from './Instructions/AddTrace.js'
 import { Async, AsyncRegister } from './Instructions/Async.js'
+import { Ensuring } from './Instructions/Ensuring.js'
 import { Failure } from './Instructions/Failure.js'
 import { Fork, ForkParams } from './Instructions/Fork.js'
 import { FromLazy } from './Instructions/FromLazy.js'
 import { GetFiberContext } from './Instructions/GetFiberContext.js'
 import { GetFiberScope } from './Instructions/GetFiberScope.js'
+import { GetTrace } from './Instructions/GetTrace.js'
 import type {
   AnyInstruction,
   ErrorsFromInstruction,
@@ -80,14 +82,14 @@ export const provide =
     new Provide([fx, env], __trace)
 
 export const provideService =
-  <S, I extends S>(service: Service<S>, impl: I) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R, S>, E, A> =>
-    access((env) => pipe(fx, provide((env as Env<R>).provideService(service, impl))))
+  <S, I extends S>(service: Service<S>, impl: I, __trace?: string) =>
+  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
+    access((env) => pipe(fx, provide((env as Env<R>).add(service, impl))), __trace)
 
 export const provideLayer =
-  <S, I extends S>(service: Service<S>, impl: I) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R, S>, E, A> =>
-    access((env) => pipe(fx, provide((env as Env<R>).provideService(service, impl))))
+  <S, I extends S>(service: Service<S>, impl: I, __trace?: string) =>
+  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
+    access((env) => pipe(fx, provide((env as Env<R>).add(service, impl))), __trace)
 
 export const addTrace =
   (trace: Trace) =>
@@ -108,13 +110,18 @@ export const addRuntimeTrace =
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
     addTrace(Trace.runtime(error, targetObject))(fx)
 
+export const getTrace: Of<Trace> = new GetTrace()
+
 export const async = <R, E, A>(register: AsyncRegister<R, E, A>, __trace?: string): Fx<R, E, A> =>
   new Async(register, __trace)
 
 export const fromCause = <E>(cause: Cause<E>, __trace?: string): IO<E, never> =>
   new Failure(cause, __trace)
 
-export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): IO<E, A> =>
+export const fromExit = <E = never, A = unknown>(
+  exit: Exit.Exit<E, A>,
+  __trace?: string,
+): IO<E, A> =>
   exit.tag === 'Left' ? fromCause(exit.left, __trace) : fromValue(exit.right, __trace)
 
 export const fail = <E>(error: E, __trace?: string): IO<E, never> =>
@@ -143,6 +150,11 @@ export const unit = success<void>(undefined, 'unit')
 
 export const getFiberContext: Of<FiberContext> = new GetFiberContext(undefined, 'getFiberContext')
 export const getFiberScope: Of<Closeable> = new GetFiberScope(undefined, 'getFiberScope')
+
+export const ensuring =
+  <E, A, R2, E2>(finalizer: (exit: Exit.Exit<E, A>) => Fx<R2, E2, any>, __trace?: string) =>
+  <R>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, A> =>
+    new Ensuring<R | R2, E | E2, A>([fx, finalizer], __trace)
 
 export const forkWithParams =
   (params: ForkParams = {}, __trace?: string) =>
@@ -180,6 +192,8 @@ export const interruptable = Eff.interruptable as <R, E, A>(
   fx: Fx<R, E, A>,
   __trace?: string | undefined,
 ) => Fx<R, E, A>
+
+export const getInterruptStatus = Eff.getInterruptStatus as Of<boolean>
 
 export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   fxs: FX,

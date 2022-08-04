@@ -67,9 +67,9 @@ export class LocalScope implements Closeable {
         return success(false)
       }
 
-      this.#state = Closing(this.finalizers, exit)
+      this.#state = Closing(this.finalizers, getExit(this))
       const releaseAll = pipe(
-        zipAll(this.keys.map((key) => this.finalize(key, exit))),
+        zipAll(this.keys.map((key) => this.finalize(key, getExit(this)))),
         withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
       )
 
@@ -107,6 +107,7 @@ export class LocalScope implements Closeable {
       ? Open(
           this.keys.filter((x) => x !== key),
           finalizers,
+          Maybe.Just(getExit(this)),
         )
       : Closing(finalizers, getExit(this))
   }

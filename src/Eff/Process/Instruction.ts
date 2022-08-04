@@ -1,7 +1,7 @@
 import { U } from 'ts-toolbelt'
 
 import { Ensuring } from '../Instructions/Ensuring.js'
-import { SetInterruptStatus } from '../Instructions/SetInterruptStatus.js'
+import { GetInterruptStatus, SetInterruptStatus } from '../Instructions/SetInterruptStatus.js'
 
 import { Eff } from '@/Eff/Eff.js'
 import { Async } from '@/Eff/Instructions/Async.js'
@@ -15,6 +15,7 @@ export type Instruction<Y, E, R> =
   | Ensuring<Y, R, Y>
   | Failure<E>
   | FromLazy<R>
+  | GetInterruptStatus
   | GetTrace
   | PushInstruction<Y, R>
   | SetInterruptStatus<Y, R>
@@ -29,9 +30,10 @@ export type AnyInstruction =
   | Instruction<never, never, any>
   | Instruction<any, never, never>
 
-export type ErrorsFromInstruction<T, R = never> = [T] extends [never]
-  ? never
-  : U.ListOf<T> extends readonly [infer Head, ...infer Tail]
+export type ErrorsFromInstruction<T, R = never> = U.ListOf<T> extends readonly [
+  infer Head,
+  ...infer Tail,
+]
   ? [Head] extends [Failure<infer E>]
     ? ErrorsFromInstruction<Tail[number], R | E>
     : ErrorsFromInstruction<Tail[number], R>

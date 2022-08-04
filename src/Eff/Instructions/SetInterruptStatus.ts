@@ -16,3 +16,9 @@ export const interruptable = <Y, R>(
   fx: Eff<Y, R>,
   __trace?: string,
 ): Eff<Y | SetInterruptStatus<Y, R>, R> => new SetInterruptStatus([fx, true], __trace)
+
+export class GetInterruptStatus extends Eff.Instruction<void, boolean> {
+  readonly tag = 'GetInterruptStatus'
+}
+
+export const getInterruptStatus = new GetInterruptStatus()

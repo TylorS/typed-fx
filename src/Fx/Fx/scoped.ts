@@ -1,4 +1,4 @@
-import { pipe } from 'hkt-ts/function'
+import { flow, pipe } from 'hkt-ts/function'
 
 import {
   Fx,
@@ -35,7 +35,7 @@ export function reserve<R, E, A>(scoped: Fx<R | Scope, E, A>): Of<Reservation<R,
     const scope = fiberScope.fork() // Fork the scope, will be closed in event of failure.
     const reservation: Reservation<R, E, A> = {
       acquire: pipe(scoped, provideService(Scope, scope), attempt, uninterruptable),
-      release: scope.close,
+      release: flow(scope.close, uninterruptable),
     }
 
     return reservation
@@ -59,16 +59,18 @@ export function managed<R, E, A, R2>(
   acquire: Fx<R, E, A>,
   release: (value: A) => Fx<R2, never, any>,
 ): Fx<R | R2 | Scope, E, A> {
-  return Fx(function* () {
-    const scope = yield* ask(Scope)
-    const env = yield* getEnv<R | R2>()
+  return uninterruptable(
+    Fx(function* () {
+      const scope = yield* ask(Scope)
+      const env = yield* getEnv<R | R2>()
 
-    const a = yield* uninterruptable(acquire)
+      const a = yield* acquire
 
-    scope.ensuring(() => pipe(a, release, provide(env)))
+      scope.ensuring(() => pipe(a, release, provide(env)))
 
-    return a
-  })
+      return a
+    }),
+  )
 }
 
 /**

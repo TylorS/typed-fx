@@ -1,6 +1,6 @@
 import { identity, pipe } from 'hkt-ts'
 import { Endomorphism } from 'hkt-ts/Endomorphism'
-import { Just, Maybe, Nothing, isJust, match } from 'hkt-ts/Maybe'
+import { Just, Maybe, Nothing, isJust, isNothing, match } from 'hkt-ts/Maybe'
 
 /**
  * A Heap is a glorified Map of `HeakKey`s to their values.
@@ -20,6 +20,16 @@ export class Heap {
 
   readonly get = <A>(key: HeapKey<A>): Maybe<A> =>
     this.map.has(key) ? Just(this.map.get(key)) : Nothing
+
+  readonly getOrThrow = <A>(key: HeapKey<A>): A => {
+    const maybe = this.get(key)
+
+    if (isNothing(maybe)) {
+      throw new Error(`Unable to ${key.name} in Heap`)
+    }
+
+    return maybe.value
+  }
 
   readonly set = <A>(key: HeapKey<A>, value: A): A => {
     this.map.set(key, value)
@@ -102,14 +112,17 @@ export class Heap {
  * to rejoin them.
  */
 export interface HeapKey<A> {
+  readonly name: string
   readonly fork: (a: A) => Maybe<A>
   readonly join: (first: A, second: A) => A
 }
 
 export const HeapKey = <A>(
+  name: string,
   fork: HeapKey<A>['fork'] = Just,
   join: HeapKey<A>['join'] = identity,
 ): HeapKey<A> => ({
+  name,
   fork,
   join,
 })

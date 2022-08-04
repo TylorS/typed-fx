@@ -1,7 +1,7 @@
 import type { Fx } from '../Fx.js'
 
 import { Eff } from '@/Eff/Eff.js'
-import { Env } from '@/Fx/Env/Env.js'
+import type { Env } from '@/Fx/Env/Env.js'
 
 export class Access<R, R2, E, A> extends Eff.Instruction<(resources: Env<R>) => Fx<R2, E, A>, A> {
   readonly tag = 'Access'

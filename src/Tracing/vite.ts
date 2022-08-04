@@ -45,8 +45,8 @@ export function tracingPlugin(params: TracingParams): Plugin {
       }
     },
 
-    async transform(src, id, options) {
-      if ((options?.ssr && params.ssr === false) || id.includes('node_modules')) {
+    async transform(src, id) {
+      if (id.includes('node_modules')) {
         return
       }
 

@@ -29,7 +29,7 @@ export interface FiberRefs {
   /**
    * Create a new FiberRefs instance that forks each FiberRef it contains based on the user provided semantics.
    */
-  readonly fork: Fx.Of<FiberRefs>
+  readonly fork: () => FiberRefs
 
   /**
    * Create a new FiberRefs instance with an override over a particular value
@@ -62,7 +62,12 @@ export interface FiberRefsState {
 /**
  * Constructs a new FiberRefs instance.
  */
-export function FiberRefs(state: Atomic.Atomic<FiberRefsState>): FiberRefs {
+export function FiberRefs(
+  state: Atomic.Atomic<FiberRefsState> = Atomic.Atomic<FiberRefsState>({
+    references: new Map(),
+    fibers: new Map(),
+  }),
+): FiberRefs {
   // Access is always localized
   const semaphores = new Map<FiberRef.AnyFiberRef, Semaphore>()
 
@@ -107,7 +112,7 @@ export function FiberRefs(state: Atomic.Atomic<FiberRefsState>): FiberRefs {
       FiberRefs,
     )
 
-  const fork = Fx.fromLazy(() => {
+  const fork = () => {
     const forked = new Map<FiberRef.AnyFiberRef, any>()
 
     for (const [k, v] of state.get().references) {
@@ -123,7 +128,7 @@ export function FiberRefs(state: Atomic.Atomic<FiberRefsState>): FiberRefs {
       Atomic.fork((s) => ({ ...s, references: forked })),
       FiberRefs,
     )
-  })
+  }
 
   const join: FiberRefs['join'] = (ref, value) =>
     Fx.fromLazy(() => {

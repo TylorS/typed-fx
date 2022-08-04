@@ -1,7 +1,6 @@
 import { Eff } from '../Eff.js'
-import { Failure } from '../Instructions/Failure.js'
 
-import { AnyInstruction, ErrorsFromInstruction, Instruction } from './Instruction.js'
+import { ErrorsFromInstruction, Instruction } from './Instruction.js'
 
 export interface ProcessorEff<Y, E, R> extends Eff<Instruction<Y, E, any>, R> {}
 
@@ -15,8 +14,8 @@ export type AnyProcessorEff =
   | ProcessorEff<never, never, any>
   | ProcessorEff<never, any, never>
 
-export function ProcessorEff<Y extends AnyInstruction, R>(
-  f: () => Generator<Y, R>,
-): ProcessorEff<Exclude<Y, Failure<any> | Failure<never>>, ErrorsFromInstruction<Y>, R> {
+export function ProcessorEff<Y, R>(
+  f: () => Generator<Instruction<Y, any, any>, R>,
+): ProcessorEff<Y, ErrorsFromInstruction<Y>, R> {
   return Eff(f)
 }

@@ -59,7 +59,7 @@ export class InstructionGeneratorNode<Y, R> {
         ? this.generator.throw(this.value.get())
         : tryGetResult(this.generator, this.value.get())
 
-    this._done = result.done ?? true
+    this._done = result.done ?? false
 
     return result
   }
@@ -121,7 +121,7 @@ export class RuntimeGeneratorNode<Y, R> {
         ? this.generator.throw(this.value.get())
         : tryGetResult(this.generator, this.value.get())
 
-    this._done = result.done ?? true
+    this._done = result.done ?? false
 
     return result
   }

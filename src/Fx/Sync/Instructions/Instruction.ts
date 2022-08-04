@@ -1,39 +1,22 @@
 import { U } from 'ts-toolbelt'
 
-import type { Fx } from '../Fx.js'
-
 import type { Access, Provide } from './Access.js'
 import type { AddTrace } from './AddTrace.js'
-import type { Async } from './Async.js'
 import { Ensuring } from './Ensuring.js'
 import type { Failure } from './Failure.js'
-import type { Fork } from './Fork.js'
 import type { FromLazy } from './FromLazy.js'
-import type { GetFiberContext } from './GetFiberContext.js'
-import type { GetFiberScope } from './GetFiberScope.js'
 import type { GetTrace } from './GetTrace.js'
-import type { GetInterruptStatus, SetInterruptStatus } from './SetInterruptStatus.js'
-import type { WithConcurrency } from './WithConcurrency.js'
-import type { ZipAll } from './ZipAll.js'
 
-import { ReturnOf, YieldOf } from '@/Eff/Eff.js'
+import { ReturnOf } from '@/Eff/Eff.js'
 
 export type Instruction<R, E, A> =
   | Access<R, R, E, A>
   | AddTrace<R, E, A>
-  | Async<R, E, A>
   | Ensuring<R, E, A>
   | Failure<E>
-  | Fork<R, any, A>
   | FromLazy<A>
-  | GetFiberContext
-  | GetFiberScope
-  | GetInterruptStatus
   | GetTrace
   | Provide<any, E, A>
-  | SetInterruptStatus<R, E, A>
-  | WithConcurrency<R, E, A>
-  | ZipAll<ReadonlyArray<Fx<R, E, any>>>
 
 export type AnyInstruction =
   | Instruction<any, any, any>
@@ -71,23 +54,13 @@ type ExtractEffErrors<T, R = never> = U.ListOf<T> extends readonly [infer Head, 
 
 type ExtractEffResources_<T> = T extends Access<infer R, infer R2, infer _E, infer _A>
   ? R | R2
-  : T extends Async<infer _R, infer _E, infer _A>
-  ? _R
   : T extends AddTrace<infer _R, infer _E, infer _A>
   ? _R
   : T extends Ensuring<infer _R, infer _E, infer _A>
   ? _R
-  : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
-  ? _R
-  : T extends WithConcurrency<infer _R, infer _E, infer _A>
-  ? _R
-  : T extends ZipAll<infer FX>
-  ? ExtractEffResources<YieldOf<FX[number]>>
   : never
 
 type ExtractEffErrors_<T> = T extends Access<infer _R, infer _R2, infer _E, infer _A>
-  ? _E
-  : T extends Async<infer _R, infer _E, infer _A>
   ? _E
   : T extends AddTrace<infer _R, infer _E, infer _A>
   ? _E
@@ -97,12 +70,6 @@ type ExtractEffErrors_<T> = T extends Access<infer _R, infer _R2, infer _E, infe
   ? _E
   : T extends Provide<infer _R, infer _E, infer _A>
   ? _E
-  : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
-  ? _E
-  : T extends WithConcurrency<infer _R, infer _E, infer _A>
-  ? _E
-  : T extends ZipAll<infer FX>
-  ? ExtractEffResources<YieldOf<FX[number]>>
   : never
 
 /* eslint-enable @typescript-eslint/no-unused-vars */

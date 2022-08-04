@@ -14,7 +14,7 @@ import { Async } from '../Instructions/Async.js'
 import { Ensuring } from '../Instructions/Ensuring.js'
 import { Failure } from '../Instructions/Failure.js'
 import { FromLazy } from '../Instructions/FromLazy.js'
-import { SetInterruptStatus } from '../Instructions/SetInterruptStatus.js'
+import { GetInterruptStatus, SetInterruptStatus } from '../Instructions/SetInterruptStatus.js'
 import { AddTrace, GetTrace } from '../Instructions/Trace.js'
 
 import { Heap } from './Heap.js'
@@ -290,6 +290,8 @@ export class Process<Y, A> {
     try {
       const result = current.next()
 
+      // console.log('InstructionGenerator', result)
+
       if (result.done) {
         const exit = Right(result.value)
         const runningArbitary = this._runningArbitary
@@ -340,6 +342,8 @@ export class Process<Y, A> {
     try {
       const result = current.next()
 
+      // console.log('RuntimeGenerator', result)
+
       if (result.done) {
         return (this._current = current.back(Right(result.value)))
       }
@@ -355,6 +359,8 @@ export class Process<Y, A> {
    */
   protected processRuntimeInstruction(current: RuntimeInstructionNode<Y, any>) {
     const instr = current.instruction
+
+    // console.log('Runtime', instr.tag)
 
     switch (instr.tag) {
       case 'FromLazy':
@@ -529,10 +535,20 @@ export class Process<Y, A> {
   }
 
   /**
+   * Get the Interrupt Status of the process.
+   */
+  protected processGetInterruptStatus(
+    _: GetInterruptStatus,
+    current: RuntimeInstructionNode<Y, any>,
+  ) {
+    return current.back(Right(this._status.isInterruptable))
+  }
+
+  /**
    * Process Synchronous effects.
    */
   protected processFromLazy(instr: FromLazy<any>, current: RuntimeInstructionNode<Y, any>) {
-    this._current = current.back(instr.input())
+    this._current = current.back(Right(instr.input()))
   }
 
   /**
