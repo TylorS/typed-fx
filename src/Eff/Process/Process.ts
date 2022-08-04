@@ -147,6 +147,7 @@ export class Process<Y, A> {
     readonly processYield: (
       instruction: Y,
       heap: Heap,
+      platform: Platform,
     ) => ProcessorEff<Y, ErrorsFromInstruction<Y>, any>,
   ) {
     this._current = new InitialNode(eff)
@@ -204,61 +205,6 @@ export class Process<Y, A> {
 
   // Internals
 
-  protected whenInterruptable = <B>(
-    eff: Eff<Y, B>,
-  ): Eff<Async<never, any, never>, Exit<ErrorsFromInstruction<Y>, B>> => {
-    const { runArbitraryEff, _interruptable } = this
-
-    const [future] = _interruptable.waitFor(1)
-
-    return Eff(function* () {
-      yield* wait(future)
-
-      return yield* runArbitraryEff(eff)
-    })
-  }
-
-  protected runArbitraryEff = <B>(
-    eff: Eff<Y, B>,
-  ): Eff<Async<never, any, never>, Exit<ErrorsFromInstruction<Y>, B>> => {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const that = this
-
-    return Eff(function* () {
-      const future = pending<never, Exit<ErrorsFromInstruction<Y>, B>>()
-
-      that._runningArbitary++
-      that._current = new ArbitraryEffNode<Y, B>(
-        eff,
-        // If we don't have somewhere to return to already, we must be waiting on an Async operation
-        // So we'll grab the previously unfinshed Async stack to continue to
-        that._current ?? that.getUnfinishedAsync(),
-        (exit) => {
-          that._runningArbitary--
-
-          complete(future)(Eff.of(exit))
-        },
-      )
-
-      that.run()
-
-      return yield* wait(future)
-    })
-  }
-
-  protected getUnfinishedAsync() {
-    if (this._asyncToPreviousState.size === 0) {
-      return
-    }
-
-    const [newestKey] = A.sort(reverse(N.Ord))(Array.from(this._asyncToPreviousState.keys()))
-    const stack = this._asyncToPreviousState.get(newestKey)
-
-    this._asyncToPreviousState.delete(newestKey)
-
-    return stack
-  }
-
   protected run = (): void => {
     this.running()
 
@@ -269,6 +215,39 @@ export class Process<Y, A> {
     this.suspended()
   }
 
+  /**
+   * Updates the current FiberStatus to Running
+   */
+  protected running() {
+    this._started = true
+    if (this._status.tag === 'Suspended') {
+      this._status = Running(this._status.isInterruptable)
+    }
+  }
+
+  /**
+   * Updates the current FiberStatus to Suspended
+   */
+  protected suspended() {
+    if (this._status.tag === 'Running') {
+      this._status = Suspended(this._status.isInterruptable)
+      this._suspended.notify(Right(undefined))
+    }
+  }
+
+  /**
+   * The last think to run in a Process.
+   */
+  protected finalize(exit: Exit<ErrorsFromInstruction<Y>, A>) {
+    this._status = Done
+    this._settable.dispose()
+    this._observers.notify(exit)
+    this._suspended.notify(Right(undefined))
+  }
+
+  /**
+   * Process the current node in the Stack
+   */
   protected processStack(current: ProcessorStack<Y, any>) {
     // console.log('Stack', current.tag)
     switch (current.tag) {
@@ -304,14 +283,9 @@ export class Process<Y, A> {
     }
   }
 
-  protected processArbitraryEff(current: ArbitraryEffNode<Y, any>) {
-    this._current = current.forward()
-  }
-
-  protected processFinalizer(current: FinalizerNode<Y, any>) {
-    this._current = current.forward()
-  }
-
+  /**
+   * Step over an InstructionGenerator's yields
+   */
   protected processInstructionGenerator(current: InstructionGeneratorNode<Y, any>) {
     try {
       const result = current.next()
@@ -346,14 +320,22 @@ export class Process<Y, A> {
     }
   }
 
+  /**
+   * Process an Eff's Instruction Set
+   */
   protected processInstruction(current: InstructionNode<Y, any>) {
     // console.log('Instruction', current.instruction)
     this._current = new RuntimeGeneratorNode(
-      this.processYield(current.instruction, this.params.heap)[Symbol.iterator](),
+      this.processYield(current.instruction, this.params.heap, this.params.platform)[
+        Symbol.iterator
+      ](),
       current,
     )
   }
 
+  /**
+   * Step over an RuntimeGenerator's instructions
+   */
   protected processRuntimeGenerator(current: RuntimeGeneratorNode<Y, any>) {
     try {
       const result = current.next()
@@ -368,6 +350,9 @@ export class Process<Y, A> {
     }
   }
 
+  /**
+   * Process a Runtime Instruction
+   */
   protected processRuntimeInstruction(current: RuntimeInstructionNode<Y, any>) {
     const instr = current.instruction
 
@@ -391,6 +376,23 @@ export class Process<Y, A> {
     }
   }
 
+  /**
+   * Process running an Arbitrary Eff within this Process.
+   */
+  protected processArbitraryEff(current: ArbitraryEffNode<Y, any>) {
+    this._current = current.forward()
+  }
+
+  /**
+   * Process Finalizer
+   */
+  protected processFinalizer(current: FinalizerNode<Y, any>) {
+    this._current = current.forward()
+  }
+
+  /**
+   * Process Asynchronous instruction.
+   */
   protected processAsync(instr: Async<Y, any, Y>, current: ProcessorStack<Y, any>) {
     let returnedSynchronously = false
 
@@ -446,6 +448,9 @@ export class Process<Y, A> {
     this._current = undefined
   }
 
+  /**
+   * Process Failure, appending a Runtime Trace to the current Stack.
+   */
   protected processFailure(
     instr: Failure<ErrorsFromInstruction<Y>>,
     current: RuntimeInstructionNode<Y, any>,
@@ -468,6 +473,9 @@ export class Process<Y, A> {
     )
   }
 
+  /**
+   * Construct a Finalizer Node.
+   */
   protected processEnsuring(
     instr: Ensuring<Y, ErrorsFromInstruction<Y>, Y>,
     current: RuntimeInstructionNode<Y, any>,
@@ -475,6 +483,9 @@ export class Process<Y, A> {
     this._current = new FinalizerNode(...instr.input, Nothing, current)
   }
 
+  /**
+   * Mark the current region's interrupt status, and pop it off once complete.
+   */
   protected processInterruptStatus(
     instr: SetInterruptStatus<Y, any>,
     current: RuntimeInstructionNode<Y, any>,
@@ -501,26 +512,32 @@ export class Process<Y, A> {
     )
   }
 
-  protected onInterruptStatusUpdate(status: boolean) {
-    if (status && this._interruptable.size() > 0) {
-      this._interruptable.all(unit)
-    }
-  }
-
+  /**
+   * Add a Trace to the current Stack.
+   */
   protected processAddTrace(_: AddTrace<Y, any>, current: RuntimeInstructionNode<Y, any>) {
     const [eff, trace] = _.input
 
     this._current = new InstructionGeneratorNode(eff[Symbol.iterator](), current, Just(trace))
   }
 
+  /**
+   * Get the Current Stack Trace up to the Platform's configured max length.
+   */
   protected processGetTrace(_: GetTrace, current: RuntimeInstructionNode<Y, any>) {
     this._current = current.back(Right(this.getTrace(current)))
   }
 
+  /**
+   * Process Synchronous effects.
+   */
   protected processFromLazy(instr: FromLazy<any>, current: RuntimeInstructionNode<Y, any>) {
     this._current = current.back(instr.input())
   }
 
+  /**
+   * Process Nested Effs in the Call stack
+   */
   protected processPushInstruction(
     instr: PushInstruction<Y, any>,
     current: RuntimeInstructionNode<Y, any>,
@@ -528,34 +545,10 @@ export class Process<Y, A> {
     this._current = new InstructionGeneratorNode(instr.input[Symbol.iterator](), current, Nothing)
   }
 
-  protected getTrace(node: ProcessorStack<Y, any>) {
-    return findAllTraces(node, this.params.platform.maxTraceCount)
-  }
-
-  protected getErrorExit(e: unknown, stack: ProcessorStack<Y, any>) {
-    if (e instanceof CauseError) {
-      return Left(e.causedBy)
-    }
-
-    const trace = this.getTrace(stack)
-
-    return Left(trace.tag === 'EmptyTrace' ? died(e) : traced(trace)(died(e)))
-  }
-
-  protected running() {
-    this._started = true
-    if (this._status.tag === 'Suspended') {
-      this._status = Running(this._status.isInterruptable)
-    }
-  }
-
-  protected suspended() {
-    if (this._status.tag === 'Running') {
-      this._status = Suspended(this._status.isInterruptable)
-      this._suspended.notify(Right(undefined))
-    }
-  }
-
+  /**
+   * Track the current number of ops that have been called in this Process, if it is equal to the Platform's configured
+   * maxOpCount, it will Asynchronously yield to other Fibers.
+   */
   protected yieldNowIfNeeded() {
     if (++this._opCount === this.params.platform.maxOpCount) {
       this._opCount = 0
@@ -573,9 +566,7 @@ export class Process<Y, A> {
       this.setTimer(() => {
         // If another Eff has begun running
         if (this._current !== undefined) {
-          this._suspended.addObserver(() => {
-            restart()
-          })
+          return this._suspended.addObserver(restart)
         }
 
         restart()
@@ -583,13 +574,103 @@ export class Process<Y, A> {
     }
   }
 
-  protected finalize(exit: Exit<ErrorsFromInstruction<Y>, A>) {
-    this._status = Done
-    this._settable.dispose()
-    this._observers.notify(exit)
-    this._suspended.notify(Right(undefined))
+  /**
+   * Wait for the Fiber to become Interruptable again, and then run the arbitary Eff.
+   */
+  protected whenInterruptable = <B>(
+    eff: Eff<Y, B>,
+  ): Eff<Async<never, any, never>, Exit<ErrorsFromInstruction<Y>, B>> => {
+    const { runArbitraryEff, _interruptable } = this
+
+    const [future] = _interruptable.waitFor(1)
+
+    return Eff(function* () {
+      yield* wait(future)
+
+      return yield* runArbitraryEff(eff)
+    })
   }
 
+  /**
+   * Run an Arbitrary Eff within the current process' context.
+   */
+  protected runArbitraryEff = <B>(
+    eff: Eff<Y, B>,
+  ): Eff<Async<never, any, never>, Exit<ErrorsFromInstruction<Y>, B>> => {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const that = this
+
+    return Eff(function* () {
+      const future = pending<never, Exit<ErrorsFromInstruction<Y>, B>>()
+
+      that._runningArbitary++
+      that._current = new ArbitraryEffNode<Y, B>(
+        eff,
+        // If we don't have somewhere to return to already, we must be waiting on an Async operation
+        // So we'll grab the previously unfinshed Async stack to continue to
+        that._current ?? that.getUnfinishedAsync(),
+        (exit) => {
+          that._runningArbitary--
+
+          complete(future)(Eff.of(exit))
+        },
+      )
+
+      that.run()
+
+      return yield* wait(future)
+    })
+  }
+
+  /**
+   * Attempt to find the last Async to return. Only used when an ArbitraryEff tries to run while this Process
+   * is currently Suspended.
+   */
+  protected getUnfinishedAsync() {
+    if (this._asyncToPreviousState.size === 0) {
+      return
+    }
+
+    const [newestKey] = A.sort(reverse(N.Ord))(Array.from(this._asyncToPreviousState.keys()))
+    const stack = this._asyncToPreviousState.get(newestKey)
+
+    this._asyncToPreviousState.delete(newestKey)
+
+    return stack
+  }
+
+  /**
+   * Get the current Trace for the Process.
+   */
+  protected getTrace(node: ProcessorStack<Y, any>) {
+    return findAllTraces(node, this.params.platform.maxTraceCount)
+  }
+
+  /**
+   * Get an Exit from an Error
+   */
+  protected getErrorExit(e: unknown, stack: ProcessorStack<Y, any>) {
+    if (e instanceof CauseError) {
+      return Left(e.causedBy)
+    }
+
+    const trace = this.getTrace(stack)
+
+    return Left(trace.tag === 'EmptyTrace' ? died(e) : traced(trace)(died(e)))
+  }
+
+  /**
+   * Notify listeners interested in when the Process becomes interruptable.
+   */
+  protected onInterruptStatusUpdate(status: boolean) {
+    if (status && this._interruptable.size() > 0) {
+      this._interruptable.all(unit)
+    }
+  }
+
+  /**
+   * Fork the ProcessParams
+   */
   protected forkParams(): ProcessParams {
     return {
       platform: fork(this.params.platform),
@@ -598,6 +679,9 @@ export class Process<Y, A> {
     }
   }
 
+  /**
+   * Set a Timer and track its resources.
+   */
   protected setTimer(f: () => void) {
     const inner = settable()
 
