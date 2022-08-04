@@ -6,23 +6,21 @@ import { toLowerCase } from 'hkt-ts/string'
 import { Closeable, getExit } from './Closeable.js'
 import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 
-import { AtomicCounter } from '@/Atomic/AtomicCounter.js'
-import { Exit, makeSequentialAssociative } from '@/Fx/Exit/Exit.js'
+import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
+import { Exit, makeSequentialAssociative } from '@/Exit/Exit.js'
 import {
   FinalizationStrategy,
   Finalizer,
   FinalizerKey,
   finalizationStrategyToConcurrency,
 } from '@/Fx/Finalizer/Finalizer.js'
-import { Fx, fromLazy, lazy, success, unit } from '@/Fx/Fx/Fx.js'
-import { withConcurrency } from '@/Fx/Fx/Instruction/WithConcurrency.js'
-import { zipAll } from '@/Fx/Fx/Instruction/ZipAll.js'
+import { Fx, Of, fromLazy, lazy, success, unit, withConcurrency, zipAll } from '@/Fx/Fx/Fx.js'
 
 const { concat: concatExits } = makeSequentialAssociative<any, any>(First)
 
 export class LocalScope implements Closeable {
   #state: ScopeState = Open([], new Map())
-  #refCount = new AtomicCounter()
+  #refCount = AtomicCounter()
 
   constructor(readonly strategy: FinalizationStrategy) {}
 
@@ -52,20 +50,20 @@ export class LocalScope implements Closeable {
 
     // Mutually track resources
     this.ensuring(extended.close)
-    extended.ensuring(() => fromLazy(() => this.#refCount.decrement))
+    extended.ensuring(() => fromLazy(() => decrement(this.#refCount)))
 
     // Track Reference Count to this Scope
-    this.#refCount.increment
+    increment(this.#refCount)
 
     return extended
   }
 
-  readonly close = (exit: Exit<any, any>) =>
+  readonly close = (exit: Exit<any, any>): Of<boolean> =>
     lazy(() => {
       this.setExit(exit)
 
       // Can't close while there is more references
-      if (this.#refCount.decrement > 0) {
+      if (decrement(this.#refCount) > 0) {
         return success(false)
       }
 

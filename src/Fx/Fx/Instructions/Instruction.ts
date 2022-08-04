@@ -2,25 +2,30 @@ import { U } from 'ts-toolbelt'
 
 import type { Fx } from '../Fx.js'
 
-import { Access } from './Access.js'
-import { AddTrace } from './AddTrace.js'
-import { Async } from './Async.js'
-import { Failure } from './Failure.js'
-import { FromLazy } from './FromLazy.js'
-import { GetTrace } from './GetTrace.js'
-import { Provide } from './Provide.js'
-import { SetInterruptStatus } from './SetInterruptStatus.js'
-import { WithConcurrency } from './WithConcurrency.js'
-import { ZipAll } from './ZipAll.js'
+import type { Access, Provide } from './Access.js'
+import type { AddTrace } from './AddTrace.js'
+import type { Async } from './Async.js'
+import type { Failure } from './Failure.js'
+import type { Fork } from './Fork.js'
+import type { FromLazy } from './FromLazy.js'
+import type { GetFiberContext } from './GetFiberContext.js'
+import type { GetFiberScope } from './GetFiberScope.js'
+import type { GetTrace } from './GetTrace.js'
+import type { SetInterruptStatus } from './SetInterruptStatus.js'
+import type { WithConcurrency } from './WithConcurrency.js'
+import type { ZipAll } from './ZipAll.js'
 
 import { ReturnOf, YieldOf } from '@/Eff/Eff.js'
 
 export type Instruction<R, E, A> =
   | Access<R, R, E, A>
-  | AddTrace
+  | AddTrace<R, E, A>
   | Async<R, E, A>
   | Failure<E>
+  | Fork<R, any, A>
   | FromLazy<A>
+  | GetFiberContext
+  | GetFiberScope
   | GetTrace
   | Provide<any, E, A>
   | SetInterruptStatus<R, E, A>

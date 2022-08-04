@@ -1,6 +1,6 @@
 import { Maybe, Nothing } from 'hkt-ts/Maybe'
 
-import { Exit } from '@/Fx/Exit/Exit.js'
+import { Exit } from '@/Exit/Exit.js'
 import { Finalizer, FinalizerKey } from '@/Fx/Finalizer/Finalizer.js'
 
 export type ScopeState = Open | Closing | Closed

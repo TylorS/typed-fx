@@ -1,5 +1,6 @@
+import type { Instruction } from './Instruction.js'
+
 import * as Eff from '@/Eff/index.js'
-import { Instruction } from './Instruction.js'
 
 export class AddTrace<R, E, A> extends Eff.AddTrace<Instruction<R, E, any>, A> {
   readonly __R?: () => R

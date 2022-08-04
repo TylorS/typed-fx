@@ -7,7 +7,7 @@ import { ScopeState } from './ScopeState.js'
 
 import { Empty } from '@/Cause/Cause.js'
 import { Exit } from '@/Exit/Exit.js'
-import { Of, async, fromLazy, lazy, success } from '@/Fx2/Fx/Fx.js'
+import { Of, async, fromLazy, lazy, success } from '@/Fx/Fx/Fx.js'
 import { Service } from '@/Service/index.js'
 
 export interface Closeable extends Scope {

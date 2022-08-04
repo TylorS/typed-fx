@@ -1,28 +1,39 @@
 import { Either } from 'hkt-ts/Either'
-import { Lazy } from 'hkt-ts/function'
+import { Lazy, pipe } from 'hkt-ts/function'
+import { NonNegativeInteger } from 'hkt-ts/number'
 
 import type { Env } from '../Env/Env.js'
+import type { Fiber, Live } from '../Fiber/Fiber.js'
+import type { FiberContext } from '../FiberContext/index.js'
+import type { Closeable } from '../Scope/Closeable.js'
 
-import { Access } from './Instructions/Access.js'
+import { Access, Provide } from './Instructions/Access.js'
 import { AddTrace } from './Instructions/AddTrace.js'
 import { Async, AsyncRegister } from './Instructions/Async.js'
 import { Failure } from './Instructions/Failure.js'
+import { Fork, ForkParams } from './Instructions/Fork.js'
 import { FromLazy } from './Instructions/FromLazy.js'
+import { GetFiberContext } from './Instructions/GetFiberContext.js'
+import { GetFiberScope } from './Instructions/GetFiberScope.js'
 import type {
   AnyInstruction,
   ErrorsFromInstruction,
   Instruction,
   ResourcesFromInstruction,
 } from './Instructions/Instruction.js'
+import { WithConcurrency } from './Instructions/WithConcurrency.js'
+import { ZipAll } from './Instructions/ZipAll.js'
 
 import { Cause } from '@/Cause/Cause.js'
 import * as Eff from '@/Eff/index.js'
 import * as Exit from '@/Exit/Exit.js'
 import { FiberId } from '@/FiberId/FiberId.js'
+import { Service } from '@/Service/index.js'
 import { Trace } from '@/Trace/Trace.js'
 
 export interface Fx<out R, out E, out A> extends Eff.Eff<Instruction<R, E, any>, A> {}
 
+export interface RIO<R, A> extends Fx<R, never, A> {}
 export interface IO<E, A> extends Fx<never, E, A> {}
 export interface Of<A> extends Fx<never, never, A> {}
 
@@ -46,6 +57,37 @@ export const access = <R, R2, E, A>(
   f: (r: Env<R>) => Fx<R2, E, A>,
   __trace?: string,
 ): Fx<R | R2, E, A> => new Access(f, __trace)
+
+export const getEnv = <R>(__trace?: string): Fx<R, never, Env<R>> => access(fromValue, __trace)
+
+export const ask = <A>(service: Service<A>, __trace?: string) =>
+  access((r: Env<A>) => r.get(service), __trace)
+
+export const asks =
+  <S, A>(f: (s: S) => A, __trace?: string) =>
+  (service: Service<S>) =>
+    access(
+      (r: Env<S>) =>
+        Fx(function* () {
+          return f(yield* r.get(service))
+        }),
+      __trace,
+    )
+
+export const provide =
+  <R>(env: Env<R>, __trace?: string) =>
+  <E, A>(fx: Fx<R, E, A>): Fx<never, E, A> =>
+    new Provide([fx, env], __trace)
+
+export const provideService =
+  <S, I extends S>(service: Service<S>, impl: I) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R, S>, E, A> =>
+    access((env) => pipe(fx, provide((env as Env<R>).provideService(service, impl))))
+
+export const provideLayer =
+  <S, I extends S>(service: Service<S>, impl: I) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R, S>, E, A> =>
+    access((env) => pipe(fx, provide((env as Env<R>).provideService(service, impl))))
 
 export const addTrace =
   (trace: Trace) =>
@@ -97,6 +139,63 @@ export const lazy = <R, E, A>(f: () => Fx<R, E, A>, __trace?: string) =>
   })
 
 export const success = fromValue
+export const unit = success<void>(undefined, 'unit')
+
+export const getFiberContext: Of<FiberContext> = new GetFiberContext(undefined, 'getFiberContext')
+export const getFiberScope: Of<Closeable> = new GetFiberScope(undefined, 'getFiberScope')
+
+export const forkWithParams =
+  (params: ForkParams = {}, __trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>) =>
+    new Fork([fx, params], __trace)
+
+export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Live<E, A>> =>
+  forkWithParams({}, __trace)(fx)
+
+export const join = <E, A>(fiber: Fiber<E, A>): IO<E, A> =>
+  Fx(function* () {
+    const exit = yield* fiber.exit
+
+    // TODO: Inherit FiberRefs
+
+    return yield* fromExit(exit)
+  })
+
+export const attempt = <R, E, A>(fx: Fx<R, E, A>): RIO<R, Exit.Exit<E, A>> =>
+  Fx(function* () {
+    const fiber: Live<E, A> = yield* fork(fx)
+    const exit = yield* fiber.exit
+
+    // TODO: Inherit FiberRefs
+
+    return exit
+  })
+
+export const uninterruptable = Eff.uninterruptable as <R, E, A>(
+  fx: Fx<R, E, A>,
+  __trace?: string | undefined,
+) => Fx<R, E, A>
+
+export const interruptable = Eff.interruptable as <R, E, A>(
+  fx: Fx<R, E, A>,
+  __trace?: string | undefined,
+) => Fx<R, E, A>
+
+export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
+  fxs: FX,
+  __trace?: string,
+): Fx<
+  ResourcesOf<FX[number]>,
+  ErrorsOf<FX[number]>,
+  {
+    readonly [K in keyof FX]: OutputOf<FX[K]>
+  }
+> => new ZipAll(fxs, __trace)
+
+export const withConcurrency =
+  (concurrencyLevel: NonNegativeInteger, __trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    new WithConcurrency([fx, concurrencyLevel], __trace)
 
 export function Fx<Y extends AnyInstruction, R>(
   f: () => Generator<Y, R>,

@@ -1,5 +1,5 @@
-import { Async } from '../Async.js'
 import { Eff } from '../Eff.js'
+import { Async } from '../Instructions/Async.js'
 
 import { pending } from './Future.js'
 import { complete } from './complete.js'

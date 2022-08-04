@@ -1,4 +1,4 @@
-import { pipe } from 'hkt-ts'
+import { identity, pipe } from 'hkt-ts'
 import { Endomorphism } from 'hkt-ts/Endomorphism'
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import { Associative, First } from 'hkt-ts/Typeclass/Associative'
@@ -96,6 +96,10 @@ export function join<A>(second: Atomic<A>) {
       first,
       update((a) => first.concat(a, second.get())),
     )
+}
+
+export function fork<A>(f: Endomorphism<A> = identity) {
+  return (first: Atomic<A>): Atomic<A> => Atomic<A>(f(first.get()), first)
 }
 
 /**

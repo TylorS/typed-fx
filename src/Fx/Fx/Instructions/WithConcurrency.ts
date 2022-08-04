@@ -1,8 +1,15 @@
-import type { Instruction } from './Instruction.js'
+import { NonNegativeInteger } from 'hkt-ts/number'
 
-import * as Eff from '@/Eff/index.js'
+import type { Fx } from '../Fx.js'
 
-export class WithConcurrency<R, E, A> extends Eff.WithConcurrency<Instruction<R, E, any>, A> {
+import { Eff } from '@/Eff/Eff.js'
+
+export class WithConcurrency<R, E, A> extends Eff.Instruction<
+  readonly [fx: Fx<R, E, A>, concurrencyLevel: NonNegativeInteger],
+  A
+> {
+  readonly tag = 'WithConcurrency'
+
   readonly __R?: () => R
   readonly __E?: () => E
   readonly __A?: () => A
