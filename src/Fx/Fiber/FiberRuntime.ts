@@ -14,6 +14,7 @@ import { Semaphore, acquire } from '../Semaphore/Semaphore.js'
 
 import { Live } from './Fiber.js'
 
+import { increment } from '@/Atomic/AtomicCounter.js'
 import { Disposable } from '@/Disposable/Disposable.js'
 import { Heap, HeapKey } from '@/Eff/Process/Heap.js'
 import { PushInstruction } from '@/Eff/Process/Instruction.js'
@@ -22,6 +23,7 @@ import { ProcessorEff } from '@/Eff/Process/ProcessorEff.js'
 import { GetInterruptStatus, ensuring, getTrace } from '@/Eff/index.js'
 import { Exit, interrupt, makeParallelAssociative } from '@/Exit/Exit.js'
 import { FiberId } from '@/FiberId/FiberId.js'
+import { FiberStatus } from '@/FiberStatus/index.js'
 import * as Platform from '@/Platform/Platform.js'
 import { Delay } from '@/Time/index.js'
 import { Trace } from '@/Trace/Trace.js'
@@ -49,8 +51,13 @@ function initializeHeap<R>(
 export class FiberRuntime<R, E, A> {
   protected readonly process: Process<FxInstruction.Instruction<R, E, any>, A>
 
+  get status(): FiberStatus {
+    return this.process.status
+  }
+
   constructor(
     readonly fx: Fx<R, E, A>,
+    readonly id: FiberId.Live,
     readonly env: Env<R>,
     readonly context: FiberContext.FiberContext,
     readonly scope: Closeable.Closeable,
@@ -180,16 +187,19 @@ export function processFxInstruction<R, E>(
 }
 
 export function fromFiberRuntime<R, E, A>(runtime: FiberRuntime<R, E, A>): Live<E, A> {
-  const future = pending<never, never, Exit<E, A>>()
-
-  runtime.addObserver((exit) => complete(future)(success(exit)))
-
   return {
     tag: 'Live',
-    id: runtime.context.id,
+    id: runtime.id,
+    status: fromLazy(() => runtime.status),
     context: success(runtime.context),
     scope: success(runtime.scope),
-    exit: wait(future),
+    exit: lazy(() => {
+      const future = pending<never, never, Exit<E, A>>()
+
+      runtime.addObserver((exit) => complete(future)(success(exit)))
+
+      return wait(future)
+    }),
   }
 }
 
@@ -225,8 +235,13 @@ const forkNewRuntime = function* <R, E, A>(
 
   const currentScope = heap.getOrThrow(FiberScopeKey)
   const scope = params?.forkScope?.fork() ?? currentScope.fork()
+  const id = new FiberId.Live(
+    increment(currentContext.platform.sequenceNumber),
+    currentContext.platform.timer,
+    currentContext.platform.timer.getCurrentTime(),
+  )
 
-  return new FiberRuntime(fx, heap.getOrThrow(EnvKey), context, scope, Just(yield* getTrace))
+  return new FiberRuntime(fx, id, heap.getOrThrow(EnvKey), context, scope, Just(yield* getTrace))
 }
 
 const getFinalExit = <E>(exits: ReadonlyArray<Exit<E, readonly any[]>>) => {
@@ -259,7 +274,7 @@ const zipAllFuture = <R, E>(runtimes: FiberRuntime<R, E, any>[]) => {
               yield* zipAll(
                 runtimes.map((r) =>
                   Fx(function* () {
-                    return Either.tupled(yield* r.interrupt(failed.context.id))
+                    return Either.tupled(yield* r.interrupt(failed.id))
                   }),
                 ),
               ),

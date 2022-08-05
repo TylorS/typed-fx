@@ -60,7 +60,7 @@ export interface ProcessParams {
 }
 
 // TODO: Handle race condition running an ArbitraryEff while the Process is suspended - where to return errors?
-// TODO: Handle Finalization with ArbitraryEff
+// TODO: Should only unexpected errors be thrown into Generators?
 
 /**
  * Process is an interpreter for any arbitrary Eff. It has some built-in support for

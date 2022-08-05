@@ -16,6 +16,7 @@ import { Process } from './Process.js'
 import { ProcessorEff } from './ProcessorEff.js'
 
 import { died } from '@/Cause/Cause.js'
+import { CauseError } from '@/Cause/CauseError.js'
 import { Exit } from '@/Exit/Exit.js'
 import { Platform } from '@/Platform/Platform.js'
 import { Debug, Trace } from '@/Trace/Trace.js'
@@ -109,10 +110,27 @@ describe(new URL(import.meta.url).pathname, () => {
 
         it('allows try/catch to respond to all failures', (done) => {
           const value = 42
+          const error = new Error('test')
+          // eslint-disable-next-line require-yield
           const test = Eff(function* () {
+            // Respond locally to failures unwrapped.
             try {
-              return yield* failure(died(new Error('test')))
-            } catch {
+              throw error
+            } catch (e) {
+              deepStrictEqual(e, error)
+            }
+
+            // When it is transported across the runtime, it will be wrapped in a CauseError to
+            // preserve the enhanced Stack trace.
+            try {
+              yield* failure(died(error))
+            } catch (e) {
+              ok(e instanceof CauseError)
+              ok(e.causedBy.tag === 'Traced')
+              ok(e.causedBy.cause.tag === 'Died')
+              deepStrictEqual(e.causedBy.cause.error, error)
+              deepStrictEqual(e.cause, error)
+
               return value
             }
           })
@@ -362,7 +380,7 @@ describe(new URL(import.meta.url).pathname, () => {
           const [limitTime, limitExit] = await timeProcess(test, NonNegativeInteger(1))
 
           deepStrictEqual(noLimitExit, limitExit)
-          ok(limitTime > noLimitTime * 3)
+          ok(limitTime > noLimitTime * 2)
         })
       })
     })

@@ -1,4 +1,4 @@
-import { Either } from 'hkt-ts/Either'
+import { Either, isRight } from 'hkt-ts/Either'
 import { Lazy, pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
@@ -33,6 +33,21 @@ import { FiberId } from '@/FiberId/FiberId.js'
 import { Service } from '@/Service/index.js'
 import { Trace } from '@/Trace/Trace.js'
 
+/**
+ * Fx is the immutable representation of an Effectful program. It utilizes Generators to
+ * encode type-safe dependency injection of `R`, type-safe errors `E`, and an Output of `A`.
+ *
+ * Features:
+ *  - Asynchrony, write Async code using synchronous Generators.
+ *  - Failures, respond to expected and unexpected failures.
+ *  - Dependency Injection, Access the Environment to retrieve Services.
+ *  - Interruption
+ *      - Mark regions of Fx as "uninterruptable" to safely acquire resources.
+ *      - Interrupt an Fx, waiting until it can do so, immediately if possible.
+ *  - Tracing, Add custom traces or use our plugins to improve your stack traces.
+ *  - Concurrency, control the concurrency level at at region of Fx
+ *  - Fibers, fork fibers to enhance the way you manage Fx.
+ */
 export interface Fx<out R, out E, out A> extends Eff.Eff<Instruction<R, E, any>, A> {}
 
 export interface RIO<R, A> extends Fx<R, never, A> {}
@@ -168,7 +183,9 @@ export const join = <E, A>(fiber: Fiber<E, A>): IO<E, A> =>
   Fx(function* () {
     const exit = yield* fiber.exit
 
-    // TODO: Inherit FiberRefs
+    if (isRight(exit)) {
+      yield* inheritFiberRefs(fiber)
+    }
 
     return yield* fromExit(exit)
   })
@@ -178,10 +195,24 @@ export const attempt = <R, E, A>(fx: Fx<R, E, A>): RIO<R, Exit.Exit<E, A>> =>
     const fiber: Live<E, A> = yield* fork(fx)
     const exit = yield* fiber.exit
 
-    // TODO: Inherit FiberRefs
+    if (isRight(exit)) {
+      yield* inheritFiberRefs(fiber)
+    }
 
     return exit
   })
+
+export function inheritFiberRefs<E, A>(fiber: Fiber<E, A>): Of<void> {
+  return Fx(function* () {
+    if (fiber.tag === 'Synthetic') {
+      return yield* fiber.inheritFiberRefs
+    }
+
+    const context = yield* fiber.context
+
+    yield* context.fiberRefs.inherit
+  })
+}
 
 export const uninterruptable = Eff.uninterruptable as <R, E, A>(
   fx: Fx<R, E, A>,

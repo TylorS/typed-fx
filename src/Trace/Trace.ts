@@ -107,3 +107,5 @@ export const Debug: D.Debug<Trace> = D.sum<Trace>()('tag')({
     debug: ({ frames }) => frames.map(StackFrame.debug).join('\n'),
   },
 })
+
+export const debug = Debug.debug

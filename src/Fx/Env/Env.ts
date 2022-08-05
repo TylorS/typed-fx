@@ -89,6 +89,7 @@ export class Environment<R> implements Env<R> {
           // Place the exit onto the Outer Scope in which the Layer was provided
           yield* scope.close(exit)
 
+          // This Fx Should never return
           return yield* never
         } else {
           return exit.right
@@ -97,7 +98,7 @@ export class Environment<R> implements Env<R> {
 
       return new Environment<
         R | S
-      >(services, new Map<any, any>([...layers, [layer.provider, provider]]), fibers)
+      >(services, new Map<any, any>([...layers, [layer.service, provider]]), fibers)
     })
   }
 

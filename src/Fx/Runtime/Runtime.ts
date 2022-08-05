@@ -33,17 +33,13 @@ export function Runtime<R = never>(params: RuntimeParams<R>): Runtime<R> {
   const makeFiberRuntime = <E, A>(fx: Fx<R, E, A>, forkParams?: ForkParams) =>
     new FiberRuntime(
       fx,
+      new FiberId.Live(
+        increment(platform.sequenceNumber),
+        params.context.platform.timer,
+        params.context.platform.timer.getCurrentTime(),
+      ),
       params.env,
-      FiberContext.fork(params.context, {
-        ...forkParams,
-        id:
-          forkParams?.id ??
-          new FiberId.Live(
-            increment(platform.sequenceNumber),
-            params.context.platform.timer,
-            params.context.platform.timer.getCurrentTime(),
-          ),
-      }),
+      FiberContext.fork(params.context, forkParams),
       forkParams?.forkScope?.fork() ?? params.scope.fork(),
       params.trace,
     )

@@ -3,11 +3,9 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 
 import type { FiberRefs } from '../FiberRefs/FiberRefs.js'
 
-import { FiberId } from '@/FiberId/FiberId.js'
 import { Platform } from '@/Platform/Platform.js'
 
 export interface FiberContext {
-  readonly id: FiberId
   readonly fiberRefs: FiberRefs
   readonly concurrencyLevel: NonNegativeInteger
   readonly interruptStatus: boolean

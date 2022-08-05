@@ -4,23 +4,33 @@ import { Renderer, defaultRenderer, prettyPrint } from './Renderer.js'
 import * as Trace from '@/Trace/Trace.js'
 
 export class CauseError<E> extends Error {
-  constructor(readonly causedBy: Cause<E>, readonly renderer: Renderer<E> = defaultRenderer) {
+  constructor(readonly causedBy: Cause<E>, renderer: Renderer<E> = defaultRenderer) {
     // Separate any taces from the message to use the Error.stack with the Traces
-    const [message, trace] = causeAndTrace(causedBy, renderer)
+    const [cause, trace] = causeAndTrace(causedBy)
 
-    super(message)
+    // Print the message
+    super(prettyPrint(cause, renderer))
+
+    this.name = 'CauseError'
 
     // If there is a Trace, add it to the Error
     if (trace.tag !== 'EmptyTrace') {
-      this.stack = renderer.renderTrace(trace)
+      this.stack = renderer.renderTrace(trace).replace(/\n/g, '\n    ')
     }
+
+    // Ammend the Error that caused everything
+    if (cause.tag === 'Died' && cause.error instanceof Error) {
+      this.cause = cause.error
+    }
+
+    this.toString = () => prettyPrint(causedBy, renderer)
   }
 }
 
 /**
  * Splits any top-level Trace nodes from the rest of the Cause
  */
-function causeAndTrace<E>(cause: Cause<E>, renderer: Renderer<E>) {
+export function causeAndTrace<E>(cause: Cause<E>): readonly [Cause<E>, Trace.Trace] {
   let trace: Trace.Trace = Trace.EmptyTrace
   let causeToPrint = cause
 
@@ -29,5 +39,5 @@ function causeAndTrace<E>(cause: Cause<E>, renderer: Renderer<E>) {
     causeToPrint = causeToPrint.cause
   }
 
-  return [prettyPrint(causeToPrint, renderer), trace] as const
+  return [causeToPrint, trace] as const
 }
