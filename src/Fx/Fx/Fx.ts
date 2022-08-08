@@ -114,6 +114,28 @@ export const asks =
       __trace,
     )
 
+export const asksFx =
+  <S, R, E, A>(f: (s: S) => Fx<R, E, A>, __trace?: string) =>
+  (service: Service<S>) =>
+    access(
+      (r: Env<S>) =>
+        Fx(function* () {
+          return yield* f(yield* r.get(service))
+        }),
+      __trace,
+    )
+
+export const asksFx_ =
+  <S>(service: Service<S>) =>
+  <R, E, A>(f: (s: S) => Fx<R, E, A>, __trace?: string) =>
+    access(
+      (r: Env<S>) =>
+        Fx(function* () {
+          return yield* f(yield* r.get(service))
+        }),
+      __trace,
+    )
+
 /**
  * Provide the entire Env for an Fx to run within.
  */
