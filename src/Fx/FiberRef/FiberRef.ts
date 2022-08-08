@@ -7,9 +7,9 @@ import { Fx } from '@/Fx/Fx/Fx.js'
 export class FiberRef<R, E, A> {
   constructor(
     readonly initial: Fx<R, E, A>,
-    readonly fork: (a: A) => Maybe<A>,
-    readonly join: (current: A, incoming: A) => A,
-    readonly Eq: Eq<A>,
+    readonly fork: (a: A) => Maybe<A> = Just,
+    readonly join: (current: A, incoming: A) => A = Second.concat,
+    readonly Eq: Eq<A> = DeepEquals,
   ) {}
 }
 
@@ -31,8 +31,6 @@ export type Params<A> = {
   readonly Eq?: Eq<A>
 }
 
-export const make = <R, E, A>(initial: Fx<R, E, A>, params: Params<A> = {}) => {
-  const { fork = Just, join = Second.concat, Eq = DeepEquals } = params
-
-  return new FiberRef(initial, fork, join, Eq)
+export const make = <R, E, A>(initial: Fx<R, E, A>, params: Params<A> = {}): FiberRef<R, E, A> => {
+  return new FiberRef(initial, params.fork, params.join, params.Eq)
 }
