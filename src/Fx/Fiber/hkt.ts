@@ -27,16 +27,12 @@ export interface FiberHKT extends HKT2 {
 export const Bicovariant: B.Bicovariant2<FiberHKT> = {
   bimap: (f, g) => (fiber) =>
     Synthetic({
-      id: bimapFiberId(fiber),
+      id: new FiberId.Synthetic([fiber.id]),
       exit: Fx.Fx(function* () {
         return pipe(yield* fiber.exit, Exit.bimap(f, g))
       }),
       inheritFiberRefs: Fx.inheritFiberRefs(fiber),
     }),
-}
-
-function bimapFiberId<E, A>(fiber: Fiber<E, A>): FiberId.Synthetic {
-  return new FiberId.Synthetic([fiber.id])
 }
 
 export const bimap = Bicovariant.bimap
