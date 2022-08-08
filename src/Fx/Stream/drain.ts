@@ -30,6 +30,7 @@ export const observe =
           const scope = yield* getFiberScope
           const exit: Exit<E2, any> = yield* attempt(f(x))
 
+          // Place the exit onto the outer Scope in the case of failures
           if (isLeft(exit)) {
             yield* scope.close(exit)
           }
