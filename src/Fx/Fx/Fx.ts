@@ -5,6 +5,7 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 import type { Env } from '../Env/Env.js'
 import type { Fiber, Live } from '../Fiber/Fiber.js'
 import type { FiberContext } from '../FiberContext/index.js'
+import type * as Layer from '../Layer/Layer.js'
 import type { Closeable } from '../Scope/Closeable.js'
 
 import { Access, Provide } from './Instructions/Access.js'
@@ -156,9 +157,39 @@ export const provideService =
  * Use a Layer to provide a Service lazily and asynchronously.
  */
 export const provideLayer =
-  <S, I extends S>(service: Service<S>, impl: I, __trace?: string) =>
-  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
-    access((env) => pipe(fx, provide((env as Env<R>).add(service, impl))), __trace)
+  <R2, E2, S>(layer: Layer.Layer<R2, E2, S>, __trace?: string) =>
+  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R | R2, S>, E | E2, A> =>
+    access(
+      (env) =>
+        Fx(function* () {
+          const provided = yield* (env as Env<R | R2>).addLayer(layer)
+
+          return yield* pipe(fx, provide(provided))
+        }),
+      __trace,
+    ) as Fx<Exclude<R | R2, S>, E | E2, A>
+
+/**
+ * Provide any number of Layers.
+ */
+export const provideLayers =
+  <Layers extends ReadonlyArray<Layer.AnyLayer>>(layers: readonly [...Layers], __trace: string) =>
+  <R, E, A>(
+    fx: Fx<R | Layer.OutputOf<Layers[number]>, E, A>,
+  ): Fx<Exclude<R, Layer.OutputOf<Layers[number]>>, E | Layer.ErrorsOf<Layers[number]>, A> =>
+    access(
+      (env) =>
+        Fx(function* () {
+          let provided: Env<any> = env
+
+          for (const layer of layers) {
+            provided = yield* provided.addLayer(layer)
+          }
+
+          return yield* pipe(fx, provide(provided))
+        }),
+      __trace,
+    )
 
 /**
  * Add a Trace to the Fx Stack for printing during failure.
