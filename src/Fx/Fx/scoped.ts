@@ -1,11 +1,9 @@
-import { flow, pipe } from 'hkt-ts/function'
+import { pipe } from 'hkt-ts/function'
 
 import {
   Fx,
-  Of,
   ask,
-  attempt,
-  fromExit,
+  ensuring,
   getEnv,
   getFiberScope,
   provide,
@@ -13,42 +11,17 @@ import {
   uninterruptable,
 } from './Fx.js'
 
-import { Exit } from '@/Exit/Exit.js'
 import { Scope } from '@/Fx/Scope/Scope.js'
 
 /**
- * A Reservation is the representation of a resource that
- * has an aquisition and release phase.
+ * Run a Scoped Fx within an isolated Scope, cleaning up those resources as soon as complete.
  */
-export interface Reservation<R, E, A> {
-  readonly acquire: Fx<Exclude<R, Scope>, never, Exit<E, A>>
-  readonly release: (exit: Exit<any, any>) => Of<boolean>
-}
-
-/**
- * Fx.reserve is a lower-level primitive for running Scoped-Fx with explicit acquisition and
- * release mechanism. When acquiring a resource
- */
-export function reserve<R, E, A>(scoped: Fx<R | Scope, E, A>): Of<Reservation<R, E, A>> {
-  return Fx(function* () {
-    const fiberScope = yield* getFiberScope
-    const scope = fiberScope.fork() // Fork the scope, will be closed in event of failure.
-    const reservation: Reservation<R, E, A> = {
-      acquire: pipe(scoped, provideService(Scope, scope), attempt, uninterruptable),
-      release: flow(scope.close, uninterruptable),
-    }
-
-    return reservation
-  })
-}
-
 export function scoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, E, A> {
   return Fx(function* () {
-    const reservation: Reservation<R, E, A> = yield* reserve(scoped)
-    const exit: Exit<E, A> = yield* reservation.acquire
-    yield* reservation.release(exit)
+    const fiberScope = yield* getFiberScope
+    const scope = fiberScope.fork()
 
-    return yield* fromExit(exit)
+    return yield* pipe(scoped, provideService(Scope, scope), ensuring(scope.close))
   })
 }
 

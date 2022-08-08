@@ -10,7 +10,7 @@ import { Fx, Of, fromExit, fromLazy, success, zipAll } from '../Fx/Fx.js'
 import { ForkParams } from '../Fx/Instructions/Fork.js'
 import * as FxInstruction from '../Fx/Instructions/Instruction.js'
 import * as Closeable from '../Scope/Closeable.js'
-import { Semaphore } from '../Semaphore/Semaphore.js'
+import { Semaphore, acquire } from '../Semaphore/Semaphore.js'
 
 import { Live } from './Fiber.js'
 
@@ -93,6 +93,7 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
     platform: Platform.Platform,
   ) => {
     return ProcessorEff<FxInstruction.Instruction<R, E, any>, any>(function* () {
+      // console.log('FiberRuntime', instr.tag)
       switch (instr.tag) {
         case 'Access': {
           return yield* new PushInstruction(instr.input(heap.getOrThrow(EnvKey)))
@@ -100,10 +101,9 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
         case 'Fork': {
           const [fx, params] = instr.input
 
-          // TODO: WHY DOES SEMAPHORE BLOW EVERYTHING UP?
-          // const semaphore = heap.getOrThrow(ConcurrencyLevelKey)
+          const semaphore = heap.getOrThrow(ConcurrencyLevelKey)
           const runtime: FiberRuntime<any, any, any> = yield* forkNewRuntime(
-            fx,
+            acquire(semaphore)(fx),
             params,
             heap,
             getInterruptStatus(),
@@ -155,11 +155,12 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
           }
 
           // Allow for Concurrency.
-          // TODO: WHY DOES SEMAPHORE BLOW EVERYTHING UP?
-          // const semaphore = heap.getOrThrow(ConcurrencyLevelKey)
+          const semaphore = heap.getOrThrow(ConcurrencyLevelKey)
           const runtimes: FiberRuntime<any, any, any>[] = []
           for (const fx of fxs) {
-            runtimes.push(yield* forkNewRuntime(fx, undefined, heap, getInterruptStatus()))
+            runtimes.push(
+              yield* forkNewRuntime(acquire(semaphore)(fx), undefined, heap, getInterruptStatus()),
+            )
           }
 
           const [future, onExit] = zipAllFuture<R, E>(runtimes)
@@ -224,7 +225,7 @@ const forkNewRuntime = function* <R, E, A>(
   const currentContext = getCurrentContext(heap, interruptStatus)
   const context: FiberContext.FiberContext = FiberContext.fork(currentContext, params)
 
-  const scope = params?.forkScope?.fork() ?? heap.getOrThrow(FiberScopeKey).fork()
+  const scope = params?.scope ?? params?.forkScope?.fork() ?? heap.getOrThrow(FiberScopeKey).fork()
   const id = new FiberId.Live(
     increment(currentContext.platform.sequenceNumber),
     currentContext.platform.timer,

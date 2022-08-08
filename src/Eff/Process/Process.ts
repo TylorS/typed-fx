@@ -59,7 +59,6 @@ export interface ProcessParams {
   readonly trace: Maybe<Trace.Trace>
 }
 
-// TODO: Handle race condition running an ArbitraryEff while the Process is suspended - where to return errors?
 // TODO: Should only unexpected errors be thrown into Generators?
 
 /**

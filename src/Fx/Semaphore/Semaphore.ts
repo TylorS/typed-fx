@@ -24,7 +24,7 @@ export class Semaphore {
   }
 
   readonly prepare = fromLazy(() => {
-    if (this.running < this.maxPermits) {
+    if (this.available > 0) {
       return new Acquisition(
         fromLazy(() => {
           this.running++
