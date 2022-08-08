@@ -5,6 +5,7 @@ import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
 import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
 import * as B from 'hkt-ts/Typeclass/Bicovariant'
 import { Bottom2 } from 'hkt-ts/Typeclass/Bottom'
+import * as CB from 'hkt-ts/Typeclass/CommutativeBoth'
 import * as C from 'hkt-ts/Typeclass/Covariant'
 import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import * as IE from 'hkt-ts/Typeclass/IdentityEither'
@@ -61,7 +62,7 @@ export const AssociativeBoth: AB.AssociativeBoth2<FiberHKT> = {
           return makeSequentialAssociative<any, any>(makeAssociative<any>()).concat(
             fe,
             se,
-          ) as Exit.Exit<any, readonly [A, B]>
+          ) as Exit.Exit<E, readonly [A, B]>
         }),
         inheritFiberRefs: Fx.Fx(function* () {
           yield* Fx.inheritFiberRefs(f)
@@ -70,9 +71,34 @@ export const AssociativeBoth: AB.AssociativeBoth2<FiberHKT> = {
       }),
 }
 
-export const both = AB.both
-export const zipLeft = AB.zipLeft<FiberHKT>({ ...AssociativeBoth, ...Covariant })
-export const zipRight = AB.zipRight<FiberHKT>({ ...AssociativeBoth, ...Covariant })
+export const bothSeq = AB.both
+export const zipLeftSeq = AB.zipLeft<FiberHKT>({ ...AssociativeBoth, ...Covariant })
+export const zipRightSeq = AB.zipRight<FiberHKT>({ ...AssociativeBoth, ...Covariant })
+
+export const CommutativeBoth: CB.CommutativeBoth2<FiberHKT> = {
+  both:
+    <E, B>(s: Fiber<E, B>) =>
+    <A>(f: Fiber<E, A>) =>
+      Synthetic({
+        id: new FiberId.Synthetic([f.id, s.id]),
+        exit: Fx.Fx(function* () {
+          const [fe, se] = yield* Fx.zipAll([f.exit, s.exit] as const)
+
+          return makeSequentialAssociative<any, E>(makeAssociative<any>()).concat(
+            Exit.tupled(fe),
+            Exit.tupled(se),
+          ) as Exit.Exit<E, readonly [A, B]>
+        }),
+        inheritFiberRefs: Fx.Fx(function* () {
+          yield* Fx.inheritFiberRefs(f)
+          yield* Fx.inheritFiberRefs(s)
+        }),
+      }),
+}
+
+export const both = CommutativeBoth.both
+export const zipLeft = AB.zipLeft<FiberHKT>({ ...CommutativeBoth, ...Covariant })
+export const zipRight = AB.zipRight<FiberHKT>({ ...CommutativeBoth, ...Covariant })
 
 export function fromExit<E, A>(exit: Exit.Exit<E, A>): Synthetic<E, A> {
   return Synthetic({
