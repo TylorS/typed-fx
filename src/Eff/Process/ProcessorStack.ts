@@ -17,7 +17,7 @@ export type ProcessorStack<Y, R> =
   | FinalizerNode<Y, R>
   | InitialNode<Y, R>
   | InstructionGeneratorNode<Y, R>
-  | InstructionNode<Y, R>
+  | InstructionNode<Y>
   | RuntimeGeneratorNode<Y, R>
   | RuntimeInstructionNode<Y, R>
 
@@ -36,7 +36,6 @@ export class InstructionGeneratorNode<Y, R> {
   readonly tag = 'InstructionGenerator'
 
   protected _done = false
-  protected _hasThrown = false
 
   readonly value: Atomic<any> = Atomic(undefined)
   readonly method: Atomic<GeneratorMethod> = Atomic<GeneratorMethod>('next')
@@ -59,12 +58,12 @@ export class InstructionGeneratorNode<Y, R> {
         ? this.generator.throw(this.value.get())
         : tryGetResult(this.generator, this.value.get())
 
-    this._done = result.done ?? false
+    this._done = result.done ?? true
 
     return result
   }
 
-  readonly forward = (instruction: Y, trace: Maybe.Maybe<Trace>): InstructionNode<Y, any> =>
+  readonly forward = (instruction: Y, trace: Maybe.Maybe<Trace>): InstructionNode<Y> =>
     new InstructionNode(instruction, trace, this)
 
   readonly back = (exit: Exit<any, any> | Exit<never, any>): ProcessorStack<Y, any> | undefined => {
@@ -82,7 +81,7 @@ export class InstructionGeneratorNode<Y, R> {
   }
 }
 
-export class InstructionNode<Y, R> {
+export class InstructionNode<Y> {
   readonly tag = 'Instruction'
 
   constructor(
@@ -91,9 +90,7 @@ export class InstructionNode<Y, R> {
     readonly previous: InstructionGeneratorNode<Y, any>,
   ) {}
 
-  readonly back = (exit: Exit<any, R> | Exit<never, R>): ProcessorStack<Y, any> | undefined => {
-    return this.previous.back(exit)
-  }
+  readonly back = this.previous.back
 }
 
 export class RuntimeGeneratorNode<Y, R> {
@@ -106,7 +103,7 @@ export class RuntimeGeneratorNode<Y, R> {
 
   constructor(
     readonly generator: Generator<Instruction<Y, any, any>, R>,
-    readonly previous: InstructionNode<Y, any> | RuntimeGeneratorNode<Y, R>,
+    readonly previous: InstructionNode<Y> | RuntimeGeneratorNode<Y, R>,
   ) {}
 
   readonly next = (): IteratorResult<Instruction<Y, any, any>, R> => {
@@ -121,7 +118,7 @@ export class RuntimeGeneratorNode<Y, R> {
         ? this.generator.throw(this.value.get())
         : tryGetResult(this.generator, this.value.get())
 
-    this._done = result.done ?? false
+    this._done = result.done ?? true
 
     return result
   }

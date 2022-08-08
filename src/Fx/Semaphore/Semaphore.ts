@@ -1,10 +1,11 @@
 import { constant } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
+import { Fx, Of, fromLazy, unit } from '../Fx/Fx.js'
+
 import { YieldOf } from '@/Eff/Eff.js'
 import { MutableFutureQueue } from '@/Eff/Future/MutableFutureQueue.js'
 import { wait } from '@/Eff/Future/wait.js'
-import { Fx, Of, fromLazy, unit } from '@/Fx/Fx/index.js'
 import { managed, scoped } from '@/Fx/Fx/scoped.js'
 
 export class Semaphore {

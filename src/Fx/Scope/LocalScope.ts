@@ -50,7 +50,7 @@ export class LocalScope implements Closeable {
 
     // Mutually track resources
     this.ensuring(extended.close)
-    extended.ensuring(() => fromLazy(() => decrement(this.#refCount)))
+    extended.ensuring(this.close)
 
     // Track Reference Count to this Scope
     increment(this.#refCount)

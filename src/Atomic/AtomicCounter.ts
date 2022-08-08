@@ -4,8 +4,8 @@ import { Atomic, getAndUpdate, update } from './Atomic.js'
 
 export interface AtomicCounter extends Atomic<NonNegativeInteger> {}
 
-export function AtomicCounter(): AtomicCounter {
-  return Atomic(NonNegativeInteger<number>(0), NonNegativeIntegerAssociativeSum)
+export function AtomicCounter(initial: NonNegativeInteger = NonNegativeInteger(0)): AtomicCounter {
+  return Atomic(initial, NonNegativeIntegerAssociativeSum)
 }
 
 export const increment: (counter: AtomicCounter) => NonNegativeInteger = update(

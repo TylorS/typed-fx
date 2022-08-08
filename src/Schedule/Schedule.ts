@@ -89,7 +89,7 @@ export const retries = (retries: NonNegativeInteger): Schedule =>
     const next = state.step(now)
 
     // If we've reached our retry limit, lets return Done.
-    if (next.iteration === retries) {
+    if (state.iteration === retries) {
       return [next, Done]
     }
 

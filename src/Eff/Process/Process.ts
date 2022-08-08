@@ -37,7 +37,7 @@ import { CauseError } from '@/Cause/CauseError.js'
 import { Disposable, settable } from '@/Disposable/Disposable.js'
 import { Exit } from '@/Exit/Exit.js'
 import { Done, FiberStatus, Running, Suspended, setInterruptStatus } from '@/FiberStatus/index.js'
-import { Platform, fork } from '@/Platform/Platform.js'
+import { Platform } from '@/Platform/Platform.js'
 import * as StackFrame from '@/StackFrame/StackFrame.js'
 import { Delay } from '@/Time/index.js'
 import * as Trace from '@/Trace/index.js'
@@ -200,9 +200,6 @@ export class Process<Y, A> {
     })
   }
 
-  readonly fork = <B>(eff: Eff<Y, B>): Process<Y, B> =>
-    new Process(eff, this.forkParams(), this.processYield)
-
   // Internals
 
   protected run = (): void => {
@@ -239,10 +236,10 @@ export class Process<Y, A> {
    * The last think to run in a Process.
    */
   protected finalize(exit: Exit<ErrorsFromInstruction<Y>, A>) {
-    this._status = Done
+    this._suspended.notify(Right(undefined))
     this._settable.dispose()
     this._observers.notify(exit)
-    this._suspended.notify(Right(undefined))
+    this._status = Done
   }
 
   /**
@@ -250,6 +247,7 @@ export class Process<Y, A> {
    */
   protected processStack(current: ProcessorStack<Y, any>) {
     // console.log('Stack', current.tag)
+
     switch (current.tag) {
       // Roughly ordered based on order of occurence, though it really depends on
       // the Eff's usage on RuntimeInstructions to operate
@@ -290,7 +288,7 @@ export class Process<Y, A> {
     try {
       const result = current.next()
 
-      // console.log('InstructionGenerator', result)
+      // console.log('InstructionGenerator', result.value)
 
       if (result.done) {
         const exit = Right(result.value)
@@ -325,8 +323,7 @@ export class Process<Y, A> {
   /**
    * Process an Eff's Instruction Set
    */
-  protected processInstruction(current: InstructionNode<Y, any>) {
-    // console.log('Instruction', current.instruction)
+  protected processInstruction(current: InstructionNode<Y>) {
     this._current = new RuntimeGeneratorNode(
       this.processYield(current.instruction, this.params.heap, this.params.platform)[
         Symbol.iterator
@@ -342,7 +339,7 @@ export class Process<Y, A> {
     try {
       const result = current.next()
 
-      // console.log('RuntimeGenerator', result)
+      // console.log('RuntimeGenerator', result.value)
 
       if (result.done) {
         return (this._current = current.back(Right(result.value)))
@@ -403,32 +400,26 @@ export class Process<Y, A> {
     let returnedSynchronously = false
 
     const id = this._asyncID++
+
     const either = instr.input((eff) => {
       returnedSynchronously = true
 
-      // If things are still suspended, continue processing
-      if (!this._current) {
-        this._current = new InstructionGeneratorNode(
-          eff[Symbol.iterator](),
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          this._asyncToPreviousState.get(id)!,
-          Nothing,
-        )
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const previousState = this._asyncToPreviousState.get(id)!
 
-        this._asyncToPreviousState.delete(id)
-
-        this.run()
-      } else {
+      // If we started an Arbitrary Eff in the meantime, lets save our place to return to later.
+      if (this._current) {
         this._asyncToPreviousState.set(
           id,
-          new InstructionGeneratorNode(
-            eff[Symbol.iterator](),
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this._asyncToPreviousState.get(id)!,
-            Nothing,
-          ),
+          new InstructionGeneratorNode(eff[Symbol.iterator](), previousState, Nothing),
         )
+      } else {
+        this._current = new InstructionGeneratorNode(eff[Symbol.iterator](), previousState, Nothing)
       }
+
+      this._asyncToPreviousState.delete(id)
+
+      this.run()
     })
 
     // If we can continue synchronously, lets do so
@@ -486,7 +477,8 @@ export class Process<Y, A> {
     instr: Ensuring<Y, ErrorsFromInstruction<Y>, Y>,
     current: RuntimeInstructionNode<Y, any>,
   ) {
-    this._current = new FinalizerNode(...instr.input, Nothing, current)
+    const [eff, finalizer] = instr.input
+    this._current = new FinalizerNode(eff, finalizer, Nothing, current)
   }
 
   /**
@@ -619,16 +611,27 @@ export class Process<Y, A> {
     return Eff(function* () {
       const future = pending<never, Exit<ErrorsFromInstruction<Y>, B>>()
 
+      const previous = that._current ?? that.getUnfinishedAsync()
+
       that._runningArbitary++
       that._current = new ArbitraryEffNode<Y, B>(
         eff,
         // If we don't have somewhere to return to already, we must be waiting on an Async operation
         // So we'll grab the previously unfinshed Async stack to continue to
-        that._current ?? that.getUnfinishedAsync(),
+        previous,
         (exit) => {
           that._runningArbitary--
 
           complete(future)(Eff.of(exit))
+
+          if (!previous) {
+            const prevAsync = that.getUnfinishedAsync()
+
+            if (prevAsync) {
+              that._current = prevAsync
+              that.run()
+            }
+          }
         },
       )
 
@@ -681,17 +684,6 @@ export class Process<Y, A> {
   protected onInterruptStatusUpdate(status: boolean) {
     if (status && this._interruptable.size() > 0) {
       this._interruptable.all(unit)
-    }
-  }
-
-  /**
-   * Fork the ProcessParams
-   */
-  protected forkParams(): ProcessParams {
-    return {
-      platform: fork(this.params.platform),
-      heap: this.params.heap.fork(),
-      trace: this._current ? Just(this.getTrace(this._current)) : Nothing,
     }
   }
 
