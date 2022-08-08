@@ -60,3 +60,14 @@ export function bracket<R, E, A, R2, E2, B, R3>(
     return yield* withResource(a)
   })
 }
+
+/**
+ * Run a Scoped Fx within an isolated Scope, cleaning up those resources as soon as complete.
+ */
+export function fiberScoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, E, A> {
+  return Fx(function* () {
+    const fiberScope = yield* getFiberScope
+
+    return yield* pipe(scoped, provideService(Scope, fiberScope))
+  })
+}

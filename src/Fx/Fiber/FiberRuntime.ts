@@ -10,7 +10,7 @@ import { Fx, Of, fromExit, fromLazy, success, zipAll } from '../Fx/Fx.js'
 import { ForkParams } from '../Fx/Instructions/Fork.js'
 import * as FxInstruction from '../Fx/Instructions/Instruction.js'
 import * as Closeable from '../Scope/Closeable.js'
-import { Semaphore, acquire } from '../Semaphore/Semaphore.js'
+import { Semaphore, acquireFiber } from '../Semaphore/Semaphore.js'
 
 import { Live } from './Fiber.js'
 
@@ -103,7 +103,7 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
 
           const semaphore = heap.getOrThrow(ConcurrencyLevelKey)
           const runtime: FiberRuntime<any, any, any> = yield* forkNewRuntime(
-            acquire(semaphore)(fx),
+            acquireFiber(semaphore)(fx),
             params,
             heap,
             getInterruptStatus(),
@@ -159,7 +159,12 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
           const runtimes: FiberRuntime<any, any, any>[] = []
           for (const fx of fxs) {
             runtimes.push(
-              yield* forkNewRuntime(acquire(semaphore)(fx), undefined, heap, getInterruptStatus()),
+              yield* forkNewRuntime(
+                acquireFiber(semaphore)(fx),
+                undefined,
+                heap,
+                getInterruptStatus(),
+              ),
             )
           }
 

@@ -6,7 +6,7 @@ import { Fx, Of, fromLazy, unit } from '../Fx/Fx.js'
 import { YieldOf } from '@/Eff/Eff.js'
 import { MutableFutureQueue } from '@/Eff/Future/MutableFutureQueue.js'
 import { wait } from '@/Eff/Future/wait.js'
-import { managed, scoped } from '@/Fx/Fx/scoped.js'
+import { fiberScoped, managed, scoped } from '@/Fx/Fx/scoped.js'
 
 export class Semaphore {
   protected waiting = MutableFutureQueue<YieldOf<Of<void>>, void>()
@@ -89,6 +89,20 @@ export function acquirePermit(semaphore: Semaphore) {
 export function acquire(semaphore: Semaphore) {
   return <R, E, A>(fx: Fx<R, E, A>) =>
     scoped(
+      Fx(function* () {
+        yield* acquirePermit(semaphore)
+
+        return yield* fx
+      }),
+    )
+}
+
+/**
+ * Acquire a permit from a given semaphore, run an Fx, and then release the permit.
+ */
+export function acquireFiber(semaphore: Semaphore) {
+  return <R, E, A>(fx: Fx<R, E, A>) =>
+    fiberScoped(
       Fx(function* () {
         yield* acquirePermit(semaphore)
 
