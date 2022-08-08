@@ -34,11 +34,7 @@ export namespace FiberId {
     static readonly tag = 'Synthetic'
     readonly tag = Synthetic.tag
 
-    constructor(
-      readonly fiberIds: ReadonlyArray<FiberId>,
-      readonly clock: Clock, // The Clock used to create FiberId
-      readonly startTime: Time, // The monotonic Time at which this Fiber started, relative to its Clock.
-    ) {}
+    constructor(readonly fiberIds: ReadonlyArray<FiberId>) {}
   }
 }
 
@@ -50,8 +46,8 @@ export const Live = (sequenceNumber: N.NonNegativeInteger, clock: Clock): FiberI
   new FiberId.Live(sequenceNumber, clock, clock.getCurrentTime())
 
 export type Synthetic = FiberId.Synthetic
-export const Synthetic = (fiberIds: ReadonlyArray<FiberId>, clock: Clock): FiberId.Synthetic =>
-  new FiberId.Synthetic(fiberIds, clock, clock.getCurrentTime())
+export const Synthetic = (fiberIds: ReadonlyArray<FiberId>): FiberId.Synthetic =>
+  new FiberId.Synthetic(fiberIds)
 
 export const match =
   <A, B, C>(
@@ -93,15 +89,13 @@ export const Ord: O.Ord<FiberId> = O.sum<FiberId>()('tag')(
     tag: O.Static,
   })(S.Ord),
   Synthetic: O.struct<FiberId.Synthetic>({
-    startTime: Time.makeOrd(N.Ord),
     fiberIds: A.makeOrd(O.lazy(() => Ord)),
-    clock: O.Static,
     tag: O.Static,
   })(S.Ord),
 })
 
 export const Associative: ASC.Associative<FiberId> = {
-  concat: (f, s) => (f.tag === None.tag ? s : s.tag === None.tag ? f : Synthetic([f, s], f.clock)),
+  concat: (f, s) => (f.tag === None.tag ? s : s.tag === None.tag ? f : Synthetic([f, s])),
 }
 
 export const Identity: I.Identity<FiberId> = {
@@ -117,12 +111,8 @@ export const Debug: D.Debug<FiberId> = D.sum<FiberId>()('tag')({
     debug: (id) => `Fiber #${id.sequenceNumber} (started at ${idToIsoString(id)})`,
   },
   Synthetic: {
-    debug: (id) =>
-      `Synthetic Fiber (started at ${idToIsoString(id)})\n  -${id.fiberIds
-        .map(Debug.debug)
-        .join('\n  -')}`,
+    debug: (id) => `Synthetic Fiber\n  -${id.fiberIds.map(Debug.debug).join('\n  -')}`,
   },
 })
 
-const idToIsoString = (id: FiberId.Live | FiberId.Synthetic) =>
-  timeToDate(id.startTime)(id.clock).toISOString()
+const idToIsoString = (id: FiberId.Live) => timeToDate(id.startTime)(id.clock).toISOString()

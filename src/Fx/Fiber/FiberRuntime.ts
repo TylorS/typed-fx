@@ -131,6 +131,54 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
 
           return a
         }
+        case 'RaceAll': {
+          const fxs = instr.input
+
+          // Fast-path for empty array
+          if (fxs.length === 0) {
+            return []
+          }
+
+          // Fast-path for array with 1 value
+          if (fxs.length === 1) {
+            return [yield* new PushInstruction(fxs[0])]
+          }
+
+          // Allow for Concurrency.
+          const semaphore = heap.getOrThrow(ConcurrencyLevelKey)
+          const runtimes: FiberRuntime<any, any, any>[] = []
+          for (const fx of fxs) {
+            runtimes.push(
+              yield* forkNewRuntime(
+                acquireFiber(semaphore)(fx),
+                undefined,
+                heap,
+                getInterruptStatus(),
+              ),
+            )
+          }
+
+          const future = pending<R, never, readonly [FiberRuntime<any, any, any>, Exit<E, any>]>()
+
+          let deleted = 0
+          runtimes.forEach((r, i) =>
+            r.addObserver((e) => {
+              const [r] = runtimes.splice(i - deleted++, 1)
+              complete(future)(success([r, e] as const))
+            }),
+          )
+
+          // Asynchronously start the Runtimes
+          setTimer(platform, heap, () => runtimes.forEach((r) => r.start()))
+
+          const [winner, exit]: readonly [FiberRuntime<any, any, any>, Exit<E, any>] =
+            yield* new PushInstruction(wait(future))
+
+          // Cancel all Remaining Fx
+          yield* new PushInstruction(zipAll(runtimes.map((r) => r.interrupt(winner.id))))
+
+          return yield* new PushInstruction(fromExit(exit))
+        }
         case 'WithConcurrency': {
           const [fx, level] = instr.input
           const currentSemaphore = heap.getOrThrow(ConcurrencyLevelKey)

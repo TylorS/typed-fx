@@ -33,6 +33,7 @@ import * as Exit from '@/Exit/Exit.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import { Service } from '@/Service/index.js'
 import { Trace } from '@/Trace/Trace.js'
+import { RaceAll } from './Instructions/RaceAll.js'
 
 /**
  * Fx is the immutable representation of an Effectful program. It utilizes Generators to
@@ -411,6 +412,16 @@ export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
     readonly [K in keyof FX]: OutputOf<FX[K]>
   }
 > => new ZipAll(fxs, __trace)
+
+/**
+ * Race an array of Fx into an Fx of the first resolved Fx, cancelling all other
+ * operations not resolved.
+ */
+export const raceAll = <FX extends ReadonlyArray<AnyFx>>(
+  fxs: FX,
+  __trace?: string,
+): Fx<ResourcesOf<FX[number]>, ErrorsOf<FX[number]>, OutputOf<FX[number]>> =>
+  new RaceAll(fxs, __trace)
 
 /**
  * Control the concurrency level of any region of Fx.

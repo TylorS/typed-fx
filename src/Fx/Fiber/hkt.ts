@@ -1,21 +1,24 @@
-import { HKT2, Params, pipe } from 'hkt-ts'
+import { Either, HKT2, Params, flow, pipe } from 'hkt-ts'
 import { makeAssociative } from 'hkt-ts/Array'
-import { Right } from 'hkt-ts/Either'
+import { ReadonlyRecord } from 'hkt-ts/Record'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
+import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
 import * as B from 'hkt-ts/Typeclass/Bicovariant'
+import { Bottom2 } from 'hkt-ts/Typeclass/Bottom'
 import * as C from 'hkt-ts/Typeclass/Covariant'
 import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
+import * as IE from 'hkt-ts/Typeclass/IdentityEither'
 import { Top2 } from 'hkt-ts/Typeclass/Top'
 
-import { Fx, inheritFiberRefs, success, unit } from '../Fx/Fx.js'
-import { mainFiberContext } from '../Fx/run.js'
+import { pending, wait } from '../Future/Future.js'
+import * as Fx from '../Fx/index.js'
 
-import { Fiber, Synthetic } from './Fiber.js'
+import { AnyFiber, ErrorsOf, Fiber, OutputOf, Synthetic } from './Fiber.js'
 
+import { Empty } from '@/Cause/Cause.js'
 import * as Exit from '@/Exit/index.js'
 import { makeSequentialAssociative } from '@/Exit/index.js'
 import { FiberId } from '@/FiberId/FiberId.js'
-import { Time } from '@/Time/index.js'
 
 export interface FiberHKT extends HKT2 {
   readonly type: Fiber<this[Params.E], this[Params.A]>
@@ -25,17 +28,15 @@ export const Bicovariant: B.Bicovariant2<FiberHKT> = {
   bimap: (f, g) => (fiber) =>
     Synthetic({
       id: bimapFiberId(fiber),
-      exit: Fx(function* () {
-        const e = yield* fiber.exit
-
-        return pipe(e, Exit.bimap(f, g))
+      exit: Fx.Fx(function* () {
+        return pipe(yield* fiber.exit, Exit.bimap(f, g))
       }),
-      inheritFiberRefs: inheritFiberRefs(fiber),
+      inheritFiberRefs: Fx.inheritFiberRefs(fiber),
     }),
 }
 
 function bimapFiberId<E, A>(fiber: Fiber<E, A>): FiberId.Synthetic {
-  return new FiberId.Synthetic([fiber.id], fiber.id.clock, fiber.id.clock.getCurrentTime())
+  return new FiberId.Synthetic([fiber.id])
 }
 
 export const bimap = Bicovariant.bimap
@@ -56,8 +57,8 @@ export const AssociativeBoth: AB.AssociativeBoth2<FiberHKT> = {
     <E, B>(s: Fiber<E, B>) =>
     <A>(f: Fiber<E, A>) =>
       Synthetic({
-        id: new FiberId.Synthetic([f.id, s.id], f.id.clock, f.id.clock.getCurrentTime()),
-        exit: Fx(function* () {
+        id: new FiberId.Synthetic([f.id, s.id]),
+        exit: Fx.Fx(function* () {
           const fe = yield* tupled(f).exit
           const se = yield* tupled(s).exit
 
@@ -66,30 +67,111 @@ export const AssociativeBoth: AB.AssociativeBoth2<FiberHKT> = {
             se,
           ) as Exit.Exit<any, readonly [A, B]>
         }),
-        inheritFiberRefs: Fx(function* () {
-          yield* inheritFiberRefs(f)
-          yield* inheritFiberRefs(s)
+        inheritFiberRefs: Fx.Fx(function* () {
+          yield* Fx.inheritFiberRefs(f)
+          yield* Fx.inheritFiberRefs(s)
         }),
       }),
 }
 
 export const both = AB.both
-
 export const zipLeft = AB.zipLeft<FiberHKT>({ ...AssociativeBoth, ...Covariant })
 export const zipRight = AB.zipRight<FiberHKT>({ ...AssociativeBoth, ...Covariant })
 
-export const Top: Top2<FiberHKT> = {
-  top: Synthetic({
-    id: new FiberId.Synthetic([FiberId.None], mainFiberContext.platform.timer, Time(0)),
-    exit: success(Right(undefined)),
-    inheritFiberRefs: unit,
-  }),
+export function fromExit<E, A>(exit: Exit.Exit<E, A>): Synthetic<E, A> {
+  return Synthetic({
+    id: new FiberId.Synthetic([]),
+    exit: Fx.success(exit),
+    inheritFiberRefs: Fx.unit,
+  })
 }
+
+export const Top: Top2<FiberHKT> = {
+  top: fromExit(Either.Right(undefined)),
+}
+
+export const top = Top.top
+
+export const empty = fromExit<never, never>(Either.Left(Empty))
+export const die = flow(Exit.die, fromExit)
+export const failure = flow(Exit.failure, fromExit)
+export const interrupt = flow(Exit.interrupt, fromExit)
+export const success = flow(Exit.success, fromExit)
+export const fromEither = flow(Exit.fromEither, fromExit)
 
 export const IdentityBoth: IB.IdentityBoth2<FiberHKT> = {
   ...Top,
   ...AssociativeBoth,
 }
 
-export const tuple = IB.tuple<FiberHKT>({ ...IdentityBoth, ...Covariant })
-export const struct = IB.struct<FiberHKT>({ ...IdentityBoth, ...Covariant })
+export const tuple = IB.tuple<FiberHKT>({ ...IdentityBoth, ...Covariant }) as <
+  Fibers extends ReadonlyArray<AnyFiber>,
+>(
+  ...fibers: Fibers
+) => Fiber<
+  ErrorsOf<Fibers[number]>,
+  {
+    readonly [K in keyof Fibers]: OutputOf<Fibers[K]>
+  }
+>
+
+export const struct = IB.struct<FiberHKT>({ ...IdentityBoth, ...Covariant }) as <
+  Fibers extends ReadonlyRecord<string, AnyFiber>,
+>(
+  fibers: Fibers,
+) => Fiber<
+  ErrorsOf<Fibers[string]>,
+  {
+    readonly [K in keyof Fibers]: OutputOf<Fibers[K]>
+  }
+>
+
+export const never: Fiber<never, never> = Synthetic({
+  id: new FiberId.Synthetic([]),
+  exit: wait(pending()),
+  inheritFiberRefs: Fx.unit,
+})
+
+export const Bottom: Bottom2<FiberHKT> = {
+  bottom: never,
+}
+
+export const bottom = Bottom.bottom
+
+export const AssociativeEither: AE.AssociativeEither2<FiberHKT> = {
+  either:
+    <E, B>(s: Fiber<E, B>) =>
+    <A>(f: Fiber<E, A>) =>
+      Synthetic<E, Either.Either<A, B>>({
+        id: new FiberId.Synthetic([f.id, s.id]),
+        exit: Fx.Fx(function* () {
+          return pipe(
+            yield* Fx.either(s.exit)(f.exit),
+            Either.match(Exit.map(Either.Left), Exit.map(Either.Right)),
+          )
+        }),
+        inheritFiberRefs: Fx.Fx(function* () {
+          // Wait for an inherit the Refs of the winning Fiber
+          return yield* pipe(
+            yield* Fx.either(s.exit)(f.exit),
+            Either.match(
+              () => Fx.inheritFiberRefs(f),
+              () => Fx.inheritFiberRefs(s),
+            ),
+          )
+        }),
+      }),
+}
+
+export const either = AE.either
+export const orElse = AE.orElse<FiberHKT>({ ...AssociativeEither, ...Covariant })
+export const race = AE.tuple<FiberHKT>({ ...AssociativeEither, ...Covariant }) as <
+  Fibers extends ReadonlyArray<AnyFiber>,
+>(
+  ...fibers: Fibers
+) => Fiber<ErrorsOf<Fibers[number]>, OutputOf<Fibers[number]>>
+
+export const IdentityEither: IE.IdentityEither2<FiberHKT> = {
+  ...AssociativeEither,
+  ...Bottom,
+}

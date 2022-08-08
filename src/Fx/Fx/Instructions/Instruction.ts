@@ -17,6 +17,7 @@ import type { WithConcurrency } from './WithConcurrency.js'
 import type { ZipAll } from './ZipAll.js'
 
 import { ReturnOf, YieldOf } from '@/Eff/Eff.js'
+import { RaceAll } from './RaceAll.js'
 
 export type Instruction<R, E, A> =
   | Access<R, R, E, A>
@@ -31,6 +32,7 @@ export type Instruction<R, E, A> =
   | GetInterruptStatus
   | GetTrace
   | Provide<any, E, A>
+  | RaceAll<ReadonlyArray<Fx<R, E, any>>>
   | SetInterruptStatus<R, E, A>
   | WithConcurrency<R, E, A>
   | ZipAll<ReadonlyArray<Fx<R, E, any>>>
@@ -77,6 +79,8 @@ type ExtractEffResources_<T> = T extends Access<infer R, infer R2, infer _E, inf
   ? _R
   : T extends Ensuring<infer _R, infer _E, infer _A>
   ? _R
+  : T extends RaceAll<infer FX>
+  ? ExtractEffResources<YieldOf<FX[number]>>
   : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
   ? _R
   : T extends WithConcurrency<infer _R, infer _E, infer _A>
@@ -97,6 +101,8 @@ type ExtractEffErrors_<T> = T extends Access<infer _R, infer _R2, infer _E, infe
   ? _E
   : T extends Provide<infer _R, infer _E, infer _A>
   ? _E
+  : T extends RaceAll<infer FX>
+  ? ExtractEffResources<YieldOf<FX[number]>>
   : T extends SetInterruptStatus<infer _R, infer _E, infer _A>
   ? _E
   : T extends WithConcurrency<infer _R, infer _E, infer _A>
