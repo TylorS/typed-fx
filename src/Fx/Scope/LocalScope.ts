@@ -50,7 +50,7 @@ export class LocalScope implements Closeable {
 
     // Mutually track resources
     this.ensuring(extended.close)
-    extended.ensuring(this.close)
+    extended.ensuring(() => this.release)
 
     // Track Reference Count to this Scope
     increment(this.#refCount)
@@ -62,31 +62,35 @@ export class LocalScope implements Closeable {
     lazy(() => {
       this.setExit(exit)
 
-      // Can't close while there is more references
-      if (decrement(this.#refCount) > 0) {
-        return success(false)
-      }
-
-      this.#state = Closing(this.finalizers, getExit(this))
-      const releaseAll = pipe(
-        zipAll(this.keys.map((key) => this.finalize(key, getExit(this)))),
-        withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
-      )
-
-      const setClosed = () => {
-        this.#state = Closed(getExit(this))
-      }
-
-      return Fx(function* () {
-        yield* releaseAll
-
-        setClosed()
-
-        return true
-      })
+      return this.release
     })
 
   // Internals
+
+  protected release = lazy(() => {
+    // Can't close while there is more references
+    if (decrement(this.#refCount) > 0) {
+      return success(false)
+    }
+
+    this.#state = Closing(this.finalizers, getExit(this))
+    const releaseAll = pipe(
+      zipAll(this.keys.map((key) => this.finalize(key, getExit(this)))),
+      withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
+    )
+
+    const setClosed = () => {
+      this.#state = Closed(getExit(this))
+    }
+
+    return Fx(function* () {
+      yield* releaseAll
+
+      setClosed()
+
+      return true
+    })
+  })
 
   protected addFinalizer(key: FinalizerKey, finalizer: Finalizer) {
     if (this.isNotOpen) {
