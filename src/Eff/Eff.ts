@@ -13,7 +13,7 @@ export type YieldOf<T> = T extends Eff<infer _Y, infer _A> ? _Y : never
 export type ReturnOf<T> = T extends Eff<infer _Y, infer _A> ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export function Eff<Y, R>(f: () => Generator<Y, R>): Eff<Y, R> {
+export function Eff<Y = never, R = unknown>(f: () => Generator<Y, R>): Eff<Y, R> {
   return {
     [Symbol.iterator]: f,
   }
