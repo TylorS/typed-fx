@@ -1,18 +1,14 @@
 import type { AnyFx, ErrorsOf, OutputOf, ResourcesOf } from '../Fx.js'
 
-import { Eff } from '@/Eff/Eff.js'
+import { FxInstruction } from './FxInstruction.js'
 
-export class ZipAll<FX extends ReadonlyArray<AnyFx>> extends Eff.Instruction<
+export class ZipAll<FX extends ReadonlyArray<AnyFx>> extends FxInstruction<
   FX,
+  ResourcesOf<FX[number]>,
+  ErrorsOf<FX[number]>,
   {
     readonly [K in keyof FX]: OutputOf<FX[K]>
   }
 > {
   readonly tag = 'ZipAll'
-
-  readonly __R?: () => ResourcesOf<FX[number]>
-  readonly __E?: () => ErrorsOf<FX[number]>
-  readonly __A?: () => {
-    readonly [K in keyof FX]: OutputOf<FX[K]>
-  }
 }

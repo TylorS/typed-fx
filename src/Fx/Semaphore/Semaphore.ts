@@ -3,13 +3,12 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Fx, Of, fromLazy, unit } from '../Fx/Fx.js'
 
-import { YieldOf } from '@/Eff/Eff.js'
-import { MutableFutureQueue } from '@/Eff/Future/MutableFutureQueue.js'
-import { wait } from '@/Eff/Future/wait.js'
+import { MutableFutureQueue } from '@/Fx/Future/MutableFutureQueue.js'
+import { wait } from '@/Fx/Future/wait.js'
 import { fiberScoped, managed, scoped } from '@/Fx/Fx/scoped.js'
 
 export class Semaphore {
-  protected waiting = MutableFutureQueue<YieldOf<Of<void>>, void>()
+  protected waiting = MutableFutureQueue<never, never, void>()
   protected running = 0
 
   constructor(readonly maxPermits: NonNegativeInteger) {}

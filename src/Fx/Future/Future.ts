@@ -1,13 +1,67 @@
-import type { Instruction } from '../Fx/Instructions/Instruction.js'
 import { Fx } from '../Fx/index.js'
 
-import * as F from '@/Eff/Future/index.js'
+import { Atomic } from '@/Atomic/Atomic.js'
+import { Disposable } from '@/Disposable/Disposable.js'
 
-export interface Future<R, E, A> extends F.Future<Instruction<R, E, any>, A> {}
+export interface Future<R, E, A> {
+  readonly state: Atomic<FutureState<R, E, A>>
+}
 
-export const complete = F.complete as <R, E, A>(
+export type FutureState<R, E, A> = Pending<R, E, A> | Resolved<R, E, A>
+
+export interface Pending<R, E, A> {
+  readonly tag: 'Pending'
+  readonly observers: ReadonlySet<Observer<R, E, A>>
+}
+
+export function Pending<R, E, A>(): Future<R, E, A> {
+  return {
+    state: Atomic<FutureState<R, E, A>>({ tag: 'Pending', observers: new Set() }),
+  }
+}
+
+export function addObserver<R, E, A>(
   future: Future<R, E, A>,
-) => (fx: Fx<R, E, A>) => boolean
-export const wait = F.wait as <R, E, A>(future: Future<R, E, A>) => Fx<R, E, A>
+  observer: Observer<R, E, A>,
+): Disposable {
+  return future.state.modify((state): readonly [Disposable, FutureState<R, E, A>] => {
+    if (state.tag === 'Resolved') {
+      return [Disposable.None, state]
+    }
 
-export const pending = F.pending as <R, E, A>() => Future<R, E, A>
+    const updated: FutureState<R, E, A> = {
+      ...state,
+      observers: new Set([...state.observers, observer]),
+    }
+
+    return [Disposable(() => removeObserver(future, observer)), updated]
+  })
+}
+
+function removeObserver<R, E, A>(future: Future<R, E, A>, observer: Observer<R, E, A>) {
+  return future.state.modify((state) => {
+    if (state.tag === 'Resolved') {
+      return [undefined, state]
+    }
+
+    return [
+      undefined,
+      { ...state, observer: new Set([...state.observers].filter((x) => x !== observer)) },
+    ]
+  })
+}
+
+export interface Observer<R, E, A> {
+  (fx: Fx<R, E, A>): void
+}
+
+export interface Resolved<R, E, A> {
+  readonly tag: 'Resolved'
+  readonly fx: Fx<R, E, A>
+}
+
+export function Resolved<R, E, A>(fx: Fx<R, E, A>): Future<R, E, A> {
+  return {
+    state: Atomic<FutureState<R, E, A>>({ tag: 'Resolved', fx }),
+  }
+}

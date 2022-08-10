@@ -1,16 +1,13 @@
-import type { Instruction } from './Instruction.js'
+import { Either } from 'hkt-ts/Either'
 
-import * as Eff from '@/Eff/index.js'
+import type { Fx } from '../Fx.js'
 
-export class Async<R, E, A> extends Eff.Async<
-  Instruction<R, E, any>,
-  A,
-  Instruction<R, never, any>
-> {
-  readonly __R?: () => R
-  readonly __E?: () => E
-  readonly __A?: () => A
+import { FxInstruction } from './FxInstruction.js'
+
+export class Async<R, E, A> extends FxInstruction<AsyncRegister<R, E, A>, R, E, A> {
+  readonly tag = 'Async'
 }
 
-export interface AsyncRegister<R, E, A>
-  extends Eff.AsyncRegister<Instruction<R, E, any>, A, Instruction<R, never, any>> {}
+export interface AsyncRegister<R, E, A> {
+  (cb: (fx: Fx<R, E, A>) => void): Either<Fx<R, never, any>, Fx<R, E, A>>
+}

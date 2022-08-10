@@ -15,10 +15,10 @@ import {
   provide,
   success,
 } from '../Fx/Fx.js'
+import { never } from '../Fx/hkt.js'
 import type { Layer } from '../Layer/Layer.js'
 import { Scope } from '../Scope/Scope.js'
 
-import { never } from '@/Eff/Instructions/Async.js'
 import { Exit } from '@/Exit/Exit.js'
 import * as Service from '@/Service/index.js'
 

@@ -1,7 +1,10 @@
-import * as Eff from '@/Eff/index.js'
+import { Lazy } from 'hkt-ts/function'
 
-export class FromLazy<A> extends Eff.FromLazy<A> {
-  readonly __R?: () => never
-  readonly __E?: () => never
-  readonly __A?: () => A
+import { FxInstruction } from './FxInstruction.js'
+
+/**
+ * Peform Synchronous effects with ability to yield cooperatively to other Fibers.
+ */
+export class FromLazy<A> extends FxInstruction<Lazy<A>, never, never, A> {
+  static tag = 'FromLazy' as const
 }

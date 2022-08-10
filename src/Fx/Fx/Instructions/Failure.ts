@@ -1,7 +1,7 @@
-import * as Eff from '@/Eff/index.js'
+import { FxInstruction } from './FxInstruction.js'
 
-export class Failure<E> extends Eff.Failure<E> {
-  readonly __R?: () => never
-  readonly __E?: () => E
-  readonly __A?: () => never
+import { Cause } from '@/Cause/Cause.js'
+
+export class Failure<E> extends FxInstruction<Cause<E>, never, E, never> {
+  readonly tag = 'Failure'
 }

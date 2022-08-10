@@ -25,6 +25,7 @@ import type {
   ResourcesFromInstruction,
 } from './Instructions/Instruction.js'
 import { RaceAll } from './Instructions/RaceAll.js'
+import { SetInterruptStatus } from './Instructions/SetInterruptStatus.js'
 import { WithConcurrency } from './Instructions/WithConcurrency.js'
 import { ZipAll } from './Instructions/ZipAll.js'
 
@@ -380,24 +381,19 @@ export function inheritFiberRefs<E, A>(fiber: Fiber<E, A>): Of<void> {
  * Mark a region of the Fx stack as uninterruptable, disallowing the Fiber to be interrupted
  * until completion.
  */
-export const uninterruptable = Eff.uninterruptable as <R, E, A>(
+export const uninterruptable = <R, E, A>(
   fx: Fx<R, E, A>,
   __trace?: string | undefined,
-) => Fx<R, E, A>
+): Fx<R, E, A> => new SetInterruptStatus([fx, false], __trace)
 
 /**
  * Mark a region of the Fx stack as interruptable. Be careful using this operator, it will interrupts
  * to flow back into uninterruptable regions.
  */
-export const interruptable = Eff.interruptable as <R, E, A>(
+export const interruptable = <R, E, A>(
   fx: Fx<R, E, A>,
   __trace?: string | undefined,
-) => Fx<R, E, A>
-
-/**
- * Get the current InterruptStatus of the Fiber
- */
-export const getInterruptStatus = Eff.getInterruptStatus as Of<boolean>
+): Fx<R, E, A> => new SetInterruptStatus([fx, true], __trace)
 
 /**
  * Combine an Array of Fx into an Fx of an array containing their output values.

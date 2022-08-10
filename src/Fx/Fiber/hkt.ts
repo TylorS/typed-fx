@@ -11,7 +11,7 @@ import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import * as IE from 'hkt-ts/Typeclass/IdentityEither'
 import { Top2 } from 'hkt-ts/Typeclass/Top'
 
-import { pending, wait } from '../Future/Future.js'
+import { Pending, wait } from '../Future/index.js'
 import * as Fx from '../Fx/index.js'
 
 import { AnyFiber, ErrorsOf, Fiber, OutputOf, Synthetic } from './Fiber.js'
@@ -150,7 +150,7 @@ export const struct = IB.struct<FiberHKT>({ ...IdentityBoth, ...Covariant }) as 
 
 export const never: Fiber<never, never> = Synthetic({
   id: new FiberId.Synthetic([]),
-  exit: wait(pending()),
+  exit: wait(Pending()),
   inheritFiberRefs: Fx.unit,
 })
 

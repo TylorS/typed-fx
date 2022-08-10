@@ -1,10 +1,7 @@
-import { Eff } from '@/Eff/Eff.js'
+import { FxInstruction } from './FxInstruction.js'
+
 import type { FiberContext } from '@/Fx/FiberContext/index.js'
 
-export class GetFiberContext extends Eff.Instruction<void, FiberContext> {
+export class GetFiberContext extends FxInstruction<void, never, never, FiberContext> {
   readonly tag = 'GetFiberContext'
-
-  readonly __R?: () => never
-  readonly __E?: () => never
-  readonly __A?: () => FiberContext
 }

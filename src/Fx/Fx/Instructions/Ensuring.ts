@@ -1,13 +1,14 @@
-import type { Instruction } from './Instruction.js'
+import type { Fx } from '../Fx.js'
 
-import * as Eff from '@/Eff/index.js'
+import { FxInstruction } from './FxInstruction.js'
 
-export class Ensuring<R, E, A> extends Eff.Ensuring<
-  Instruction<R, E, any>,
-  A,
-  Instruction<R, E, any>
+import type { Finalizer } from '@/Fx/Finalizer/Finalizer.js'
+
+export class Ensuring<R, E, A> extends FxInstruction<
+  readonly [fx: Fx<R, E, A>, finalizer: Finalizer<R, E>],
+  R,
+  E,
+  A
 > {
-  readonly __R?: () => R
-  readonly __E?: () => E
-  readonly __A?: () => A
+  readonly tag = 'Ensuring'
 }

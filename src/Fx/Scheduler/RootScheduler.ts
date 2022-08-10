@@ -1,11 +1,11 @@
-import { complete, pending, wait } from '../Future/Future.js'
+import { Pending, complete, wait } from '../Future/index.js'
 import { ForkParams } from '../Fx/Instructions/Fork.js'
 
-import { Scheduler } from './Scheduler.js'
+import type { Scheduler } from './Scheduler.js'
 
 import * as Clock from '@/Clock/Clock.js'
 import { Disposable } from '@/Disposable/Disposable.js'
-import * as Fx from '@/Fx/Fx/index.js'
+import * as Fx from '@/Fx/Fx/Fx.js'
 import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { UnixTime } from '@/Time/index.js'
@@ -98,7 +98,7 @@ function scheduled<R, E, A>(
 // A simple helper to create a Future around an existing Fx to be run
 // at a future time by the scheduler.
 class Task<R, E, A> {
-  protected future = pending<R, E, A>()
+  protected future = Pending<R, E, A>()
 
   constructor(readonly fx: Fx.Fx<R, E, A>) {}
 
