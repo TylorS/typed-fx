@@ -17,7 +17,7 @@ export interface TracingParams {
 
 const jsRegex = /.([c|m]?jsx?)$/
 const jsMapRegex = /.js.map$/
-const name = '@typed/fx/tracing'
+const name = '@typed/fx/Tracing'
 
 export function tracingPlugin(params: TracingParams): Plugin {
   console.info(`${name} :: Setting up TypeScript project...`)
