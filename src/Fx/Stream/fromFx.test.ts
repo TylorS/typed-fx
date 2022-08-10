@@ -10,7 +10,7 @@ import { fromFx } from './fromFx.js'
 
 import { Fx, fromLazy, join, provideService, runMain, success } from '@/Fx/Fx/index.js'
 
-describe(new URL(import.meta.url).pathname, () => {
+describe.only(new URL(import.meta.url).pathname, () => {
   describe(fromFx.name, () => {
     it('creates a Stream from an Fx', async () => {
       const stream = fromFx(success(1))

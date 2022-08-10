@@ -8,9 +8,9 @@ export class FromFx<R, E, A> extends Stream<R, E, A> {
     super((sink, scheduler) =>
       scheduler.schedule(
         Fx.Fx(function* () {
-          const value = yield* fx
+          const a = yield* fx
 
-          yield* sink.event(value)
+          yield* sink.event(a)
           yield* sink.end
         }),
         Schedule.once,

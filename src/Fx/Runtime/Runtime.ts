@@ -40,7 +40,7 @@ export function Runtime<R = never>(params: RuntimeParams<R>): Runtime<R> {
       ),
       params.env,
       FiberContext.fork(params.context, forkParams),
-      forkParams?.forkScope?.fork() ?? params.scope.fork(),
+      forkParams?.scope ?? forkParams?.forkScope?.fork() ?? params.scope.fork(),
       params.trace,
     )
 

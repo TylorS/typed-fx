@@ -24,6 +24,7 @@ import type {
   Instruction,
   ResourcesFromInstruction,
 } from './Instructions/Instruction.js'
+import { RaceAll } from './Instructions/RaceAll.js'
 import { WithConcurrency } from './Instructions/WithConcurrency.js'
 import { ZipAll } from './Instructions/ZipAll.js'
 
@@ -33,7 +34,6 @@ import * as Exit from '@/Exit/Exit.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import { Service } from '@/Service/index.js'
 import { Trace } from '@/Trace/Trace.js'
-import { RaceAll } from './Instructions/RaceAll.js'
 
 /**
  * Fx is the immutable representation of an Effectful program. It utilizes Generators to

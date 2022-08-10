@@ -15,12 +15,12 @@ import { Semaphore, acquireFiber } from '../Semaphore/Semaphore.js'
 import { Live } from './Fiber.js'
 
 import { increment } from '@/Atomic/AtomicCounter.js'
-import { Disposable } from '@/Disposable/Disposable.js'
+import { Disposable, settable } from '@/Disposable/Disposable.js'
 import { Heap, HeapKey } from '@/Eff/Process/Heap.js'
 import { PushInstruction } from '@/Eff/Process/Instruction.js'
 import { Process } from '@/Eff/Process/Process.js'
 import { ProcessorEff } from '@/Eff/Process/ProcessorEff.js'
-import { Future, ensuring, getTrace } from '@/Eff/index.js'
+import { ensuring, getTrace } from '@/Eff/index.js'
 import { Exit, interrupt, makeParallelAssociative } from '@/Exit/Exit.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberStatus } from '@/FiberStatus/index.js'
@@ -74,7 +74,7 @@ export class FiberRuntime<R, E, A> {
     )
 
     // Ensure that when this Scope closes, the process will attempt to be closed as well
-    scope.ensuring((exit) => (isLeft(exit) ? this.process.runEff(fromExit(exit)) : success(null)))
+    // scope.ensuring((exit) => (isLeft(exit) ? this.process.runEff(fromExit(exit)) : success(null)))
   }
 
   readonly start = (): boolean => this.process.start()
@@ -111,7 +111,7 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
           const fiber = fromFiberRuntime(runtime)
 
           // Asynchronously start the Fiber
-          setTimer(platform, heap, () => runtime.start())
+          setTimer(platform, heap, runtime.start)
 
           return fiber
         }
@@ -234,17 +234,13 @@ export function processFxInstruction(getInterruptStatus: () => boolean) {
 }
 
 export function fromFiberRuntime<R, E, A>(runtime: FiberRuntime<R, E, A>): Live<E, A> {
-  const exit = pending<never, never, Exit<E, A>>()
-
-  runtime.addObserver((e) => Future.complete(exit)(success(e)))
-
   return {
     tag: 'Live',
     id: runtime.id,
     status: fromLazy(() => runtime.status),
     context: success(runtime.context),
     scope: success(runtime.scope),
-    exit: Future.wait(exit),
+    exit: Closeable.wait(runtime.scope),
   }
 }
 
@@ -252,8 +248,11 @@ export function fromFiberRuntime<R, E, A>(runtime: FiberRuntime<R, E, A>): Live<
 
 // Set timer and track those resources.
 const setTimer = (platform: Platform.Platform, heap: Heap, f: () => void) => {
-  const disposable = platform.timer.setTimer(f, Delay(0))
-  heap.getOrThrow(FiberScopeKey).ensuring(() => fromLazy(() => disposable.dispose()))
+  const inner = settable()
+
+  heap.getOrThrow(FiberScopeKey).ensuring(() => fromLazy(() => inner.dispose()))
+
+  inner.add(platform.timer.setTimer(f, Delay(0)))
 }
 
 const getCurrentContext = (heap: Heap, interruptStatus: boolean) => {
@@ -340,12 +339,7 @@ const zipAllFuture = <R, E>(runtimes: FiberRuntime<R, E, any>[]) => {
 function closeOrWaitForScope(scope: Closeable.Closeable) {
   return (exit: Exit<any, any>) =>
     Fx(function* () {
-      const released = yield* scope.close(exit)
-
-      if (released) {
-        return Closeable.getExit(scope)
-      }
-
+      console.log(yield* scope.close(exit))
       return yield* Closeable.wait(scope)
     })
 }
