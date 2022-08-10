@@ -9,6 +9,8 @@ export interface Platform {
   readonly maxOpCount: NonNegativeInteger
   readonly maxTraceCount: NonNegativeInteger
   readonly timer: Timer.Timer
+
+  readonly fork: () => Platform
 }
 
 export function Platform(
@@ -17,12 +19,15 @@ export function Platform(
   maxTraceCount: NonNegativeInteger = NonNegativeInteger(50),
   timer: Timer.Timer = SetTimeoutTimer(),
 ): Platform {
-  return {
+  const platform: Platform = {
     sequenceNumber,
     maxOpCount,
     maxTraceCount,
     timer,
+    fork: () => fork(platform),
   }
+
+  return platform
 }
 
 export function fork(platform: Platform): Platform {

@@ -5,8 +5,8 @@ import * as Schedule from '@/Schedule/index.js'
 
 export class FromFx<R, E, A> extends Stream<R, E, A> {
   constructor(readonly fx: Fx.Fx<R, E, A>) {
-    super((sink, scheduler) =>
-      scheduler.schedule(
+    super((sink, context) =>
+      context.scheduler.schedule(
         Fx.Fx(function* () {
           const a = yield* fx
 
@@ -14,6 +14,7 @@ export class FromFx<R, E, A> extends Stream<R, E, A> {
           yield* sink.end
         }),
         Schedule.once,
+        context,
       ),
     )
   }

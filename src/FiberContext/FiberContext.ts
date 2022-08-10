@@ -14,11 +14,15 @@ export interface FiberContext {
   readonly parent: Maybe<FiberContext>
 }
 
-export function fork(context: FiberContext, overrides?: Partial<FiberContext>): FiberContext {
-  return {
-    ...context,
-    ...overrides,
-    fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
-    parent: overrides?.parent ?? Just(context),
+export namespace FiberContext {
+  export function fork(context: FiberContext, overrides?: Partial<FiberContext>): FiberContext {
+    return {
+      ...context,
+      ...overrides,
+      fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
+      parent: overrides?.parent ?? Just(context),
+    }
   }
 }
+
+export const fork = FiberContext.fork

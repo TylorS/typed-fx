@@ -28,11 +28,11 @@ import * as Eff from '@/Eff/index.js'
 import type { Env } from '@/Env/Env.js'
 import * as Exit from '@/Exit/Exit.js'
 import type { Fiber, Live } from '@/Fiber/Fiber.js'
-import type { FiberContext } from '@/FiberContext/index.js'
+import { FiberContext } from '@/FiberContext/index.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import type * as Layer from '@/Layer/Layer.js'
 import type { Closeable } from '@/Scope/Closeable.js'
-import { Service } from '@/Service/index.js'
+import * as Service from '@/Service/index.js'
 import { Trace } from '@/Trace/Trace.js'
 
 /**
@@ -99,15 +99,18 @@ export const getEnv = <R>(__trace?: string): Fx<R, never, Env<R>> => access(from
 /**
  * Ask for a Service from the Env
  */
-export const ask = <A>(service: Service<A>, __trace?: string): RIO<A, A> =>
-  access((r: Env<A>) => r.get(service), __trace)
+export const ask = <S extends Service.Service<any>>(
+  service: S,
+  __trace?: string,
+): RIO<Service.OutputOf<S>, Service.OutputOf<S>> =>
+  access((r: Env<Service.OutputOf<S>>) => r.get(service), __trace)
 
 /**
  * Apply a function to a Service.
  */
 export const asks =
   <S, A>(f: (s: S) => A, __trace?: string) =>
-  (service: Service<S>) =>
+  (service: Service.Service<S>) =>
     access(
       (r: Env<S>) =>
         Fx(function* () {
@@ -118,7 +121,7 @@ export const asks =
 
 export const asksFx =
   <S, R, E, A>(f: (s: S) => Fx<R, E, A>, __trace?: string) =>
-  (service: Service<S>) =>
+  (service: Service.Service<S>) =>
     access(
       (r: Env<S>) =>
         Fx(function* () {
@@ -128,10 +131,10 @@ export const asksFx =
     )
 
 export const asksFx_ =
-  <S>(service: Service<S>) =>
-  <R, E, A>(f: (s: S) => Fx<R, E, A>, __trace?: string) =>
+  <S extends Service.Service<any>>(service: S) =>
+  <R, E, A>(f: (s: Service.OutputOf<S>) => Fx<R, E, A>, __trace?: string) =>
     access(
-      (r: Env<S>) =>
+      (r: Env<Service.OutputOf<S>>) =>
         Fx(function* () {
           return yield* f(yield* r.get(service))
         }),
@@ -150,7 +153,7 @@ export const provide =
  * Provide a single service to the Env.
  */
 export const provideService =
-  <S, I extends S>(service: Service<S>, impl: I, __trace?: string) =>
+  <S, I extends S>(service: Service.Service<S>, impl: I, __trace?: string) =>
   <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
     access((env) => pipe(fx, provide((env as Env<R>).add(service, impl))), __trace)
 
@@ -322,7 +325,7 @@ export const ensuring =
  * Fork a Fiber with ForkParams.
  */
 export const forkWithParams =
-  (params: ForkParams = {}, __trace?: string) =>
+  (params: ForkParams, __trace?: string) =>
   <R, E, A>(fx: Fx<R, E, A>) =>
     new Fork([fx, params], __trace)
 
@@ -330,7 +333,13 @@ export const forkWithParams =
  * Fork a Fiber with default parameters.
  */
 export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Live<E, A>> =>
-  forkWithParams({}, __trace)(fx)
+  Fx(function* () {
+    return yield* forkWithParams(yield* forkFiberContext, __trace)(fx)
+  })
+
+export const forkFiberContext: Of<FiberContext> = Fx(function* () {
+  return FiberContext.fork(yield* getFiberContext)
+})
 
 /**
  * Join a Fiber back with it's parent.

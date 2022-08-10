@@ -5,9 +5,7 @@ import { pipe } from 'hkt-ts'
 import { observe } from './drain.js'
 import { fromFx } from './fromFx.js'
 
-import { Fx, fromLazy, join, provideService, runMain, success } from '@/Fx/index.js'
-import { RootScheduler } from '@/Scheduler/RootScheduler.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
+import { Fx, fromLazy, join, runMain, success } from '@/Fx/index.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(fromFx.name, () => {
@@ -23,7 +21,7 @@ describe(new URL(import.meta.url).pathname, () => {
         yield* join(fiber)
       })
 
-      await pipe(test, provideService(Scheduler, RootScheduler()), runMain)
+      await runMain(test)
     })
   })
 })

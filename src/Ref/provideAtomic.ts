@@ -1,23 +1,22 @@
-import { AnyRef, ErrorsOf, OutputOf, ResourcesOf } from './Ref.js'
+import { AnyRefConstructor, ErrorsOf, OutputOf, ResourcesOf } from './Ref.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
-import { Fx, fromLazy } from '@/Fx/Fx.js'
+import { Fx, Of, fromLazy } from '@/Fx/Fx.js'
 import { Layer } from '@/Layer/Layer.js'
 import { InstanceOf } from '@/Service/index.js'
 
-export function atomic<REF extends AnyRef>(
+export function atomic<REF extends AnyRefConstructor>(
   ref: REF,
 ): Layer<ResourcesOf<REF>, ErrorsOf<REF>, InstanceOf<REF>> {
-  return Layer<InstanceOf<REF>, ResourcesOf<REF>, ErrorsOf<REF>>(
+  return Layer(
     ref.id(),
     Fx(function* () {
       const atomic = Atomic(yield* ref.initial)
-      const get = fromLazy(() => atomic.get())
-      const modify = <B>(f: (a: OutputOf<REF>) => readonly [B, OutputOf<REF>]) =>
+      const get = fromLazy(atomic.get)
+      const modify = <B>(f: (a: OutputOf<REF>) => readonly [B, OutputOf<REF>]): Of<B> =>
         fromLazy(() => atomic.modify(f))
-      const api = new ref(get, modify)
 
-      return api as InstanceOf<REF>
+      return new ref(get, modify)
     }),
   )
 }

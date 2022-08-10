@@ -1,12 +1,18 @@
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 
 import * as Fx from '@/Fx/index.js'
-import { Id, InstanceOf } from '@/Service/index.js'
+import { Id, InstanceOf, Service } from '@/Service/index.js'
 
 export interface RefApi<R, E, A> {
   readonly get: Fx.Fx<R, E, A>
   readonly modify: <B>(f: (a: A) => readonly [B, A]) => Fx.Fx<R, E, B>
 }
+
+export type AnyRefApi =
+  | RefApi<any, any, any>
+  | RefApi<never, never, any>
+  | RefApi<never, any, any>
+  | RefApi<any, never, any>
 
 export type Ref<R, E, A> = ReturnType<typeof Ref<R, E, A>>
 
@@ -31,20 +37,36 @@ export function Ref<R, E, A>(initial: Fx.Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
       super()
     }
 
-    static make<S extends typeof Reference>(
+    static make<S extends AnyRefConstructor>(
       this: S,
       get: RefApi<R, E, A>['get'],
       modify: RefApi<R, E, A>['modify'],
     ): InstanceOf<S> {
-      return new this(get, modify) as InstanceOf<S>
+      return new (this as RefConstructor<R, E, A>)(get, modify) as InstanceOf<S>
     }
 
-    static get<S extends typeof Reference>(this: S) {
+    static get<S extends AnyRefConstructor>(this: S) {
       return Fx.asksFx_(this.id())((ref) => ref.get)
     }
 
-    static modify<S extends typeof Reference, B>(this: S, f: (a: A) => readonly [B, A]) {
+    static modify<S extends AnyRefConstructor, B>(this: S, f: (a: A) => readonly [B, A]) {
       return Fx.asksFx_(this.id())((ref) => ref.modify(f))
     }
   }
 }
+
+export interface RefConstructor<R, E, A> {
+  readonly id: () => Service<any>
+  readonly initial: Fx.Fx<R, E, A>
+  readonly Eq: Eq<A>
+
+  new (get: RefApi<R, E, A>['get'], modify: RefApi<R, E, A>['modify']): RefApi<R, E, A>
+
+  readonly make: <S extends AnyRefConstructor>(
+    this: S,
+    get: RefApi<R, E, A>['get'],
+    modify: RefApi<R, E, A>['modify'],
+  ) => InstanceOf<S>
+}
+
+export type AnyRefConstructor = RefConstructor<any, any, any>

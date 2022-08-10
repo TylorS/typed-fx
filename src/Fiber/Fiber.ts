@@ -24,6 +24,8 @@ export interface Live<E, A> {
   readonly scope: Of<Closeable>
 }
 
+export type AnyLiveFiber = Live<any, any> | Live<never, never> | Live<any, never> | Live<never, any>
+
 export const Live = <E, A>(params: Omit<Live<E, A>, 'tag'>): Live<E, A> => ({
   tag: 'Live',
   ...params,

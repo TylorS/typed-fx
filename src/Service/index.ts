@@ -5,7 +5,7 @@ import { Tagged } from '@/Tagged/index.js'
  */
 export type Service<S> = Tagged<
   {
-    readonly Service: Service<S>
+    readonly Service: S
   },
   symbol
 >

@@ -7,13 +7,13 @@ import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { Closeable } from '@/Scope/Closeable.js'
 import type { Scope } from '@/Scope/Scope.js'
 
-export interface ForkParams extends Partial<FiberContext> {
+export interface ForkParams extends FiberContext {
   readonly scope?: Closeable // Scope to use explicitly for this Fiber
   readonly forkScope?: Scope // Scope to use to fork for this Fiber, used only when `scope` is not provided.
 }
 
 export class Fork<R, E, A> extends FxInstruction<
-  readonly [Fx<R, E, A>, ForkParams?],
+  readonly [Fx<R, E, A>, ForkParams],
   R,
   never,
   Live<E, A>
