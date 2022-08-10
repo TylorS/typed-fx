@@ -11,15 +11,14 @@ import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import * as IE from 'hkt-ts/Typeclass/IdentityEither'
 import { Top2 } from 'hkt-ts/Typeclass/Top'
 
-import { Pending, wait } from '../Future/index.js'
-import * as Fx from '../Fx/index.js'
-
 import { AnyFiber, ErrorsOf, Fiber, OutputOf, Synthetic } from './Fiber.js'
 
 import { Empty } from '@/Cause/Cause.js'
 import * as Exit from '@/Exit/index.js'
 import { makeSequentialAssociative } from '@/Exit/index.js'
 import { FiberId } from '@/FiberId/FiberId.js'
+import { Pending, wait } from '@/Future/index.js'
+import * as Fx from '@/Fx/index.js'
 
 export interface FiberHKT extends HKT2 {
   readonly type: Fiber<this[Params.E], this[Params.A]>

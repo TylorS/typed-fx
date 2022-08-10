@@ -1,6 +1,5 @@
-import { Fx } from '../Fx/Fx.js'
-import { Scope } from '../Scope/Scope.js'
-
+import { Fx } from '@/Fx/Fx.js'
+import { Scope } from '@/Scope/Scope.js'
 import { Service } from '@/Service/index.js'
 
 export interface Layer<R, E, A> {

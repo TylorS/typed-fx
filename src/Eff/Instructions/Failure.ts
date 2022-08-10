@@ -1,12 +1,11 @@
 import { pipe } from 'hkt-ts'
 import { Left, isLeft } from 'hkt-ts/Either'
 
-import { Eff } from '../Eff.js'
-import { handle } from '../handle.js'
-
 import { GetTrace, getTrace } from './Trace.js'
 
 import * as Cause from '@/Cause/Cause.js'
+import { Eff } from '@/Eff/Eff.js'
+import { handle } from '@/Eff/handle.js'
 import { Exit, success } from '@/Exit/Exit.js'
 
 export class Failure<E> extends Eff.Instruction<Cause.Cause<E>, never> {

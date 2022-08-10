@@ -1,7 +1,6 @@
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 
-import * as Fx from '../Fx/index.js'
-
+import * as Fx from '@/Fx/index.js'
 import { Id, InstanceOf } from '@/Service/index.js'
 
 export interface RefApi<R, E, A> {

@@ -1,8 +1,8 @@
 import { Either, Left, Right } from 'hkt-ts/Either'
 
-import { Fx, async, fromLazy } from '../Fx/Fx.js'
-
 import { Future, addObserver } from './Future.js'
+
+import { Fx, async, fromLazy } from '@/Fx/Fx.js'
 
 export function wait<R, E, A>(future: Future<R, E, A>): Fx<R, E, A> {
   return async((cb) =>

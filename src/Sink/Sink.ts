@@ -1,9 +1,8 @@
 import { constant, flow, pipe } from 'hkt-ts'
 import { Left, Right } from 'hkt-ts/Either'
 
-import { Fx, IO, getEnv, getFiberScope, provide, unit } from '../Fx/Fx.js'
-
 import { Cause } from '@/Cause/Cause.js'
+import { Fx, IO, getEnv, getFiberScope, provide, unit } from '@/Fx/Fx.js'
 
 export abstract class Sink<in out E, in A> {
   abstract readonly event: (a: A) => IO<E, unknown>

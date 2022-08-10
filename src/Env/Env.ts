@@ -1,7 +1,8 @@
 import { pipe } from 'hkt-ts'
 import { isLeft } from 'hkt-ts/Either'
 
-import * as Fiber from '../Fiber/index.js'
+import { Exit } from '@/Exit/Exit.js'
+import * as Fiber from '@/Fiber/index.js'
 import {
   Fx,
   Of,
@@ -14,12 +15,10 @@ import {
   lazy,
   provide,
   success,
-} from '../Fx/Fx.js'
-import { never } from '../Fx/hkt.js'
-import type { Layer } from '../Layer/Layer.js'
-import { Scope } from '../Scope/Scope.js'
-
-import { Exit } from '@/Exit/Exit.js'
+} from '@/Fx/Fx.js'
+import { never } from '@/Fx/hkt.js'
+import type { Layer } from '@/Layer/Layer.js'
+import { Scope } from '@/Scope/Scope.js'
 import * as Service from '@/Service/index.js'
 
 export interface Env<in R> {

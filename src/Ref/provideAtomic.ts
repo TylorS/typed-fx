@@ -1,9 +1,8 @@
-import { Fx, fromLazy } from '../Fx/Fx.js'
-import { Layer } from '../Layer/Layer.js'
-
 import { AnyRef, ErrorsOf, OutputOf, ResourcesOf } from './Ref.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
+import { Fx, fromLazy } from '@/Fx/Fx.js'
+import { Layer } from '@/Layer/Layer.js'
 import { InstanceOf } from '@/Service/index.js'
 
 export function atomic<REF extends AnyRef>(

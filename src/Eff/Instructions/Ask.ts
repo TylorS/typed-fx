@@ -1,7 +1,7 @@
 import { pipe } from 'hkt-ts/function'
 
-import { Eff } from '../Eff.js'
-import { handle } from '../handle.js'
+import { Eff } from '@/Eff/Eff.js'
+import { handle } from '@/Eff/handle.js'
 
 export class Ask<R> extends Eff.Instruction<void, R> {
   static tag = 'Ask'

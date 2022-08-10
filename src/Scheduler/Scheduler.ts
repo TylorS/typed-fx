@@ -1,8 +1,7 @@
-import { Fiber } from '../Fiber/Fiber.js'
-import { ForkParams } from '../Fx/Instructions/Fork.js'
-import { Fx, RIO, ask } from '../Fx/index.js'
-
 import * as Clock from '@/Clock/Clock.js'
+import { Fiber } from '@/Fiber/Fiber.js'
+import { ForkParams } from '@/Fx/Instructions/Fork.js'
+import { Fx, RIO, ask } from '@/Fx/index.js'
 import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Service } from '@/Service/index.js'

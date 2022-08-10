@@ -1,7 +1,7 @@
 import { Lazy, pipe } from 'hkt-ts'
 
-import { Eff } from '../Eff.js'
-import { handle } from '../handle.js'
+import { Eff } from '@/Eff/Eff.js'
+import { handle } from '@/Eff/handle.js'
 
 export class FromLazy<A> extends Eff.Instruction<Lazy<A>, A> {
   static tag = 'FromLazy'

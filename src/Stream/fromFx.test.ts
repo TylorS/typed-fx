@@ -2,13 +2,12 @@ import { deepStrictEqual } from 'assert'
 
 import { pipe } from 'hkt-ts'
 
-import { RootScheduler } from '../Scheduler/RootScheduler.js'
-import { Scheduler } from '../Scheduler/Scheduler.js'
-
 import { observe } from './drain.js'
 import { fromFx } from './fromFx.js'
 
 import { Fx, fromLazy, join, provideService, runMain, success } from '@/Fx/index.js'
+import { RootScheduler } from '@/Scheduler/RootScheduler.js'
+import { Scheduler } from '@/Scheduler/Scheduler.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(fromFx.name, () => {

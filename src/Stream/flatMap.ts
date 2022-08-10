@@ -1,14 +1,13 @@
 import { pipe } from 'hkt-ts'
 
-import { Env } from '../Env/Env.js'
-import * as Fx from '../Fx/index.js'
-import { Scheduler } from '../Scheduler/Scheduler.js'
-import { Sink, makeSink } from '../Sink/Sink.js'
-
 import { Stream } from './Stream.js'
 
 import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
 import { Cause } from '@/Cause/Cause.js'
+import { Env } from '@/Env/Env.js'
+import * as Fx from '@/Fx/index.js'
+import { Scheduler } from '@/Scheduler/Scheduler.js'
+import { Sink, makeSink } from '@/Sink/Sink.js'
 
 export function flatMap<A, R2, E2, B>(f: (a: A) => Stream<R2, E2, B>) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R | R2, E | E2, B> => new FlatMap(stream, f)

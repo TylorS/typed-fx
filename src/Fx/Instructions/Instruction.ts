@@ -1,5 +1,3 @@
-import type { Fx } from '../Fx.js'
-
 import type { Access, Provide } from './Access.js'
 import type { AddTrace } from './AddTrace.js'
 import type { Async } from './Async.js'
@@ -15,6 +13,8 @@ import { RaceAll } from './RaceAll.js'
 import type { SetInterruptStatus } from './SetInterruptStatus.js'
 import type { WithConcurrency } from './WithConcurrency.js'
 import type { ZipAll } from './ZipAll.js'
+
+import type { Fx } from '@/Fx/Fx.js'
 
 export type Instruction<R, E, A> =
   | Access<R, R, E, A>

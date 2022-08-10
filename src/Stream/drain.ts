@@ -1,9 +1,9 @@
-import { Fiber } from '../Fiber/Fiber.js'
-import { Fx, ask } from '../Fx/index.js'
-import { Scheduler } from '../Scheduler/Scheduler.js'
-import { Drain, Sink, makeSink } from '../Sink/Sink.js'
-
 import { Stream } from './Stream.js'
+
+import { Fiber } from '@/Fiber/Fiber.js'
+import { Fx, ask } from '@/Fx/index.js'
+import { Scheduler } from '@/Scheduler/Scheduler.js'
+import { Drain, Sink, makeSink } from '@/Sink/Sink.js'
 
 /**
  * Fork a Stream's process into a Fiber

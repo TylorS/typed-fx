@@ -1,21 +1,22 @@
-import * as Eff from '@/Eff/index.js'
-import { HKT3, Params, pipe, Variance } from 'hkt-ts'
-import * as R from 'hkt-ts/Record'
+import { HKT3, Params, Variance, pipe } from 'hkt-ts'
+import * as A from 'hkt-ts/Array'
+import { Left, Right } from 'hkt-ts/Either'
 import * as M from 'hkt-ts/Map'
+import * as R from 'hkt-ts/Record'
 import * as S from 'hkt-ts/Set'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
+import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
 import * as AF from 'hkt-ts/Typeclass/AssociativeFlatten'
+import { Bottom3 } from 'hkt-ts/Typeclass/Bottom'
 import * as CB from 'hkt-ts/Typeclass/CommutativeBoth'
 import * as C from 'hkt-ts/Typeclass/Covariant'
 import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
+import { IdentityEither3 } from 'hkt-ts/Typeclass/IdentityEither'
 import * as T from 'hkt-ts/Typeclass/Top'
+
 import * as Fx from './Fx.js'
 
-import * as A from 'hkt-ts/Array'
-import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
-import { Left, Right } from 'hkt-ts/Either'
-import { IdentityEither3 } from 'hkt-ts/Typeclass/IdentityEither'
-import { Bottom3 } from 'hkt-ts/Typeclass/Bottom'
+import * as Eff from '@/Eff/index.js'
 
 export interface FxHKT extends HKT3 {
   readonly type: Fx.Fx<this[Params.R], this[Params.E], this[Params.A]>
@@ -137,7 +138,7 @@ export const eventually = AE.eventually<FxHKT>({ ...AssociativeEither, ...Covari
 export const orElse = AE.orElse<FxHKT>({ ...AssociativeEither, ...Covariant })
 
 export const Bottom: Bottom3<FxHKT> = {
-  bottom: Fx.async(() => Left(Fx.unit))
+  bottom: Fx.async(() => Left(Fx.unit)),
 }
 
 export const bottom = Bottom.bottom

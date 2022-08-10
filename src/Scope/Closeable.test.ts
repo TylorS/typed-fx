@@ -2,12 +2,12 @@ import { deepStrictEqual } from 'assert'
 
 import { Right } from 'hkt-ts/Either'
 
-import { Finalizer } from '../Finalizer/Finalizer.js'
-import { Fx, success } from '../Fx/Fx.js'
-import { runMain } from '../Fx/run.js'
-
 import { Closeable, wait } from './Closeable.js'
 import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
+
+import { Finalizer } from '@/Finalizer/Finalizer.js'
+import { Fx, success } from '@/Fx/Fx.js'
+import { runMain } from '@/Fx/run.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(wait.name, () => {

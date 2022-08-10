@@ -2,9 +2,8 @@
 import { pipe } from 'hkt-ts'
 import { concatAll } from 'hkt-ts/Typeclass/Associative'
 
-import { Eff } from '../Eff.js'
-import { handle } from '../handle.js'
-
+import { Eff } from '@/Eff/Eff.js'
+import { handle } from '@/Eff/handle.js'
 import * as Trace from '@/Trace/Trace.js'
 
 export class AddTrace<Y, R> extends Eff.Instruction<readonly [Eff<Y, R>, Trace.Trace], R> {
