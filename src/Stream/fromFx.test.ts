@@ -8,7 +8,7 @@ import { Scheduler } from '../Scheduler/Scheduler.js'
 import { observe } from './drain.js'
 import { fromFx } from './fromFx.js'
 
-import { Fx, fromLazy, join, provideService, runMain, success } from '@/Fx/Fx/index.js'
+import { Fx, fromLazy, join, provideService, runMain, success } from '@/Fx/index.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(fromFx.name, () => {

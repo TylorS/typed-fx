@@ -1,8 +1,8 @@
 import { Just, Maybe } from 'hkt-ts/Maybe'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import type { FiberRefs } from '@/Fx/FiberRefs/FiberRefs.js'
-import type { Scheduler } from '@/Fx/Scheduler/Scheduler.js'
+import type { FiberRefs } from '@/FiberRefs/FiberRefs.js'
+import type { Scheduler } from '@/Scheduler/Scheduler.js'
 import type { Platform } from '@/Platform/Platform.js'
 
 export interface FiberContext {

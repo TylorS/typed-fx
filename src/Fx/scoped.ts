@@ -11,7 +11,7 @@ import {
   uninterruptable,
 } from './Fx.js'
 
-import { Scope } from '@/Fx/Scope/Scope.js'
+import { Scope } from '@/Scope/Scope.js'
 
 /**
  * Run a Scoped Fx within an isolated Scope, cleaning up those resources as soon as complete.

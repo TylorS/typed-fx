@@ -1,7 +1,7 @@
 import type { Closeable } from './Closeable.js'
 import { ScopeState } from './ScopeState.js'
 
-import { FinalizationStrategy, Finalizer } from '@/Fx/Finalizer/Finalizer.js'
+import { FinalizationStrategy, Finalizer } from '@/Finalizer/Finalizer.js'
 import { Service } from '@/Service/index.js'
 
 export interface Scope {

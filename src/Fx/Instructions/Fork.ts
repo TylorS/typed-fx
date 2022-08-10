@@ -2,10 +2,10 @@ import type { Fx } from '../Fx.js'
 
 import { FxInstruction } from './FxInstruction.js'
 
-import type { Live } from '@/Fx/Fiber/Fiber.js'
-import type { FiberContext } from '@/Fx/FiberContext/FiberContext.js'
-import type { Closeable } from '@/Fx/Scope/Closeable.js'
-import type { Scope } from '@/Fx/Scope/Scope.js'
+import type { Live } from '@/Fiber/Fiber.js'
+import type { FiberContext } from '@/FiberContext/FiberContext.js'
+import type { Closeable } from '@/Scope/Closeable.js'
+import type { Scope } from '@/Scope/Scope.js'
 
 export interface ForkParams extends Partial<FiberContext> {
   readonly scope?: Closeable // Scope to use explicitly for this Fiber

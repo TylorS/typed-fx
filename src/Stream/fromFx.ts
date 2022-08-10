@@ -1,6 +1,6 @@
 import { Stream } from './Stream.js'
 
-import * as Fx from '@/Fx/Fx/index.js'
+import * as Fx from '@/Fx/index.js'
 import * as Schedule from '@/Schedule/index.js'
 
 export class FromFx<R, E, A> extends Stream<R, E, A> {

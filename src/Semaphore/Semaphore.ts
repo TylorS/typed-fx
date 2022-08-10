@@ -3,9 +3,9 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Fx, Of, fromLazy, unit } from '../Fx/Fx.js'
 
-import { MutableFutureQueue } from '@/Fx/Future/MutableFutureQueue.js'
-import { wait } from '@/Fx/Future/wait.js'
-import { fiberScoped, managed, scoped } from '@/Fx/Fx/scoped.js'
+import { MutableFutureQueue } from '@/Future/MutableFutureQueue.js'
+import { wait } from '@/Future/wait.js'
+import { fiberScoped, managed, scoped } from '@/Fx/scoped.js'
 
 export class Semaphore {
   protected waiting = MutableFutureQueue<never, never, void>()

@@ -5,7 +5,7 @@ import type { Scheduler } from './Scheduler.js'
 
 import * as Clock from '@/Clock/Clock.js'
 import { Disposable } from '@/Disposable/Disposable.js'
-import * as Fx from '@/Fx/Fx/Fx.js'
+import * as Fx from '@/Fx/Fx.js'
 import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { UnixTime } from '@/Time/index.js'

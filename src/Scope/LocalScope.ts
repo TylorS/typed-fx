@@ -7,8 +7,8 @@ import { ReleaseMap } from './ReleaseMap.js'
 import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 
 import { Exit, makeSequentialAssociative } from '@/Exit/Exit.js'
-import { FinalizationStrategy, Finalizer } from '@/Fx/Finalizer/Finalizer.js'
-import { Fx, Of, lazy, success, unit } from '@/Fx/Fx/Fx.js'
+import { FinalizationStrategy, Finalizer } from '@/Finalizer/Finalizer.js'
+import { Fx, Of, lazy, success, unit } from '@/Fx/Fx.js'
 
 const { concat: concatExits } = makeSequentialAssociative<any, any>(First)
 

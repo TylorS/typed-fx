@@ -3,7 +3,7 @@ import { Left, Right } from 'hkt-ts/Either'
 import { Scope } from './Scope.js'
 
 import { Exit } from '@/Exit/Exit.js'
-import { Of, async, fromLazy, lazy, success } from '@/Fx/Fx/Fx.js'
+import { Of, async, fromLazy, lazy, success } from '@/Fx/Fx.js'
 import { Service } from '@/Service/index.js'
 
 export interface Closeable extends Scope {

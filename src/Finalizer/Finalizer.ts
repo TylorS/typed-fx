@@ -2,7 +2,7 @@ import { Branded } from 'hkt-ts/Branded'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Exit } from '@/Exit/Exit.js'
-import { Fx } from '@/Fx/Fx/Fx.js'
+import { Fx } from '@/Fx/Fx.js'
 
 export interface Finalizer<R = never, E = never> {
   (exit: Exit<any, any>): Fx<R, E, unknown>

@@ -2,7 +2,7 @@ import type { Fx } from '../Fx.js'
 
 import { FxInstruction } from './FxInstruction.js'
 
-import type { Env } from '@/Fx/Env/Env.js'
+import type { Env } from '@/Env/Env.js'
 
 export class Access<R, R2, E, A> extends FxInstruction<
   (resources: Env<R>) => Fx<R2, E, A>,

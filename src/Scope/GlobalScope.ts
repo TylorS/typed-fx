@@ -4,8 +4,8 @@ import { Closeable } from './Closeable.js'
 import { LocalScope } from './LocalScope.js'
 import { Open } from './ScopeState.js'
 
-import { FinalizationStrategy, SequentialStrategy } from '@/Fx/Finalizer/Finalizer.js'
-import { success, unit } from '@/Fx/Fx/Fx.js'
+import { FinalizationStrategy, SequentialStrategy } from '@/Finalizer/Finalizer.js'
+import { success, unit } from '@/Fx/Fx.js'
 
 export const GlobalScope: Closeable = {
   state: Open,

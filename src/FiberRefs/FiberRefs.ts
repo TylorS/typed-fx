@@ -3,11 +3,11 @@ import { Just, Maybe, Nothing, isJust } from 'hkt-ts/Maybe'
 import { pipe } from 'hkt-ts/function'
 
 import * as Atomic from '@/Atomic/Atomic.js'
-import type { AnyFiber } from '@/Fx/Fiber/index.js'
-import * as FiberRef from '@/Fx/FiberRef/index.js'
-import { AnyFiberRef } from '@/Fx/FiberRef/index.js'
-import * as Fx from '@/Fx/Fx/Fx.js'
-import { Lock, Semaphore, acquire } from '@/Fx/Semaphore/Semaphore.js'
+import type { AnyFiber } from '@/Fiber/index.js'
+import * as FiberRef from '@/FiberRef/index.js'
+import { AnyFiberRef } from '@/FiberRef/index.js'
+import * as Fx from '@/Fx/Fx.js'
+import { Lock, Semaphore, acquire } from '@/Semaphore/Semaphore.js'
 
 export interface FiberRefs {
   /**
