@@ -10,5 +10,6 @@ export class WithConcurrency<R, E, A> extends FxInstruction<
   E,
   A
 > {
-  readonly tag = 'WithConcurrency'
+  static tag = 'WithConcurrency' as const
+  readonly tag = WithConcurrency.tag
 }

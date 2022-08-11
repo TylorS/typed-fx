@@ -4,6 +4,7 @@ import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberStatus } from '@/FiberStatus/index.js'
 import type { Of } from '@/Fx/Fx.js'
 import type { Closeable } from '@/Scope/Closeable.js'
+import { Trace } from '@/Trace/Trace.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
 
@@ -22,6 +23,8 @@ export interface Live<E, A> {
   readonly exit: Of<Exit<E, A>>
   readonly context: Of<FiberContext>
   readonly scope: Of<Closeable>
+  readonly trace: Of<Trace>
+  readonly interruptAs: (id: FiberId) => Of<boolean>
 }
 
 export type AnyLiveFiber = Live<any, any> | Live<never, never> | Live<any, never> | Live<never, any>
@@ -36,6 +39,7 @@ export interface Synthetic<E, A> {
   readonly id: FiberId.Synthetic
   readonly exit: Of<Exit<E, A>>
   readonly inheritFiberRefs: Of<void>
+  readonly interruptAs: (id: FiberId) => Of<boolean>
 }
 
 export const Synthetic = <E, A>(params: Omit<Synthetic<E, A>, 'tag'>): Synthetic<E, A> => ({

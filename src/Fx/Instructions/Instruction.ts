@@ -1,15 +1,15 @@
 import type { Access, Provide } from './Access.js'
 import type { AddTrace } from './AddTrace.js'
 import type { Async } from './Async.js'
-import { Ensuring } from './Ensuring.js'
+import type { Ensuring } from './Ensuring.js'
 import type { Failure } from './Failure.js'
 import type { Fork } from './Fork.js'
 import type { FromLazy } from './FromLazy.js'
 import type { GetFiberContext } from './GetFiberContext.js'
 import type { GetFiberScope } from './GetFiberScope.js'
 import type { GetTrace } from './GetTrace.js'
-import { Join } from './Join.js'
-import { RaceAll } from './RaceAll.js'
+import type { Join } from './Join.js'
+import type { RaceAll } from './RaceAll.js'
 import type { SetInterruptStatus } from './SetInterruptStatus.js'
 import type { WithConcurrency } from './WithConcurrency.js'
 import type { ZipAll } from './ZipAll.js'
@@ -42,16 +42,10 @@ export type AnyInstruction =
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-export type ResourcesFromInstruction<T> = T extends AnyInstruction
-  ? ReturnType<T['__R']> // Attempt to shortcut the inference process
-  : never
+export type ResourcesFromInstruction<T extends AnyInstruction> = ReturnType<T['__R']> // Attempt to shortcut the inference process
 
-export type ErrorsFromInstruction<T> = T extends AnyInstruction
-  ? ReturnType<T['__E']> // Attempt to shortcut the inference process
-  : never
+export type ErrorsFromInstruction<T extends AnyInstruction> = ReturnType<T['__E']> // Attempt to shortcut the inference process
 
-export type OutputFromInstruction<T> = T extends AnyInstruction
-  ? ReturnType<T['__A']> // Attempt to shortcut the inference process
-  : never
+export type OutputFromInstruction<T extends AnyInstruction> = ReturnType<T['__A']> // Attempt to shortcut the inference process
 
 /* eslint-enable @typescript-eslint/no-unused-vars */

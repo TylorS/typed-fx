@@ -10,5 +10,6 @@ export class Ensuring<R, E, A> extends FxInstruction<
   E,
   A
 > {
-  readonly tag = 'Ensuring'
+  static tag = 'Ensuring' as const
+  readonly tag = Ensuring.tag
 }

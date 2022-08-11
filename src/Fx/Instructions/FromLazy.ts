@@ -7,4 +7,5 @@ import { FxInstruction } from './FxInstruction.js'
  */
 export class FromLazy<A> extends FxInstruction<Lazy<A>, never, never, A> {
   static tag = 'FromLazy' as const
+  readonly tag = FromLazy.tag
 }

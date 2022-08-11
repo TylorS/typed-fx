@@ -1,3 +1,4 @@
+import { Disposable } from '@/Disposable/Disposable.js'
 import { Env } from '@/Env/Env.js'
 import * as Fiber from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/index.js'
@@ -6,7 +7,12 @@ import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Closeable } from '@/Scope/Closeable.js'
 
-export interface Scheduler {
+/**
+ * Scheduler is capable of converting Fx into a runnning Fiber given a particular Schedule.
+ * It implements the Disposable interface, it will NOT interrupt running fibers, but WILL
+ * clear all currently scheduled Fibers to start.
+ */
+export interface Scheduler extends Disposable {
   readonly schedule: <R, E, A>(
     fx: Fx<R, E, A>,
     schedule: Schedule,
@@ -21,6 +27,11 @@ export function schedule(schedule: Schedule) {
 
       return context.scheduler.schedule(fx, schedule, context)
     })
+}
+
+export function scheduleWith<R>(schedule: Schedule, context: SchedulerContext<R>) {
+  return <E, A>(fx: Fx<R, E, A>): Fiber.Live<E, ScheduleState> =>
+    context.scheduler.schedule(fx, schedule, context)
 }
 
 export function getSchedulerContext<R>() {

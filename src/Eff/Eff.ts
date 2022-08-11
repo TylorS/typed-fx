@@ -38,7 +38,7 @@ export namespace Eff {
 
   export abstract class Instruction<I, O> {
     static tag: string
-    readonly tag = Instruction.tag
+    abstract readonly tag: string
 
     constructor(readonly input: I, readonly __trace?: string) {}
 

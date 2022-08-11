@@ -10,5 +10,6 @@ export class ZipAll<FX extends ReadonlyArray<AnyFx>> extends FxInstruction<
     readonly [K in keyof FX]: OutputOf<FX[K]>
   }
 > {
-  readonly tag = 'ZipAll'
+  static tag = 'ZipAll' as const
+  readonly tag = ZipAll.tag
 }

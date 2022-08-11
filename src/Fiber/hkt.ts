@@ -32,6 +32,7 @@ export const Bicovariant: B.Bicovariant2<FiberHKT> = {
         return pipe(yield* fiber.exit, Exit.bimap(f, g))
       }),
       inheritFiberRefs: Fx.inheritFiberRefs(fiber),
+      interruptAs: fiber.interruptAs,
     }),
 }
 
@@ -67,6 +68,11 @@ export const AssociativeBoth: AB.AssociativeBoth2<FiberHKT> = {
           yield* Fx.inheritFiberRefs(f)
           yield* Fx.inheritFiberRefs(s)
         }),
+        interruptAs: (id) =>
+          pipe(
+            Fx.zipAll([f.interruptAs(id), s.interruptAs(id)] as const),
+            Fx.map(([a, b]) => a && b),
+          ),
       }),
 }
 
@@ -92,6 +98,11 @@ export const CommutativeBoth: CB.CommutativeBoth2<FiberHKT> = {
           yield* Fx.inheritFiberRefs(f)
           yield* Fx.inheritFiberRefs(s)
         }),
+        interruptAs: (id) =>
+          pipe(
+            Fx.zipAll([f.interruptAs(id), s.interruptAs(id)] as const),
+            Fx.map(([a, b]) => a && b),
+          ),
       }),
 }
 
@@ -104,6 +115,7 @@ export function fromExit<E, A>(exit: Exit.Exit<E, A>): Synthetic<E, A> {
     id: new FiberId.Synthetic([]),
     exit: Fx.success(exit),
     inheritFiberRefs: Fx.unit,
+    interruptAs: () => Fx.success(false),
   })
 }
 
@@ -151,6 +163,7 @@ export const never: Fiber<never, never> = Synthetic({
   id: new FiberId.Synthetic([]),
   exit: wait(Pending()),
   inheritFiberRefs: Fx.unit,
+  interruptAs: () => Fx.success(false),
 })
 
 export const Bottom: Bottom2<FiberHKT> = {
@@ -181,6 +194,11 @@ export const AssociativeEither: AE.AssociativeEither2<FiberHKT> = {
             ),
           )
         }),
+        interruptAs: (id) =>
+          pipe(
+            Fx.zipAll([f.interruptAs(id), s.interruptAs(id)] as const),
+            Fx.map(([a, b]) => a && b),
+          ),
       }),
 }
 

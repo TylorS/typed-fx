@@ -7,7 +7,8 @@ import { handle } from '@/Eff/handle.js'
 import * as Trace from '@/Trace/Trace.js'
 
 export class AddTrace<Y, R> extends Eff.Instruction<readonly [Eff<Y, R>, Trace.Trace], R> {
-  readonly tag = 'AddTrace'
+  static tag = 'AddTrace' as const
+  readonly tag = AddTrace.tag
 }
 
 export const addTrace =
@@ -30,7 +31,8 @@ export const addRuntimeTrace =
     pipe(Trace.Trace.runtime(error, targetObject), addTrace)(eff)
 
 export class GetTrace extends Eff.Instruction<void, Trace.Trace> {
-  readonly tag = 'GetTrace'
+  static tag = 'GetTrace' as const
+  readonly tag = GetTrace.tag
 }
 
 export const getTrace = new GetTrace()
@@ -41,7 +43,7 @@ const concatTraces = concatAll(Trace.Associative)(Trace.EmptyTrace)
 
 export const withTracing =
   (parentTrace?: Trace.Trace) =>
-  <Y, Y2, R>(eff: Eff<Y | Tracing<Y2, any>, R>): Eff<Exclude<Y, Tracing<Y2, any>> | Y2, R> =>
+  <Y, R>(eff: Eff<Y | Tracing<Y, any>, R>): Eff<Exclude<Y, Tracing<Y, any>>, R> =>
     pipe(
       eff,
       handle(function* (gen, result) {
@@ -54,36 +56,43 @@ export const withTracing =
           return () => traces.shift()
         }
 
-        while (!result.done) {
-          const instr = result.value
-
+        function* handleInstruction<
+          Y,
+          R,
+        >(gen: Generator<Y | Tracing<Y, any>, R>, instr: Y | Tracing<Y, any>): Generator<Exclude<Y, Tracing<Y, any>>, IteratorResult<Y | Tracing<Y, any>, R>> {
           if (instr instanceof GetTrace) {
-            result = gen.next(getTrace())
+            return gen.next(getTrace())
           } else if (instr instanceof AddTrace<Y, any>) {
             const [eff, trace] = instr.input
 
             const undo = pushTrace(trace)
 
             const nested = Eff.gen(eff)
+
             let nestedResult = nested.next()
-
             while (!nestedResult.done) {
-              const instr = nestedResult.value
-
-              if (isTraced(instr)) {
-                const undo = pushTrace(Trace.Trace.custom(instr.__trace))
-                nestedResult = nested.next(yield instr)
-                undo()
-              } else {
-                nestedResult = nested.next(yield instr)
-              }
+              nestedResult = yield* (handleInstruction as any)(nested, nestedResult.value)
             }
 
-            result = gen.next(nestedResult.value)
+            const result = gen.next(nestedResult.value)
+
             undo()
+
+            return result
+          } else if (isTraced(instr)) {
+            const undo = pushTrace(Trace.Trace.custom(instr.__trace))
+            const result = gen.next(yield instr as any)
+
+            undo()
+
+            return result
           } else {
-            result = gen.next(yield instr as Exclude<Y, Tracing<Y2, any>>)
+            return gen.next(yield instr as any)
           }
+        }
+
+        while (!result.done) {
+          result = yield* handleInstruction<Y, R>(gen, result.value)
         }
 
         return result.value

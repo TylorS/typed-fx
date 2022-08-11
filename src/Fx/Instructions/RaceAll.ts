@@ -8,5 +8,6 @@ export class RaceAll<FX extends ReadonlyArray<AnyFx>> extends FxInstruction<
   ErrorsOf<FX[number]>,
   OutputOf<FX[number]>
 > {
-  readonly tag = 'RaceAll'
+  static tag = 'RaceAll' as const
+  readonly tag = RaceAll.tag
 }

@@ -10,5 +10,6 @@ export class AddTrace<R, E, A> extends FxInstruction<
   E,
   A
 > {
-  readonly tag = ''
+  static tag = 'AddTrace' as const
+  readonly tag = AddTrace.tag
 }

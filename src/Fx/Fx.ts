@@ -18,6 +18,7 @@ import type {
   Instruction,
   ResourcesFromInstruction,
 } from './Instructions/Instruction.js'
+import { Join } from './Instructions/Join.js'
 import { RaceAll } from './Instructions/RaceAll.js'
 import { SetInterruptStatus } from './Instructions/SetInterruptStatus.js'
 import { WithConcurrency } from './Instructions/WithConcurrency.js'
@@ -342,18 +343,10 @@ export const forkFiberContext: Of<FiberContext> = Fx(function* () {
 })
 
 /**
- * Join a Fiber back with it's parent.
+ * Join a Fiber back with its parent.
  */
-export const join = <E, A>(fiber: Fiber<E, A>): IO<E, A> =>
-  Fx(function* () {
-    const exit = yield* fiber.exit
-
-    if (isRight(exit)) {
-      yield* inheritFiberRefs(fiber)
-    }
-
-    return yield* fromExit(exit)
-  })
+export const join = <E, A>(fiber: Fiber<E, A>, __trace?: string): IO<E, A> =>
+  new Join(fiber, __trace)
 
 /**
  * Capture any failures locally.

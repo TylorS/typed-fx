@@ -4,7 +4,8 @@ import { Eff } from '@/Eff/Eff.js'
 import { handle } from '@/Eff/handle.js'
 
 export class Ask<R> extends Eff.Instruction<void, R> {
-  static tag = 'Ask'
+  static tag = 'Ask' as const
+  readonly tag = Ask.tag
 }
 
 export const ask = <R>(): Eff<Ask<R>, R> => new Ask<R>()

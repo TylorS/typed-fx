@@ -4,7 +4,8 @@ import { Eff } from '@/Eff/Eff.js'
 import { handle } from '@/Eff/handle.js'
 
 export class FromLazy<A> extends Eff.Instruction<Lazy<A>, A> {
-  static tag = 'FromLazy'
+  static tag = 'FromLazy' as const
+  readonly tag = FromLazy.tag
 }
 
 export const fromLazy = <A>(f: Lazy<A>, __trace?: string): Eff<FromLazy<A>, A> =>

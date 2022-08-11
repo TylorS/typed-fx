@@ -9,7 +9,8 @@ import { handle } from '@/Eff/handle.js'
 import { Exit, success } from '@/Exit/Exit.js'
 
 export class Failure<E> extends Eff.Instruction<Cause.Cause<E>, never> {
-  static tag = 'Failure'
+  static tag = 'Failure' as const
+  readonly tag = Failure.tag
 }
 
 export function failure<E>(cause: Cause.Cause<E>, __trace?: string): Eff<Failure<E>, never> {

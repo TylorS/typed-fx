@@ -10,7 +10,8 @@ export class Access<R, R2, E, A> extends FxInstruction<
   E,
   A
 > {
-  readonly tag = 'Access'
+  static tag = 'Access' as const
+  readonly tag = Access.tag
 }
 
 export class Provide<R, E, A> extends FxInstruction<
@@ -19,5 +20,6 @@ export class Provide<R, E, A> extends FxInstruction<
   E,
   A
 > {
-  readonly tag = 'Provide'
+  static tag = 'Provide' as const
+  readonly tag = Provide.tag
 }

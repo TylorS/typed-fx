@@ -5,7 +5,8 @@ import type { Fx } from '../Fx.js'
 import { FxInstruction } from './FxInstruction.js'
 
 export class Async<R, E, A> extends FxInstruction<AsyncRegister<R, E, A>, R, E, A> {
-  readonly tag = 'Async'
+  static tag = 'Async' as const
+  readonly tag = Async.tag
 }
 
 export interface AsyncRegister<R, E, A> {

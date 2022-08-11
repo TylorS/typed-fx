@@ -18,5 +18,6 @@ export class Fork<R, E, A> extends FxInstruction<
   never,
   Live<E, A>
 > {
-  readonly tag = 'Fork'
+  static tag = 'Fork' as const
+  readonly tag = Fork.tag
 }

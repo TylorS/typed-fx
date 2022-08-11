@@ -7,4 +7,7 @@ export class SetInterruptStatus<R, E, A> extends FxInstruction<
   R,
   E,
   A
-> {}
+> {
+  static tag = 'SetInterruptStatus' as const
+  readonly tag = SetInterruptStatus.tag
+}
