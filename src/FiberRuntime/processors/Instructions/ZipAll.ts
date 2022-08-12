@@ -48,7 +48,7 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
       ]
     }
 
-    const trace = getTraceUpTo(state.trace, context.platform.maxOpCount)
+    const trace = getTraceUpTo(state.trace, context.platform.maxTraceCount)
     const [future, onExit] = zipAllFuture(zipAll.input.length)
 
     const deleted = 0
@@ -75,6 +75,8 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
 
       return runtime
     })
+
+    runtimes.forEach((r) => r.start())
 
     return [
       new Await(

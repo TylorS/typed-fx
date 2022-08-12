@@ -51,28 +51,24 @@ export class ReleaseMap {
     lazy(() => (this.finalizers.has(key) ? (this.finalizers.get(key)!(exit) as Of<void>) : unit))
 
   readonly releaseAll = (exit: Exit<any, any>): Of<void> => {
-    const releaseRemaining = () => {
-      const releaseAll_ = zipAll(
-        Array.from(this.finalizers.keys())
-          .reverse()
-          .map((key) => this.release(key, exit)),
-      )
+    const toBeReleased = Array.from(this.finalizers.keys())
+      .reverse()
+      .map((key) => this.release(key, exit))
 
-      this.finalizers.clear()
+    this.finalizers.clear()
 
-      return pipe(
-        releaseAll_,
-        withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
-        mapTo(undefined),
-      )
+    if (this.strategy.strategy === 'Sequential') {
+      return Fx(function* () {
+        for (const fx of toBeReleased) {
+          yield* fx
+        }
+      })
     }
 
-    const isEmpty = () => this.isEmpty()
-
-    return Fx(function* () {
-      while (!isEmpty()) {
-        yield* releaseRemaining()
-      }
-    })
+    return pipe(
+      zipAll(toBeReleased),
+      withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
+      mapTo(undefined),
+    )
   }
 }

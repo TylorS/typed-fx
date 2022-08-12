@@ -27,7 +27,7 @@ export function processFork(initial: FiberContext, fiberScope: Scope) {
       ...FiberContext.fork(current, params),
       env: state.env.value,
       scope: params.scope ?? params.forkScope?.fork() ?? fiberScope.fork(),
-      trace: Just(getTraceUpTo(state.trace, current.platform.maxOpCount)),
+      trace: Just(getTraceUpTo(state.trace, current.platform.maxTraceCount)),
     })
 
     pipe(node.previous.next, set(fiber))

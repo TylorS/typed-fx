@@ -6,7 +6,7 @@ import { FiberRuntime } from './FiberRuntime.js'
 import { FiberState } from './FiberState.js'
 import { InstructionProcessors } from './InstructionProcessor.js'
 import { GeneratorNode, InitialNode, RuntimeInstruction } from './RuntimeInstruction.js'
-import { RuntimeDecision, RuntimeProcessor } from './RuntimeProcessor.js'
+import { RuntimeProcessor } from './RuntimeProcessor.js'
 import { processAccess } from './processors/Instructions/Access.js'
 import { processAddTrace } from './processors/Instructions/AddTrace.js'
 import { processAsync } from './processors/Instructions/Async.js'
@@ -38,7 +38,7 @@ import { FiberId } from '@/FiberId/FiberId.js'
 import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
 import { AnyFuture, Future, addObserver } from '@/Future/Future.js'
-import { Fx, Of, fromLazy, lazy, success } from '@/Fx/Fx.js'
+import { Fx, Of, lazy, success } from '@/Fx/Fx.js'
 import { Closeable } from '@/Scope/Closeable.js'
 import { Semaphore } from '@/Semaphore/index.js'
 import { Stack } from '@/Stack/index.js'
@@ -111,8 +111,6 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       processors.processExitNode(scope),
     )
     this._status = Suspended(this.getInterruptStatus)
-
-    scope.ensuring((exit) => fromLazy(() => this.done(exit)))
   }
 
   // #region Public API
@@ -150,7 +148,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   }
 
   readonly trace: () => Trace = () =>
-    getTraceUpTo(this._state.get().trace, this.context.platform.maxOpCount)
+    getTraceUpTo(this._state.get().trace, this.context.platform.maxTraceCount)
 
   readonly interruptAs: (id: FiberId) => Of<boolean> = (id) =>
     lazy(() => {
@@ -178,14 +176,15 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   protected run(): void {
     this.running()
 
-    console.log(this._status.tag)
-
     while (this._status.tag === 'Running') {
       // Use the provided processor to update state and determine the next thing to do.
       const decision = this._state.modify((s) => this.processor(this._current, s))
       const tag = decision.tag
 
-      console.log(this.id.sequenceNumber, printDecision(decision))
+      // Allow the Scope to close the Fiber if it's been interrupted.
+      if (this.scope.state.tag === 'Closed') {
+        return this.done(this.scope.state.exit)
+      }
 
       // Yield to other Fibers cooperatively by scheduling a task using Timer.
       if (tag === 'Suspend') {
@@ -204,6 +203,10 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
       // Continue through the while-loop
       this._current = decision.instruction
+    }
+
+    if (this.scope.state.tag === 'Closed' && this._status.tag !== 'Done') {
+      this.done(this.scope.state.exit)
     }
   }
 
@@ -241,7 +244,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
             ),
             previous,
           )
-          this.run()
+          this.setTimer(() => this.run(), Delay(0))
         }),
       ),
     )
@@ -279,19 +282,19 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
 const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) => {
   const { id, context, scope } = runtime
-  const maxOpCount = context.platform.maxOpCount
+  const { maxTraceCount } = context.platform
 
   const processors: InstructionProcessors = {
     Access: processAccess,
     AddTrace: processAddTrace,
-    Async: processAsync(scope),
+    Async: processAsync,
     Ensuring: processEnsuring,
-    Failure: processFailure(maxOpCount),
+    Failure: processFailure(maxTraceCount),
     Fork: processFork(context, scope),
     FromLazy: processFromLazy,
     GetFiberContext: processGetFiberContext(context),
     GetFiberScope: processGetFiberScope(scope),
-    GetTrace: processGetTrace(maxOpCount),
+    GetTrace: processGetTrace(maxTraceCount),
     Join: processJoin,
     Provide: processProvide,
     RaceAll: processRaceAll(id, context, scope),
@@ -304,24 +307,24 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
   return processors
 }
 
-function printDecision(decision: RuntimeDecision): string {
-  switch (decision.tag) {
-    case 'Await':
-      return `Await ${JSON.stringify(decision.future.state.get(), null, 2)}`
-    case 'Done':
-      return `Done ${JSON.stringify(decision.exit, null, 2)}`
-    case 'Running': {
-      const instr = decision.instruction
+// function printDecision(decision: RuntimeDecision): string {
+//   switch (decision.tag) {
+//     case 'Await':
+//       return `Await ${JSON.stringify(decision.future.state.get(), null, 2)}`
+//     case 'Done':
+//       return `Done ${JSON.stringify(decision.exit, null, 2)}`
+//     case 'Running': {
+//       const instr = decision.instruction
 
-      switch (instr.tag) {
-        case 'Instruction':
-          return `Running: Instruction: ${instr.instruction.tag}`
-      }
+//       switch (instr.tag) {
+//         case 'Instruction':
+//           return `Running: Instruction: ${instr.instruction.tag}`
+//       }
 
-      return `Running: ${decision.instruction.tag}`
-    }
-    case 'Suspend': {
-      return `Suspend`
-    }
-  }
-}
+//       return `Running: ${decision.instruction.tag}`
+//     }
+//     case 'Suspend': {
+//       return `Suspend`
+//     }
+//   }
+// }

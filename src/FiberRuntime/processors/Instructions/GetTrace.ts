@@ -9,9 +9,9 @@ import { InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
 import { Running, RuntimeUpdate } from '@/FiberRuntime/RuntimeProcessor.js'
 import { GetTrace } from '@/Fx/Instructions/GetTrace.js'
 
-export function processGetTrace(maxOpCount: NonNegativeInteger) {
+export function processGetTrace(maxTraceCount: NonNegativeInteger) {
   return (_: GetTrace, state: FiberState, node: InstructionNode): RuntimeUpdate => {
-    pipe(node.previous.next, set(getTraceUpTo(state.trace, maxOpCount)))
+    pipe(node.previous.next, set(getTraceUpTo(state.trace, maxTraceCount)))
 
     return [new Running(node.previous), state]
   }

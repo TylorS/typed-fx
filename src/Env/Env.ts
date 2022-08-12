@@ -16,7 +16,6 @@ import {
   provide,
   success,
 } from '@/Fx/Fx.js'
-import { never } from '@/Fx/hkt.js'
 import type { Layer } from '@/Layer/Layer.js'
 import { Scope } from '@/Scope/Scope.js'
 import * as Service from '@/Service/index.js'
@@ -89,7 +88,7 @@ export class Environment<R> implements Env<R> {
           yield* scope.close(exit)
 
           // This Fx Should never return
-          return yield* never
+          return yield* fromExit(exit)
         } else {
           return exit.right
         }

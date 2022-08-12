@@ -31,8 +31,6 @@ export function addObserver<R, E, A>(
   observer: Observer<R, E, A>,
 ): Disposable {
   return future.state.modify((state): readonly [Disposable, FutureState<R, E, A>] => {
-    console.log('Adding Observer', state.tag)
-
     if (state.tag === 'Resolved' || state.tag === 'Interrupted') {
       return [Disposable.None, state]
     }

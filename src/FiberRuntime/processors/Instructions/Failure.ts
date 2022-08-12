@@ -10,7 +10,7 @@ import { Stack } from '@/Stack/index.js'
 import { StackFrame } from '@/StackFrame/StackFrame.js'
 import { EmptyTrace, StackFrameTrace, Trace, trimOverlappingTraces } from '@/Trace/Trace.js'
 
-export function processFailure(maxOpCount: NonNegativeInteger) {
+export function processFailure(maxTraceCount: NonNegativeInteger) {
   return function processFailure<E>(failure: Failure<E>, state: FiberState): RuntimeUpdate {
     const cause = failure.input
     const error =
@@ -23,7 +23,9 @@ export function processFailure(maxOpCount: NonNegativeInteger) {
     const updatedState: FiberState = { ...state, trace: state.trace.push(remaining) }
 
     return [
-      new Running(new ExitNode(Left(traced(getTraceUpTo(updatedState.trace, maxOpCount))(cause)))),
+      new Running(
+        new ExitNode(Left(traced(getTraceUpTo(updatedState.trace, maxTraceCount))(cause))),
+      ),
       updatedState,
     ]
   }

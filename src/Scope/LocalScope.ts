@@ -48,7 +48,6 @@ export class LocalScope implements Closeable {
 
   readonly close = (exit: Exit<any, any>): Of<boolean> =>
     lazy(() => {
-      console.log('Closing Scope')
       this.setExit(exit)
 
       return this.release
