@@ -24,7 +24,7 @@ export class LocalScope implements Closeable {
   }
 
   readonly ensuring: (finalizer: Finalizer) => Finalizer = (finalizer) => {
-    if (this.state.tag !== 'Open') {
+    if (this.isClosed) {
       return (() => unit) as Finalizer
     }
 
@@ -41,13 +41,14 @@ export class LocalScope implements Closeable {
     const extended = new LocalScope(strategy)
 
     // Mutually track resources
-    extended.ensuring(this.ensuring(extended.close))
+    extended.ensuring(this.ensuring(() => extended.release))
 
     return extended
   }
 
   readonly close = (exit: Exit<any, any>): Of<boolean> =>
     lazy(() => {
+      console.log('Closing Scope')
       this.setExit(exit)
 
       return this.release

@@ -94,6 +94,8 @@ export const Associative: ASSOC.Associative<Trace> = {
   },
 }
 
+export const concat = Associative.concat
+
 export const Identity: I.Identity<Trace> = {
   ...Associative,
   id: EmptyTrace,

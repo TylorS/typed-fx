@@ -1,47 +1,57 @@
-import { Scheduler } from './Scheduler.js'
+import { Scheduler, SchedulerContext } from './Scheduler.js'
 import { callbackScheduler } from './callbackScheduler.js'
 import { scheduled } from './scheduled.js'
 
 import { increment } from '@/Atomic/AtomicCounter.js'
+import { timeToUnixTime } from '@/Clock/Clock.js'
 import { FiberId } from '@/FiberId/FiberId.js'
+import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { make } from '@/FiberRuntime/make.js'
 import { toFiber } from '@/FiberRuntime/toFiber.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
 import { Fx } from '@/Fx/Fx.js'
+import { UnixTime } from '@/Time/index.js'
 import { Timer } from '@/Timer/Timer.js'
 
 export function RootScheduler(timer: Timer): Scheduler {
   const [disposable, addTask] = callbackScheduler(timer)
 
-  const schedule: Scheduler['schedule'] = (fx, schedule, context) => {
-    const { env, scope, ...fiberContext } = context
-    const runtime = make({
-      fx: scheduled(fx, schedule, timer, (fx, time) => {
-        const task = new ScheduledTask(fx)
+  const runAt = <R, E, A>(fx: Fx<R, E, A>, time: UnixTime) => {
+    const task = new ScheduledTask(fx)
 
-        addTask(time, task.start)
+    addTask(time, task.start)
 
-        return task.wait
-      }),
-      env,
-      scope,
-      context: fiberContext,
-      id: new FiberId.Live(
-        increment(context.platform.sequenceNumber),
-        context.platform.timer,
-        context.platform.timer.getCurrentTime(),
-      ),
-    })
+    return task.wait
+  }
 
-    // Okay to start synchronously, as it will suspend as soon as it reaches the ScheduleState.
+  const asap: Scheduler['asap'] = (fx, schedulerContext) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { env, scope, trace, ...context } = schedulerContext
+    const runtime = fiberRutimeFromSchedulerContext(
+      runAt(fx, timeToUnixTime(timer.getCurrentTime())(timer)),
+      schedulerContext,
+    )
     runtime.start()
 
-    return toFiber(runtime)
+    return toFiber(runtime, context, scope)
+  }
+
+  const schedule: Scheduler['schedule'] = (fx, schedule, schedulerContext) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { env, scope, trace, ...context } = schedulerContext
+    const runtime = fiberRutimeFromSchedulerContext(
+      scheduled(fx, schedule, timer, runAt),
+      schedulerContext,
+    )
+    runtime.start()
+
+    return toFiber(runtime, context, scope)
   }
 
   const scheduler: Scheduler = {
+    asap,
     schedule,
     ...disposable,
   }
@@ -56,4 +66,24 @@ class ScheduledTask<R, E, A> {
 
   readonly wait = wait(this.future)
   readonly start = () => complete(this.future)(this.fx)
+}
+
+export function fiberRutimeFromSchedulerContext<R, E, A>(
+  fx: Fx<R, E, A>,
+  schedulerContext: SchedulerContext<R>,
+): FiberRuntime<E, A> {
+  const { env, scope, trace, ...context } = schedulerContext
+
+  return make({
+    fx,
+    id: new FiberId.Live(
+      increment(schedulerContext.platform.sequenceNumber),
+      schedulerContext.platform.timer,
+      schedulerContext.platform.timer.getCurrentTime(),
+    ),
+    context,
+    env,
+    scope,
+    trace,
+  })
 }

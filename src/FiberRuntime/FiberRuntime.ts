@@ -5,6 +5,7 @@ import { FiberStatus } from '@/FiberStatus/index.js'
 import { Of } from '@/Fx/Fx.js'
 import { Trace } from '@/Trace/Trace.js'
 
+// TODO: Handle interrupting when the status becomes interruptable
 export interface FiberRuntime<E, A> {
   readonly id: FiberId.Live
   readonly status: () => FiberStatus

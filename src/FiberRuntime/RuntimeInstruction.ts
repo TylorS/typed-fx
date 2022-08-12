@@ -1,48 +1,39 @@
-import { Maybe } from 'hkt-ts/Maybe'
+import { Endomorphism, identity } from 'hkt-ts'
+import { Maybe, Nothing } from 'hkt-ts/Maybe'
 
 import { FiberState } from './FiberState.js'
-import { RuntimeProcessor } from './RuntimeProcessor.js'
+import { RuntimeProcessor, RuntimeUpdate } from './RuntimeProcessor.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
-import { Exit } from '@/Exit/Exit.js'
+import { AnyExit } from '@/Exit/Exit.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
-import { Fx } from '@/Fx/Fx.js'
-import { Instruction } from '@/Fx/Instructions/Instruction.js'
+import { AnyFx } from '@/Fx/Fx.js'
+import { AnyInstruction } from '@/Fx/Instructions/Instruction.js'
 import { Trace } from '@/Trace/Trace.js'
 
-export type RuntimeInstruction<R, E, A> =
-  | ExitNode<E, A>
-  | FinalizerNode<any, any, any>
-  | FxNode<any, any, any>
-  | GeneratorNode<any, any, any>
-  | InitialNode<R, E, A>
-  | InstructionNode<any, any, any>
+export type RuntimeInstruction =
+  | ExitNode
+  | FinalizerNode
+  | FxNode
+  | GeneratorNode
+  | InitialNode
+  | InstructionNode
+  | PopNode
 
 export namespace RuntimeInstruction {
   export function match(
-    initial: <R, E, A>(
-      instr: InitialNode<R, E, A>,
-      state: FiberState,
-    ) => ReturnType<RuntimeProcessor>,
-    generator: <R, E, A>(
-      instr: GeneratorNode<R, E, A>,
-      state: FiberState,
-    ) => ReturnType<RuntimeProcessor>,
-    instruction: (
-      instr: InstructionNode<any, any, any>,
-      state: FiberState,
-    ) => ReturnType<RuntimeProcessor>,
-    fx: (instr: FxNode<any, any, any>, state: FiberState) => ReturnType<RuntimeProcessor>,
-    finalizer: <R, E, A>(
-      instr: FinalizerNode<R, E, A>,
-      state: FiberState,
-    ) => ReturnType<RuntimeProcessor>,
-    exit: <E, A>(instr: ExitNode<E, A>, state: FiberState) => ReturnType<RuntimeProcessor>,
+    initial: (instr: InitialNode, state: FiberState) => RuntimeUpdate,
+    generator: (instr: GeneratorNode, state: FiberState) => RuntimeUpdate,
+    instruction: (instr: InstructionNode, state: FiberState) => RuntimeUpdate,
+    fx: (instr: FxNode, state: FiberState) => RuntimeUpdate,
+    finalizer: (instr: FinalizerNode, state: FiberState) => RuntimeUpdate,
+    pop: (instr: PopNode, state: FiberState) => RuntimeUpdate,
+    exit: (instr: ExitNode, state: FiberState) => RuntimeUpdate,
   ): RuntimeProcessor {
-    return <R, E, A>(instr: RuntimeInstruction<R, E, A>, state: FiberState) => {
+    return (instr: RuntimeInstruction, state: FiberState) => {
       switch (instr.tag) {
         case 'Initial':
-          return initial<R, E, A>(instr, state)
+          return initial(instr, state)
         case 'Generator':
           return generator(instr, state)
         case 'Instruction':
@@ -51,6 +42,8 @@ export namespace RuntimeInstruction {
           return fx(instr, state)
         case 'Finalizer':
           return finalizer(instr, state)
+        case 'Pop':
+          return pop(instr, state)
         case 'Exit':
           return exit(instr, state)
       }
@@ -61,22 +54,22 @@ export namespace RuntimeInstruction {
 /**
  * The start of ever Fiber
  */
-export class InitialNode<R, E, A> {
+export class InitialNode {
   readonly tag = 'Initial'
 
-  constructor(readonly fx: Fx<R, E, A>, readonly trace: Maybe<Trace>) {}
+  constructor(readonly fx: AnyFx, readonly trace: Maybe<Trace>) {}
 }
 
 /**
  * The back-bone of the Runtime is built atop of generators for getting the next instruction and
  * for control flow back to other Fx.
  */
-export class GeneratorNode<R, E, A> {
+export class GeneratorNode {
   readonly tag = 'Generator'
 
   constructor(
-    readonly generator: Generator<Instruction<R, E, any>, A>,
-    readonly previous: Exclude<RuntimeInstruction<any, any, any>, GeneratorNode<any, any, any>>,
+    readonly generator: Generator<AnyInstruction, any>,
+    readonly previous: RuntimeInstruction,
     readonly method: Atomic<'next' | 'throw'> = Atomic<'next' | 'throw'>('next'),
     readonly next: Atomic<any> = Atomic(undefined),
   ) {}
@@ -85,43 +78,59 @@ export class GeneratorNode<R, E, A> {
 /**
  * An Instruction Node is representing the current Instruction that needs processiong
  */
-export class InstructionNode<R, E, A> {
+export class InstructionNode {
   readonly tag = 'Instruction'
 
   constructor(
-    readonly instruction: Instruction<R, E, A>,
-    readonly previous: GeneratorNode<any, any, any>,
+    readonly instruction: AnyInstruction,
+    readonly previous: GeneratorNode,
+    readonly pop: Endomorphism.Endomorphism<FiberState> = identity,
   ) {}
 }
 
 /**
  * An Instruction can create new Fx which need to be processed
  */
-export class FxNode<R, E, A> {
+export class FxNode {
   readonly tag = 'Fx'
 
-  constructor(readonly fx: Fx<R, E, A>, readonly previous: InstructionNode<R, E, any>) {}
+  constructor(readonly fx: AnyFx, readonly previous: InstructionNode) {}
 }
 
 /**
  * At any point in the Stack you can ensure that an Fx runs in both success and failure
  */
-export class FinalizerNode<R, E, A> {
+export class FinalizerNode {
   readonly tag = 'Finalizer'
 
   constructor(
-    readonly fx: Fx<R, E, A>,
-    readonly finalizer: Finalizer,
-    readonly previous: InstructionNode<R, E, A>,
-    readonly exit: Atomic<Maybe<Exit<any, any>>>,
+    readonly fx: AnyFx,
+    readonly finalizer: Finalizer | Finalizer<any, any>,
+    readonly previous: InstructionNode,
+    readonly exit: Atomic<Maybe<AnyExit>> = Atomic<Maybe<AnyExit>>(Nothing),
+  ) {}
+}
+
+/**
+ * At any point in the Stack update the state easily using processors, but this node
+ * allows you to update the state while unwinding the stack.
+ */
+export class PopNode {
+  readonly tag = 'Pop'
+
+  constructor(
+    readonly fx: AnyFx,
+    readonly pop: Endomorphism.Endomorphism<FiberState>,
+    readonly previous: InstructionNode,
+    readonly exit: Atomic<Maybe<AnyExit>> = Atomic<Maybe<AnyExit>>(Nothing),
   ) {}
 }
 
 /**
  * Signals that the main process has completed and the Scope should be closed.
  */
-export class ExitNode<E, A> {
+export class ExitNode {
   readonly tag = 'Exit'
 
-  constructor(readonly exit: Exit<E, A>) {}
+  constructor(readonly exit: AnyExit) {}
 }

@@ -9,9 +9,11 @@ describe(new URL(import.meta.url).pathname, () => {
   describe(handle.name, () => {
     class GetNums extends Eff.Instruction<void, ReadonlyArray<number>> {
       static tag = 'GetNums' as const
+      readonly tag = GetNums.tag
     }
     class Sum extends Eff.Instruction<ReadonlyArray<number>, number> {
       static tag = 'Sum' as const
+      readonly tag = Sum.tag
     }
 
     type Instruction = GetNums | Sum

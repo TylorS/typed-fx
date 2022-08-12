@@ -4,9 +4,9 @@ import { Running, RuntimeDecision } from '../RuntimeProcessor.js'
 
 import { Eff } from '@/Eff/Eff.js'
 
-export function processFxNode<R, E, A>(
-  node: FxNode<R, E, A>,
+export function processFxNode(
+  node: FxNode,
   state: FiberState,
-): readonly [RuntimeDecision<R, E, A>, FiberState] {
-  return [new Running(new GeneratorNode(Eff.gen(node.fx), node.previous)), state]
+): readonly [RuntimeDecision, FiberState] {
+  return [new Running(new GeneratorNode(Eff.gen(node.fx as any), node.previous)), state]
 }

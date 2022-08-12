@@ -12,7 +12,7 @@ import {
   FinalizerKey,
   finalizationStrategyToConcurrency,
 } from '@/Finalizer/Finalizer.js'
-import { Of, lazy, mapTo, withConcurrency, zipAll } from '@/Fx/index.js'
+import { Fx, Of, lazy, mapTo, withConcurrency, zipAll } from '@/Fx/index.js'
 
 let nextId = 0
 
@@ -51,22 +51,28 @@ export class ReleaseMap {
     lazy(() => (this.finalizers.has(key) ? (this.finalizers.get(key)!(exit) as Of<void>) : unit))
 
   readonly releaseAll = (exit: Exit<any, any>): Of<void> => {
-    if (this.isEmpty()) {
-      return unit
+    const releaseRemaining = () => {
+      const releaseAll_ = zipAll(
+        Array.from(this.finalizers.keys())
+          .reverse()
+          .map((key) => this.release(key, exit)),
+      )
+
+      this.finalizers.clear()
+
+      return pipe(
+        releaseAll_,
+        withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
+        mapTo(undefined),
+      )
     }
 
-    const releaseAll_ = zipAll(
-      Array.from(this.finalizers.keys())
-        .reverse()
-        .map((key) => this.release(key, exit)),
-    )
+    const isEmpty = () => this.isEmpty()
 
-    this.finalizers.clear()
-
-    return pipe(
-      releaseAll_,
-      withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
-      mapTo(undefined),
-    )
+    return Fx(function* () {
+      while (!isEmpty()) {
+        yield* releaseRemaining()
+      }
+    })
   }
 }

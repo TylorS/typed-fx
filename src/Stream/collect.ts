@@ -5,9 +5,8 @@ import { observe } from './drain.js'
 
 import { Fiber } from '@/Fiber/index.js'
 import { Fx, fromLazy, join } from '@/Fx/Fx.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 
-export const collect = <R, E, A>(stream: Stream<R, E, A>): Fx<R | Scheduler, E, readonly A[]> =>
+export const collect = <R, E, A>(stream: Stream<R, E, A>): Fx<R, E, readonly A[]> =>
   Fx(function* () {
     const values: A[] = []
 

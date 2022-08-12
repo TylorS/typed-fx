@@ -4,10 +4,10 @@ import { Left, Right } from 'hkt-ts/Either'
 import { Cause } from '@/Cause/Cause.js'
 import { Fx, IO, getEnv, getFiberScope, provide, unit } from '@/Fx/Fx.js'
 
-export abstract class Sink<in out E, in A> {
-  abstract readonly event: (a: A) => IO<E, unknown>
-  abstract readonly error: (cause: Cause<E>) => IO<E, unknown>
-  abstract readonly end: IO<E, unknown>
+export abstract class Sink<E, A> {
+  readonly event: (a: A) => IO<E, unknown> = lazyUnit as any
+  readonly error: (cause: Cause<E>) => IO<E, unknown> = lazyUnit as any
+  readonly end: IO<E, unknown> = lazyUnit as any
 }
 
 const InternalSink = Sink
@@ -22,14 +22,14 @@ export type SinkEffects<E, A> = {
 
 export function make<E, A>(effects: SinkEffects<E, A>) {
   return class Sink extends InternalSink<E, A> {
-    readonly event = effects.event ?? lazyUnit
-    readonly error = effects.error ?? lazyUnit
-    readonly end = effects.end ?? unit
+    readonly event = effects.event ?? super.event
+    readonly error = effects.error ?? super.error
+    readonly end = effects.end ?? super.end
   }
 }
 
-export const Drain = new (class Drain extends make({
-  error: (cause: Cause<any>) =>
+export const Drain = new (class Drain extends make<never, any>({
+  error: (cause: Cause<never>) =>
     Fx(function* () {
       const scope = yield* getFiberScope
       yield* scope.close(Left(cause))
@@ -38,14 +38,14 @@ export const Drain = new (class Drain extends make({
     const scope = yield* getFiberScope
     yield* scope.close(Right(undefined))
   }),
-}) {})()
+}) {})() as any as Sink<any, any>
 
 export type Drain = typeof Drain
 
 export function makeSink<R, E, A>(
   event: (a: A) => Fx<R, E, any>,
-  error: (e: Cause<E>) => Fx<R, E, any> = Drain.error,
-  end: Fx<R, E, any> = Drain.end,
+  error: (e: Cause<E>) => Fx<R, E, any> = Drain.error as any,
+  end: Fx<R, E, any> = Drain.end as any,
 ) {
   return Fx(function* () {
     const env = yield* getEnv<R>()

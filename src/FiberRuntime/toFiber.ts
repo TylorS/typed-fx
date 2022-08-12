@@ -4,7 +4,7 @@ import { FiberRuntime } from './FiberRuntime.js'
 
 import { Exit } from '@/Exit/Exit.js'
 import * as Fiber from '@/Fiber/Fiber.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
+import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'

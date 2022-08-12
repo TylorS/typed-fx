@@ -11,8 +11,5 @@ export type InstructionProcessors = {
 }
 
 export interface InstructionProcessor<I extends AnyInstruction> {
-  (instruction: I, state: FiberState, node: InstructionNode<any, any, any>): readonly [
-    RuntimeDecision<any, any, any>,
-    FiberState,
-  ]
+  (instruction: I, state: FiberState, node: InstructionNode): readonly [RuntimeDecision, FiberState]
 }

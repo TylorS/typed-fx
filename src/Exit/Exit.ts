@@ -9,6 +9,8 @@ import * as FiberId from '@/FiberId/FiberId.js'
 
 export type Exit<E, A> = Either.Either<Cause.Cause<E>, A>
 
+export type AnyExit = Exit<any, any>
+
 export const success = <A>(value: A): Exit<never, A> => Either.Right(value)
 
 export const interrupt = (fiberId: FiberId.FiberId): Exit<never, never> =>

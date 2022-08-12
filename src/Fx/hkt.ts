@@ -20,9 +20,9 @@ import * as Eff from '@/Eff/index.js'
 
 export interface FxHKT extends HKT3 {
   readonly type: Fx.Fx<this[Params.R], this[Params.E], this[Params.A]>
-  readonly defaults?: {
-    [Params.R]: Variance.Covariant<never>
-    [Params.E]: Variance.Covariant<never>
+  readonly defaults: {
+    [Params.R]: Variance.Covariant<unknown>
+    [Params.E]: Variance.Covariant<unknown>
   }
 }
 
@@ -53,7 +53,8 @@ export const both = CommutativeBoth.both
 export const zipLeft = AB.zipLeft<FxHKT>({ ...CommutativeBoth, ...Covariant })
 export const zipRight = AB.zipRight<FxHKT>({ ...CommutativeBoth, ...Covariant })
 
-export const Top: T.Top3<FxHKT> = {
+// TODO: There's a bug in hkt-ts that is incorrectly inferring these default values.
+export const Top: T.Top3REC<FxHKT, never, never> = {
   top: Fx.fromValue([]),
 }
 

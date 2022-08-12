@@ -1,10 +1,10 @@
-import { Exit } from '@/Exit/Exit.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { FiberId } from '@/FiberId/FiberId.js'
-import { FiberStatus } from '@/FiberStatus/index.js'
+import type { Exit } from '@/Exit/Exit.js'
+import type { FiberContext } from '@/FiberContext/FiberContext.js'
+import type { FiberId } from '@/FiberId/FiberId.js'
+import type { FiberStatus } from '@/FiberStatus/index.js'
 import type { Of } from '@/Fx/Fx.js'
 import type { Closeable } from '@/Scope/Closeable.js'
-import { Trace } from '@/Trace/Trace.js'
+import type { Trace } from '@/Trace/Trace.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
 

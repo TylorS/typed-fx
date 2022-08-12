@@ -1,22 +1,35 @@
-export type FiberStatus = Suspended | Running | Done
+export type FiberStatus = Suspended | Running | Exiting | Done
 
 export interface Suspended {
   readonly tag: 'Suspended'
   readonly isInterruptable: boolean
 }
-export const Suspended = (isInterruptable: boolean): Suspended => ({
+export const Suspended = (isInterruptable: () => boolean): Suspended => ({
   tag: 'Suspended',
-  isInterruptable,
+  get isInterruptable() {
+    return isInterruptable()
+  },
 })
 
 export interface Running {
   readonly tag: 'Running'
   readonly isInterruptable: boolean
 }
-export const Running = (isInterruptable: boolean): Running => ({
+export const Running = (isInterruptable: () => boolean): Running => ({
   tag: 'Running',
-  isInterruptable,
+  get isInterruptable() {
+    return isInterruptable()
+  },
 })
+
+export interface Exiting {
+  readonly tag: 'Exiting'
+  readonly isInterruptable: false
+}
+export const Exiting: Exiting = {
+  tag: 'Exiting',
+  isInterruptable: false,
+}
 
 export interface Done {
   readonly tag: 'Done'
@@ -25,18 +38,4 @@ export interface Done {
 export const Done: Done = {
   tag: 'Done',
   isInterruptable: false,
-}
-
-export const setInterruptStatus = (isInterruptable: boolean) => {
-  return (status: FiberStatus): FiberStatus => {
-    if (status.tag === 'Done') {
-      return status
-    }
-
-    if (status.tag === 'Running') {
-      return Running(isInterruptable)
-    }
-
-    return Suspended(isInterruptable)
-  }
 }

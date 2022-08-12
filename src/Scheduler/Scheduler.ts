@@ -1,11 +1,15 @@
+import { Maybe } from 'hkt-ts'
+
 import { Disposable } from '@/Disposable/Disposable.js'
 import { Env } from '@/Env/Env.js'
 import * as Fiber from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/index.js'
-import { Fx, RIO, getEnv, getFiberContext, getFiberScope } from '@/Fx/index.js'
+import { Fx, RIO, getEnv, getFiberContext, getFiberScope, getTrace } from '@/Fx/Fx.js'
+import { ForkParams } from '@/Fx/Instructions/Fork.js'
 import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Closeable } from '@/Scope/Closeable.js'
+import { Trace } from '@/Trace/Trace.js'
 
 /**
  * Scheduler is capable of converting Fx into a runnning Fiber given a particular Schedule.
@@ -13,6 +17,8 @@ import { Closeable } from '@/Scope/Closeable.js'
  * clear all currently scheduled Fibers to start.
  */
 export interface Scheduler extends Disposable {
+  readonly asap: <R, E, A>(fx: Fx<R, E, A>, context: SchedulerContext<R>) => Fiber.Live<E, A>
+
   readonly schedule: <R, E, A>(
     fx: Fx<R, E, A>,
     schedule: Schedule,
@@ -39,6 +45,7 @@ export function getSchedulerContext<R>() {
     const context: SchedulerContext<R> = {
       env: yield* getEnv<R>(),
       scope: yield* getFiberScope,
+      trace: Maybe.Just(yield* getTrace),
       ...(yield* getFiberContext),
     }
 
@@ -46,22 +53,24 @@ export function getSchedulerContext<R>() {
   })
 }
 
-export function forkSchedulerContext<R>() {
+export function forkSchedulerContext<R>(params?: ForkParams) {
   return Fx(function* () {
-    return SchedulerContext.fork(yield* getSchedulerContext<R>())
+    return SchedulerContext.fork(yield* getSchedulerContext<R>(), params)
   })
 }
 
 export interface SchedulerContext<R> extends FiberContext {
   readonly env: Env<R>
   readonly scope: Closeable
+  readonly trace: Maybe.Maybe<Trace>
 }
 
 export namespace SchedulerContext {
-  export function fork<R>(context: SchedulerContext<R>) {
+  export function fork<R>(context: SchedulerContext<R>, params?: ForkParams): SchedulerContext<R> {
     return {
-      ...FiberContext.fork(context),
+      ...FiberContext.fork(context, params),
       env: context.env,
+      trace: Maybe.fromNullable(params?.trace),
       scope: context.scope.fork(),
     }
   }

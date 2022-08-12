@@ -1,12 +1,19 @@
 import { Atomic } from '@/Atomic/Atomic.js'
 import { Disposable } from '@/Disposable/Disposable.js'
-import { Fx } from '@/Fx/index.js'
+import { FiberId } from '@/FiberId/FiberId.js'
+import { Fx } from '@/Fx/Fx.js'
 
 export interface Future<R, E, A> {
   readonly state: Atomic<FutureState<R, E, A>>
 }
 
-export type FutureState<R, E, A> = Pending<R, E, A> | Resolved<R, E, A>
+export type AnyFuture =
+  | Future<any, any, any>
+  | Future<never, never, any>
+  | Future<never, any, any>
+  | Future<any, never, any>
+
+export type FutureState<R, E, A> = Pending<R, E, A> | Resolved<R, E, A> | Interrupted
 
 export interface Pending<R, E, A> {
   readonly tag: 'Pending'
@@ -24,7 +31,9 @@ export function addObserver<R, E, A>(
   observer: Observer<R, E, A>,
 ): Disposable {
   return future.state.modify((state): readonly [Disposable, FutureState<R, E, A>] => {
-    if (state.tag === 'Resolved') {
+    console.log('Adding Observer', state.tag)
+
+    if (state.tag === 'Resolved' || state.tag === 'Interrupted') {
       return [Disposable.None, state]
     }
 
@@ -39,7 +48,7 @@ export function addObserver<R, E, A>(
 
 function removeObserver<R, E, A>(future: Future<R, E, A>, observer: Observer<R, E, A>) {
   return future.state.modify((state) => {
-    if (state.tag === 'Resolved') {
+    if (state.tag === 'Resolved' || state.tag === 'Interrupted') {
       return [undefined, state]
     }
 
@@ -63,4 +72,9 @@ export function Resolved<R, E, A>(fx: Fx<R, E, A>): Future<R, E, A> {
   return {
     state: Atomic<FutureState<R, E, A>>({ tag: 'Resolved', fx }),
   }
+}
+
+export interface Interrupted {
+  readonly tag: 'Interrupted'
+  readonly fiberId: FiberId
 }

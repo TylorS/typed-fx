@@ -1,17 +1,21 @@
-import { Just, Maybe } from 'hkt-ts/Maybe'
+import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import type { FiberRefs } from '@/FiberRefs/FiberRefs.js'
-import type { Platform } from '@/Platform/Platform.js'
+import { Renderer, defaultRenderer } from '@/Cause/Renderer.js'
+import { FiberRefs } from '@/FiberRefs/FiberRefs.js'
+import { Platform } from '@/Platform/Platform.js'
 import type { Scheduler } from '@/Scheduler/Scheduler.js'
 
-export interface FiberContext {
-  readonly fiberRefs: FiberRefs
-  readonly concurrencyLevel: NonNegativeInteger
-  readonly interruptStatus: boolean
-  readonly platform: Platform
-  readonly scheduler: Scheduler
-  readonly parent: Maybe<FiberContext>
+export class FiberContext {
+  constructor(
+    readonly platform: Platform,
+    readonly scheduler: Scheduler,
+    readonly fiberRefs: FiberRefs = FiberRefs(),
+    readonly concurrencyLevel: NonNegativeInteger = NonNegativeInteger(Infinity),
+    readonly interruptStatus: boolean = true,
+    readonly renderer: Renderer<any> = defaultRenderer,
+    readonly parent: Maybe<FiberContext> = Nothing,
+  ) {}
 }
 
 export namespace FiberContext {

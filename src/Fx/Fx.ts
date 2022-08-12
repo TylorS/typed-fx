@@ -1,4 +1,6 @@
 import { Either, isRight } from 'hkt-ts/Either'
+import { Just } from 'hkt-ts/Maybe'
+import { NonEmptyArray } from 'hkt-ts/NonEmptyArray'
 import { Lazy, pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
@@ -29,8 +31,8 @@ import * as Eff from '@/Eff/index.js'
 import type { Env } from '@/Env/Env.js'
 import * as Exit from '@/Exit/Exit.js'
 import type { Fiber, Live } from '@/Fiber/Fiber.js'
-import { FiberContext } from '@/FiberContext/index.js'
-import { FiberId } from '@/FiberId/FiberId.js'
+import type { FiberContext } from '@/FiberContext/index.js'
+import type { FiberId } from '@/FiberId/FiberId.js'
 import type * as Layer from '@/Layer/Layer.js'
 import type { Closeable } from '@/Scope/Closeable.js'
 import * as Service from '@/Service/index.js'
@@ -51,7 +53,7 @@ import { Trace } from '@/Trace/Trace.js'
  *  - Concurrency, control the concurrency level at at region of Fx
  *  - Fibers, fork fibers to enhance the way you manage Fx.
  */
-export interface Fx<out R, out E, out A> extends Eff.Eff<Instruction<R, E, any>, A> {}
+export interface Fx<R, E, A> extends Eff.Eff<Instruction<R, E, any>, A> {}
 
 /**
  * An Fx which has Resource requirements and outputs a value.
@@ -250,7 +252,11 @@ export const fromExit = <E = never, A = unknown>(
   exit: Exit.Exit<E, A>,
   __trace?: string,
 ): IO<E, A> =>
-  exit.tag === 'Left' ? fromCause(exit.left, __trace) : fromValue(exit.right, __trace)
+  Fx(function* () {
+    return yield* exit.tag === 'Left'
+      ? fromCause(exit.left, __trace)
+      : fromValue(exit.right, __trace)
+  })
 
 /**
  * Create an Expected Error
@@ -339,7 +345,13 @@ export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, L
   })
 
 export const forkFiberContext: Of<FiberContext> = Fx(function* () {
-  return FiberContext.fork(yield* getFiberContext)
+  const context = yield* getFiberContext
+
+  return {
+    ...context,
+    fiberRefs: context.fiberRefs.fork(),
+    parent: Just(context),
+  }
 })
 
 /**
@@ -414,7 +426,7 @@ export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
  * Race an array of Fx into an Fx of the first resolved Fx, cancelling all other
  * operations not resolved.
  */
-export const raceAll = <FX extends ReadonlyArray<AnyFx>>(
+export const raceAll = <FX extends NonEmptyArray<AnyFx>>(
   fxs: FX,
   __trace?: string,
 ): Fx<ResourcesOf<FX[number]>, ErrorsOf<FX[number]>, OutputOf<FX[number]>> =>

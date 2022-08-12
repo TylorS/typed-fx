@@ -1,6 +1,7 @@
 import { Stream } from './Stream.js'
 
 import { Fiber } from '@/Fiber/Fiber.js'
+import { ForkParams } from '@/Fx/Instructions/Fork.js'
 import { Fx, RIO } from '@/Fx/index.js'
 import { forkSchedulerContext } from '@/Scheduler/Scheduler.js'
 import { Drain, Sink, makeSink } from '@/Sink/Sink.js'
@@ -9,10 +10,10 @@ import { Drain, Sink, makeSink } from '@/Sink/Sink.js'
  * Fork a Stream's process into a Fiber
  */
 export const fork =
-  <E, A>(sink: Sink<E, A>) =>
+  <E, A>(sink: Sink<E, A>, params?: ForkParams) =>
   <R>(stream: Stream<R, E, A>): RIO<R, Fiber<E, unknown>> =>
     Fx(function* () {
-      return stream.fork(sink, yield* forkSchedulerContext<R>())
+      return stream.fork(sink, yield* forkSchedulerContext<R>(params))
     })
 
 export const observe =

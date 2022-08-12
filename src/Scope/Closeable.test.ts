@@ -31,7 +31,7 @@ describe(new URL(import.meta.url).pathname, () => {
       })
     })
 
-    describe('given an Open scope', () => {
+    describe.only('given an Open scope', () => {
       it('awaits the closed value', async () => {
         const exit = Right(42)
         const scope = stateCloseable(Open)

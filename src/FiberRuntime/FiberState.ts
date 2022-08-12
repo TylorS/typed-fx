@@ -6,6 +6,7 @@ import { Trace } from '@/Trace/Trace.js'
 
 export interface FiberState {
   readonly concurrencyLevel: Stack<Semaphore>
+  readonly interruptStatus: Stack<boolean>
   readonly interruptedBy: ReadonlySet<FiberId>
   readonly env: Stack<Env<any>>
   readonly trace: Stack<Trace>

@@ -7,13 +7,15 @@ import { ExitNode, GeneratorNode, InstructionNode } from '../RuntimeInstruction.
 import { Done, Running, RuntimeDecision } from '../RuntimeProcessor.js'
 
 import { processFinalizerNode } from './FinalizerNode.js'
+import { processPopNode } from './PopNode.js'
 
 import { set } from '@/Atomic/Atomic.js'
+import { Trace } from '@/Trace/Trace.js'
 
-export function processGeneratorNode<R, E, A>(
-  node: GeneratorNode<R, E, A>,
+export function processGeneratorNode(
+  node: GeneratorNode,
   state: FiberState,
-): readonly [RuntimeDecision<R, E, A>, FiberState] {
+): readonly [RuntimeDecision, FiberState] {
   const { generator, previous, method, next } = node
   const result = generator[method.get()](next.get())
 
@@ -21,7 +23,19 @@ export function processGeneratorNode<R, E, A>(
   pipe(method, set('next'))
 
   if (!result.done) {
-    return [new Running(new InstructionNode(result.value, node)), state]
+    const instr = result.value
+    // Ammend the
+    const updatedState: FiberState = instr.__trace
+      ? {
+          ...state,
+          trace: state.trace.push(Trace.custom(instr.__trace)),
+        }
+      : state
+
+    return [
+      new Running(new InstructionNode(instr, node, instr.__trace ? popTrace : undefined)),
+      updatedState,
+    ]
   }
 
   const exit = Right(result.value)
@@ -29,8 +43,9 @@ export function processGeneratorNode<R, E, A>(
   switch (previous.tag) {
     case 'Initial':
       return [new Running(new ExitNode(exit)), state]
-    case 'Exit':
-      return [new Done(exit), state]
+    case 'Exit': {
+      return [new Done(previous.exit), state]
+    }
     case 'Finalizer': {
       previous.exit.modify(() => [null, Just(exit)])
 
@@ -43,12 +58,26 @@ export function processGeneratorNode<R, E, A>(
 
       return processGeneratorNode(prev, state)
     }
+    case 'Generator': {
+      previous.next.modify(() => [null, result.value])
+
+      return processGeneratorNode(previous, state)
+    }
     case 'Instruction': {
       const prev = previous.previous
 
       prev.next.modify(() => [null, result.value])
 
-      return processGeneratorNode(prev, state)
+      return processGeneratorNode(prev, previous.pop(state))
+    }
+    case 'Pop': {
+      previous.exit.modify(() => [null, Just(exit)])
+
+      return processPopNode(previous, state)
     }
   }
+}
+
+function popTrace(state: FiberState): FiberState {
+  return { ...state, trace: state.trace.pop() ?? state.trace }
 }

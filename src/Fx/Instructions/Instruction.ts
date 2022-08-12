@@ -1,3 +1,5 @@
+import type { NonEmptyArray } from 'hkt-ts/NonEmptyArray'
+
 import type { Access, Provide } from './Access.js'
 import type { AddTrace } from './AddTrace.js'
 import type { Async } from './Async.js'
@@ -11,6 +13,7 @@ import type { GetTrace } from './GetTrace.js'
 import type { Join } from './Join.js'
 import type { RaceAll } from './RaceAll.js'
 import type { SetInterruptStatus } from './SetInterruptStatus.js'
+import type { Wait } from './Wait.js'
 import type { WithConcurrency } from './WithConcurrency.js'
 import type { ZipAll } from './ZipAll.js'
 
@@ -29,8 +32,9 @@ export type Instruction<R, E, A> =
   | GetTrace
   | Join<E, A>
   | Provide<any, E, A>
-  | RaceAll<ReadonlyArray<Fx<R, E, any>>>
+  | RaceAll<NonEmptyArray<Fx<R, E, any>>>
   | SetInterruptStatus<R, E, A>
+  | Wait<R, E, A>
   | WithConcurrency<R, E, A>
   | ZipAll<ReadonlyArray<Fx<R, E, any>>>
 
