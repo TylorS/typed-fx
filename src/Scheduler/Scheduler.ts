@@ -42,11 +42,15 @@ export function scheduleWith<R>(schedule: Schedule, context: SchedulerContext<R>
 
 export function getSchedulerContext<R>() {
   return Fx(function* () {
+    const scope = yield* getFiberScope
+    const env = yield* getEnv<R>()
+    const trace = yield* getTrace
+    const fiberContext = yield* getFiberContext
     const context: SchedulerContext<R> = {
-      env: yield* getEnv<R>(),
-      scope: yield* getFiberScope,
-      trace: Maybe.Just(yield* getTrace),
-      ...(yield* getFiberContext),
+      env,
+      scope,
+      trace: Maybe.Just(trace),
+      ...fiberContext,
     }
 
     return context

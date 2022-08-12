@@ -42,7 +42,7 @@ export function getTraceUpTo(trace: Stack<Trace>, amount: number): Trace {
       frames.push(...current.value.frames)
     }
 
-    current = trace.pop()
+    current = current.previous
   }
 
   return frames.length > 0 ? new StackFrameTrace(frames) : EmptyTrace

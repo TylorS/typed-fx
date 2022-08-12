@@ -3,6 +3,7 @@ import { Left, Right } from 'hkt-ts/Either'
 
 import { Cause } from '@/Cause/Cause.js'
 import { Fx, IO, getEnv, getFiberScope, provide, unit } from '@/Fx/Fx.js'
+import { wait } from '@/Scope/Closeable.js'
 
 export abstract class Sink<E, A> {
   readonly event: (a: A) => IO<E, unknown> = lazyUnit as any
@@ -32,11 +33,19 @@ export const Drain = new (class Drain extends make<never, any>({
   error: (cause: Cause<never>) =>
     Fx(function* () {
       const scope = yield* getFiberScope
-      yield* scope.close(Left(cause))
+      const released = yield* scope.close(Left(cause))
+
+      if (!released) {
+        yield* wait(scope)
+      }
     }),
   end: Fx(function* () {
     const scope = yield* getFiberScope
-    yield* scope.close(Right(undefined))
+    const released = yield* scope.close(Right(undefined))
+
+    if (!released) {
+      yield* wait(scope)
+    }
   }),
 }) {})() as any as Sink<any, any>
 

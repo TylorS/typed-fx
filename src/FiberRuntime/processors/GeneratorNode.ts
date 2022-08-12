@@ -25,6 +25,7 @@ export function processGeneratorNode(
   if (!result.done) {
     const instr = result.value
     // Ammend the
+
     const updatedState: FiberState = instr.__trace
       ? {
           ...state,

@@ -3,9 +3,9 @@ import { pipe } from 'hkt-ts'
 import { Stream } from './Stream.js'
 
 import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
-import { Cause } from '@/Cause/Cause.js'
 import * as Fx from '@/Fx/index.js'
-import { SchedulerContext, forkSchedulerContext } from '@/Scheduler/Scheduler.js'
+import { lazy } from '@/Fx/index.js'
+import { SchedulerContext } from '@/Scheduler/Scheduler.js'
 import { Sink, makeSink } from '@/Sink/Sink.js'
 
 export function flatMap<A, R2, E2, B>(f: (a: A) => Stream<R2, E2, B>) {
@@ -38,28 +38,30 @@ export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {
   ) {}
 
   readonly event: (a: A) => Fx.IO<E | E2, unknown> = (a) => {
-    const { sink, context, f, releaseIfCompleted } = this
+    const { sink, context, f, releaseIfCompleted, running } = this
 
     return pipe(
-      Fx.fromLazy(() => increment(this.running)),
-      Fx.flatMap(() =>
-        Fx.Fx(function* () {
-          return f(a).fork(
-            yield* makeSink<never, E | E2, B>(sink.event, sink.error, releaseIfCompleted),
-            yield* forkSchedulerContext<R2>(),
-          )
-        }),
-      ),
+      Fx.Fx(function* () {
+        increment(running)
+
+        return f(a).fork(
+          yield* makeSink<never, E | E2, B>(
+            sink.event,
+            sink.error,
+            lazy(() => {
+              decrement(running)
+
+              return releaseIfCompleted
+            }),
+          ),
+          SchedulerContext.fork(context),
+        )
+      }),
       Fx.provide(context.env),
     )
   }
 
-  readonly error = (cause: Cause<E | E2>) =>
-    Fx.lazy(() => {
-      this.ended = true
-
-      return this.sink.error(cause)
-    })
+  readonly error = this.sink.error
 
   readonly end = Fx.lazy(() => {
     this.ended = true
@@ -69,7 +71,7 @@ export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {
 
   readonly releaseIfCompleted = Fx.lazy(() => {
     const { sink, ended } = this
-    const remaining = decrement(this.running)
+    const remaining = this.running.get()
 
     return Fx.Fx(function* () {
       if (ended && remaining <= 0) {

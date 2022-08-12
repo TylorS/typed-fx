@@ -14,7 +14,7 @@ export const Closeable = Service<Closeable>('Closeable')
 
 export function wait(scope: Closeable) {
   return async<never, never, Exit<any, any>>((cb) => {
-    if (scope.state.tag !== 'Closed') {
+    if (scope.state.tag === 'Open') {
       const finalizer = scope.ensuring((exit) => fromLazy(() => cb(success(exit))))
 
       return Left(lazy(() => finalizer(Right(undefined))))
