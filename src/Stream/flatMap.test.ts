@@ -11,16 +11,17 @@ import { runMain } from '@/Fx/run.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(flatMap.name, () => {
-    it('allows collecting stream values into an Array', async () => {
-      const stream = pipe(
-        success(1),
-        fromFx,
-        flatMap((a) => fromFx(success(a + 1))),
+    it('allows running streams from the output of another', async () => {
+      deepStrictEqual(
+        await pipe(
+          success(1),
+          fromFx,
+          flatMap((a) => fromFx(success(a + 1))),
+          collect,
+          runMain,
+        ),
+        [2],
       )
-
-      const actual = await pipe(stream, collect, runMain)
-
-      deepStrictEqual(actual, [2])
     })
   })
 })

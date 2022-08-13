@@ -7,9 +7,7 @@ export class FromFx<R, E, A> extends Stream<R, E, A> {
     super((sink, context) => {
       return context.scheduler.asap(
         Fx.Fx(function* () {
-          const a = yield* fx
-
-          yield* sink.event(a)
+          yield* sink.event(yield* fx)
           yield* sink.end
         }),
         context,

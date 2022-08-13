@@ -1,8 +1,10 @@
+import { flow } from 'hkt-ts/function'
+
 import { Stream } from './Stream.js'
 
 import { Fiber } from '@/Fiber/Fiber.js'
 import { ForkParams } from '@/Fx/Instructions/Fork.js'
-import { Fx, RIO } from '@/Fx/index.js'
+import { Fx, RIO, uninterruptable } from '@/Fx/index.js'
 import { forkSchedulerContext } from '@/Scheduler/Scheduler.js'
 import { Drain, Sink, makeSink } from '@/Sink/Sink.js'
 
@@ -20,7 +22,7 @@ export const observe =
   <A, R2, E2>(f: (a: A) => Fx<R2, E2, any>) =>
   <R, E>(stream: Stream<R, E, A>): RIO<R | R2, Fiber<E | E2, unknown>> =>
     Fx(function* () {
-      return yield* fork(yield* makeSink(f))(stream)
+      return yield* fork(yield* makeSink(flow(f, uninterruptable)))(stream)
     })
 
 export const drain = <R, E, A>(stream: Stream<R, E, A>): RIO<R, Fiber<E, unknown>> =>

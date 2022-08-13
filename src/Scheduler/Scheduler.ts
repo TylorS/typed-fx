@@ -26,6 +26,14 @@ export interface Scheduler extends Disposable {
   ) => Fiber.Live<E, ScheduleState>
 }
 
+export function asap<R, E, A>(fx: Fx<R, E, A>): RIO<R, Fiber.Live<E, A>> {
+  return Fx(function* () {
+    const context = yield* forkSchedulerContext<R>()
+
+    return context.scheduler.asap(fx, context)
+  })
+}
+
 export function schedule(schedule: Schedule) {
   return <R, E, A>(fx: Fx<R, E, A>): RIO<R, Fiber.Live<E, ScheduleState>> =>
     Fx(function* () {

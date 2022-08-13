@@ -181,10 +181,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       const decision = this._state.modify((s) => this.processor(this._current, s))
       const tag = decision.tag
 
-      // Allow the Scope to close the Fiber if it's been interrupted.
-      if (this.scope.state.tag === 'Closed') {
-        return this.done(this.scope.state.exit)
-      }
+      // console.log(this.id.sequenceNumber, printDecision(decision))
 
       // Yield to other Fibers cooperatively by scheduling a task using Timer.
       if (tag === 'Suspend') {
@@ -203,10 +200,6 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
       // Continue through the while-loop
       this._current = decision.instruction
-    }
-
-    if (this.scope.state.tag === 'Closed' && this._status.tag !== 'Done') {
-      this.done(this.scope.state.exit)
     }
   }
 
@@ -287,7 +280,7 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
   const processors: InstructionProcessors = {
     Access: processAccess,
     AddTrace: processAddTrace,
-    Async: processAsync,
+    Async: processAsync(id),
     Ensuring: processEnsuring,
     Failure: processFailure(maxTraceCount),
     Fork: processFork(context, scope),
@@ -299,7 +292,7 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
     Provide: processProvide,
     RaceAll: processRaceAll(id, context, scope),
     SetInterruptStatus: processSetInterruptStatus,
-    Wait: processWait as InstructionProcessors['Wait'],
+    Wait: processWait,
     WithConcurrency: processWithConcurrency,
     ZipAll: processZipAll(id, context, scope),
   }

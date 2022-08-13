@@ -89,7 +89,7 @@ export class InstructionNode {
 }
 
 /**
- * An Instruction can create new Fx which need to be processed
+ * An Instruction can create new Fx which needs to be processed
  */
 export class FxNode {
   readonly tag = 'Fx'

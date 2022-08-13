@@ -1,5 +1,6 @@
 import { isRight } from 'hkt-ts/Either'
 
+import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { FxNode, InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
 import { Await, Running, RuntimeUpdate } from '@/FiberRuntime/RuntimeProcessor.js'
@@ -8,19 +9,21 @@ import { complete } from '@/Future/complete.js'
 import { provide } from '@/Fx/Fx.js'
 import { Async } from '@/Fx/Instructions/Async.js'
 
-export function processAsync<R, E, A>(
-  async: Async<R, E, A>,
-  state: FiberState,
-  node: InstructionNode,
-): RuntimeUpdate {
-  const future = Pending<R, E, A>()
-  const either = async.input(complete(future))
+export function processAsync(id: FiberId.Live) {
+  return <R, E, A>(
+    async: Async<R, E, A>,
+    state: FiberState,
+    node: InstructionNode,
+  ): RuntimeUpdate => {
+    const future = Pending<R, E, A>()
+    const either = async.input(complete(future), id)
 
-  if (isRight(either)) {
-    return [new Running(new FxNode(either.right, node)), state]
+    if (isRight(either)) {
+      return [new Running(new FxNode(either.right, node)), state]
+    }
+
+    const env = state.env.value
+
+    return [new Await(future, () => provide(env)(either.left), node), state]
   }
-
-  const env = state.env.value
-
-  return [new Await(future, () => provide(env)(either.left), node), state]
 }

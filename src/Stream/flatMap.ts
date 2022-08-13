@@ -42,9 +42,7 @@ export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {
 
     return pipe(
       Fx.Fx(function* () {
-        increment(running)
-
-        return f(a).fork(
+        const fiber = f(a).fork(
           yield* makeSink<never, E | E2, B>(
             sink.event,
             sink.error,
@@ -56,6 +54,10 @@ export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {
           ),
           SchedulerContext.fork(context),
         )
+
+        increment(running)
+
+        return fiber
       }),
       Fx.provide(context.env),
     )
