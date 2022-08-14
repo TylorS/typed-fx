@@ -60,7 +60,25 @@ export const recurring = (amount: NonNegativeInteger): Schedule =>
   Schedule((now, state) => [state.step(now), state.iteration < amount ? new Continue(asap) : Done])
 
 export const periodic = (delay: Delay): Schedule =>
-  Schedule((now, state) => [state.step(now, Just(delay)), new Continue(delay)])
+  Schedule((now, state) => [
+    state.step(now, Just(delay)),
+    new Continue(
+      pipe(
+        state.time,
+        match(
+          () => delay,
+          (prev) => accountForTimeDrift(prev, now, delay),
+        ),
+      ),
+    ),
+  ])
+
+const accountForTimeDrift = (previous: Time, now: Time, delay: Delay): Delay => {
+  const expectedTime = previous + delay
+  const drift = expectedTime > now ? expectedTime - now : 0
+
+  return Delay(drift)
+}
 
 export const delayed = (delay: Delay): Schedule => periodic(delay).and(once)
 
