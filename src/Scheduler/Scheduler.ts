@@ -14,7 +14,7 @@ import { Trace } from '@/Trace/Trace.js'
 /**
  * Scheduler is capable of converting Fx into a runnning Fiber given a particular Schedule.
  * It implements the Disposable interface, it will NOT interrupt running fibers, but WILL
- * clear all currently scheduled Fibers to start.
+ * clear all currently scheduled tasks, including Fibers pending start.
  */
 export interface Scheduler extends Disposable {
   readonly asap: <R, E, A>(fx: Fx<R, E, A>, context: SchedulerContext<R>) => Fiber.Live<E, A>
@@ -76,7 +76,7 @@ export interface SchedulerContext<R> extends FiberContext {
   readonly env: Env<R>
   readonly scope: Closeable
   readonly trace: Maybe.Maybe<Trace>
-  readonly transform: <E, A>(fx: Fx<R, E, A>) => Fx<R, E, A>
+  readonly transform: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A>
 }
 
 export namespace SchedulerContext {

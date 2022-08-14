@@ -52,6 +52,8 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
       return runtime
     })
 
+    runtimes.forEach((f) => f.start())
+
     return [
       new Await(
         future,

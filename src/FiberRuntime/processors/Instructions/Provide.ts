@@ -11,8 +11,7 @@ export function processProvide<R, E, A>(
   const [fx, env] = provide.input
   const updatedState: FiberState = { ...state, env: state.env.push(env) }
 
-  return [
-    new Running(new PopNode(fx, (s) => ({ ...s, env: s.env.pop() ?? s.env }), node)),
-    updatedState,
-  ]
+  return [new Running(new PopNode(fx, popEnv, node)), updatedState]
 }
+
+const popEnv = (s: FiberState): FiberState => ({ ...s, env: s.env.pop() ?? s.env })
