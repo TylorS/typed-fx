@@ -1,4 +1,5 @@
 export * from './Fx.js'
 export * from './hkt.js'
+export * from './retry.js'
 export * from './scoped.js'
 export * from './run.js'
