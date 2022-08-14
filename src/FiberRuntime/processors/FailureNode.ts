@@ -1,6 +1,6 @@
 import { pipe } from 'hkt-ts'
 import { Left } from 'hkt-ts/Either'
-import { Just, isJust } from 'hkt-ts/Maybe'
+import { Just, getOrElse, isNothing } from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Associative'
 
 import { FiberState } from '../FiberState.js'
@@ -23,15 +23,14 @@ export function processFailureNode(
   state: FiberState,
 ): readonly [RuntimeDecision, FiberState] {
   const prev = node.previous
-
-  console.log('Failure', prev.tag)
+  const exit = Left(node.error)
 
   switch (prev.tag) {
     case 'Initial': {
-      return [new Running(new ExitNode(Left(node.error))), state]
+      return [new Running(new ExitNode(exit)), state]
     }
     case 'Exit': {
-      return [new Done(concatExitSeq(prev.exit, Left(node.error))), state]
+      return [new Done(concatExitSeq(prev.exit, exit)), state]
     }
     case 'Failure': {
       // Should never really happen
@@ -41,7 +40,7 @@ export function processFailureNode(
       ]
     }
     case 'Finalizer': {
-      pipe(prev.exit, set(Just(Left(node.error))))
+      pipe(prev.exit, set(Just(exit)))
 
       return processFinalizerNode(prev, state)
     }
@@ -51,21 +50,39 @@ export function processFailureNode(
     case 'Generator': {
       const prevCause = prev.cause.get()
 
-      if (isJust(prevCause)) {
-        return [new Running(new FailureNode(prevCause.value, prev.previous)), state]
+      // If we haven't tried to throw this error into the generator yet, and is currently uncaught allow
+      // the generator to try to catch it.
+      if (isNothing(prevCause) && shouldRethrow(node.error)) {
+        setFailure(node.error, prev)
+
+        return [new Running(prev), state]
       }
 
-      setFailure(node.error, prev)
-
-      return [new Running(prev), state]
+      // Otherwise continue processing the rest of the Stack with this error.
+      return [
+        new Running(
+          new FailureNode(
+            pipe(
+              prevCause,
+              getOrElse(() => node.error),
+            ),
+            prev.previous,
+          ),
+        ),
+        state,
+      ]
     }
     case 'Instruction': {
       return [new Running(new FailureNode(node.error, prev.previous)), prev.pop(state)]
     }
     case 'Pop': {
-      pipe(prev.exit, set(Just(Left(node.error))))
+      pipe(prev.exit, set(Just(exit)))
 
       return processPopNode(prev, state)
     }
   }
+}
+
+function shouldRethrow(error: Cause.Cause<any>): boolean {
+  return error.tag === 'Died' || (error.tag === 'Traced' && shouldRethrow(error.cause))
 }

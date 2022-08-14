@@ -2,9 +2,8 @@ import { Scheduler, SchedulerContext } from './Scheduler.js'
 import { callbackScheduler } from './callbackScheduler.js'
 import { scheduled } from './scheduled.js'
 
-import { increment } from '@/Atomic/AtomicCounter.js'
 import { timeToUnixTime } from '@/Clock/Clock.js'
-import { FiberId } from '@/FiberId/FiberId.js'
+import { Live } from '@/FiberId/FiberId.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { make } from '@/FiberRuntime/make.js'
 import { toFiber } from '@/FiberRuntime/toFiber.js'
@@ -72,15 +71,11 @@ export function fiberRutimeFromSchedulerContext<R, E, A>(
   fx: Fx<R, E, A>,
   schedulerContext: SchedulerContext<R>,
 ): FiberRuntime<E, A> {
-  const { env, scope, trace, ...context } = schedulerContext
+  const { env, scope, trace, transform, ...context } = schedulerContext
 
   return make({
-    fx,
-    id: new FiberId.Live(
-      increment(schedulerContext.platform.sequenceNumber),
-      schedulerContext.platform.timer,
-      schedulerContext.platform.timer.getCurrentTime(),
-    ),
+    fx: transform(fx),
+    id: Live(context.platform),
     context,
     env,
     scope,

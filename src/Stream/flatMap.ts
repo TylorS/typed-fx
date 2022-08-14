@@ -21,10 +21,11 @@ export function flatten<R, E, R2, E2, A>(
   )
 }
 
-export class FlatMap<R, E, A, R2, E2, B> extends Stream<R | R2, E | E2, B> {
-  constructor(readonly stream: Stream<R, E, A>, readonly f: (a: A) => Stream<R2, E2, B>) {
-    super((sink, context) => stream.fork(new FlatMapSink(sink, context, f), context))
-  }
+export class FlatMap<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, B> {
+  constructor(readonly stream: Stream<R, E, A>, readonly f: (a: A) => Stream<R2, E2, B>) {}
+
+  readonly fork: Stream<R | R2, E | E2, B>['fork'] = (sink, context) =>
+    this.stream.fork(new FlatMapSink(sink, context, this.f), context)
 }
 
 export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {

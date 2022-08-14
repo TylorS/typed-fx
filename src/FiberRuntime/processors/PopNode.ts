@@ -27,6 +27,8 @@ export function processPopNode(
 
   const previousState = node.pop(state)
 
+  // TODO: This is a bit of a hack as PopNode should not really know about SetInterruptStatus
+  // but this allows us to wait until the fiber is ready to be interrupted.
   if (
     node.previous.instruction.tag === 'SetInterruptStatus' &&
     previousState.interruptStatus.value &&

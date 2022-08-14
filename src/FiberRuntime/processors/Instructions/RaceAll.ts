@@ -3,10 +3,9 @@ import { NonEmptyArray } from 'hkt-ts/NonEmptyArray'
 
 import { getTraceUpTo } from './Failure.js'
 
-import { increment } from '@/Atomic/AtomicCounter.js'
 import { Exit } from '@/Exit/Exit.js'
 import { FiberContext } from '@/FiberContext/index.js'
-import { FiberId } from '@/FiberId/FiberId.js'
+import { FiberId, Live } from '@/FiberId/FiberId.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { FxNode, InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
@@ -33,11 +32,7 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
     const future = Pending<never, never, Exit<any, any>>()
     const deleted = 0
     const runtimes = raceAll.input.map((fx, i) => {
-      const id = new FiberId.Live(
-        increment(context.platform.sequenceNumber),
-        context.platform.timer,
-        context.platform.timer.getCurrentTime(),
-      )
+      const id = Live(context.platform)
       const scope = fiberScope.fork()
       const runtime: FiberRuntime<any, any> = make({
         fx,

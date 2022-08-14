@@ -11,7 +11,7 @@ import {
   InitialNode,
   RuntimeInstruction,
 } from './RuntimeInstruction.js'
-import { RuntimeDecision, RuntimeProcessor } from './RuntimeProcessor.js'
+import { RuntimeProcessor } from './RuntimeProcessor.js'
 import { processAccess } from './processors/Instructions/Access.js'
 import { processAddTrace } from './processors/Instructions/AddTrace.js'
 import { processAsync } from './processors/Instructions/Async.js'
@@ -183,33 +183,37 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
     while (this._status.tag === 'Running') {
       try {
-        // Use the provided processor to update state and determine the next thing to do.
-        const decision = this._state.modify((s) => this.processor(this._current, s))
-        const tag = decision.tag
-
-        console.log(this.id.sequenceNumber, printDecision(decision))
-
-        // Yield to other Fibers cooperatively by scheduling a task using Timer.
-        if (tag === 'Suspend') {
-          return this.suspend()
-        }
-
-        // Wait on a Future to resolve
-        if (tag === 'Await') {
-          return this.await(decision.future, decision.finalizer, decision.previous)
-        }
-
-        // The Fiber has completed
-        if (tag === 'Done') {
-          return this.done(decision.exit)
-        }
-
-        // Continue through the while-loop
-        this._current = decision.instruction
+        this.process()
       } catch (e) {
         this.uncaughtException(e)
       }
     }
+  }
+
+  protected process() {
+    // Use the provided processor to update state and determine the next thing to do.
+    const decision = this._state.modify((s) => this.processor(this._current, s))
+    const tag = decision.tag
+
+    // console.log(this.id.sequenceNumber, printDecision(decision))
+
+    // Yield to other Fibers cooperatively by scheduling a task using Timer.
+    if (tag === 'Suspend') {
+      return this.suspend()
+    }
+
+    // Wait on a Future to resolve
+    if (tag === 'Await') {
+      return this.await(decision.future, decision.finalizer, decision.previous)
+    }
+
+    // The Fiber has completed
+    if (tag === 'Done') {
+      return this.done(decision.exit)
+    }
+
+    // Continue through the while-loop
+    this._current = decision.instruction
   }
 
   // #region Status Updates
@@ -230,6 +234,14 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
     const inner = settable()
     const cleanup = this.scope.ensuring(finalizer)
     this._status = Suspended(this.getInterruptStatus)
+
+    // reset the opCount to 0 when we do asynchronous operations as we naturally
+    // allow for other fibers to run cooperatively. We really just wanna yield for
+    // synchronous operations.
+    pipe(
+      this._state,
+      update((s) => ({ ...s, opCount: 0 })),
+    )
 
     inner.add(
       this._disposable.add(
@@ -316,24 +328,24 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
   return processors
 }
 
-function printDecision(decision: RuntimeDecision): string {
-  switch (decision.tag) {
-    case 'Await':
-      return `Await ${JSON.stringify(decision.future.state.get(), null, 2)}`
-    case 'Done':
-      return `Done ${JSON.stringify(decision.exit, null, 2)}`
-    case 'Running': {
-      const instr = decision.instruction
+// function printDecision(decision: RuntimeDecision): string {
+//   switch (decision.tag) {
+//     case 'Await':
+//       return `Await ${JSON.stringify(decision.future.state.get(), null, 2)}`
+//     case 'Done':
+//       return `Done ${JSON.stringify(decision.exit, null, 2)}`
+//     case 'Running': {
+//       const instr = decision.instruction
 
-      switch (instr.tag) {
-        case 'Instruction':
-          return `Running: Instruction: ${instr.instruction.tag}`
-      }
+//       switch (instr.tag) {
+//         case 'Instruction':
+//           return `Running: Instruction: ${instr.instruction.tag}`
+//       }
 
-      return `Running: ${decision.instruction.tag}`
-    }
-    case 'Suspend': {
-      return `Suspend`
-    }
-  }
-}
+//       return `Running: ${decision.instruction.tag}`
+//     }
+//     case 'Suspend': {
+//       return `Suspend`
+//     }
+//   }
+// }

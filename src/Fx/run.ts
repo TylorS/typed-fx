@@ -1,3 +1,4 @@
+import { identity } from 'hkt-ts'
 import { Nothing } from 'hkt-ts/Maybe'
 
 import { Environment } from '@/Env/Env.js'
@@ -14,6 +15,7 @@ export const MainRuntime = Runtime<never>({
   env: new Environment<never>(),
   scope: GlobalScope,
   trace: Nothing,
+  transform: identity,
 })
 
 export const { run: runMain, runExit: runMainExit, runFiber: runMainFiber } = MainRuntime

@@ -1,4 +1,4 @@
-import { Maybe } from 'hkt-ts'
+import { Maybe, identity } from 'hkt-ts'
 
 import { Disposable } from '@/Disposable/Disposable.js'
 import { Env } from '@/Env/Env.js'
@@ -58,6 +58,7 @@ export function getSchedulerContext<R>() {
       env,
       scope,
       trace: Maybe.Just(trace),
+      transform: identity,
       ...fiberContext,
     }
 
@@ -75,6 +76,7 @@ export interface SchedulerContext<R> extends FiberContext {
   readonly env: Env<R>
   readonly scope: Closeable
   readonly trace: Maybe.Maybe<Trace>
+  readonly transform: <E, A>(fx: Fx<R, E, A>) => Fx<R, E, A>
 }
 
 export namespace SchedulerContext {
@@ -84,6 +86,7 @@ export namespace SchedulerContext {
       env: context.env,
       trace: Maybe.fromNullable(params?.trace),
       scope: context.scope.fork(),
+      transform: context.transform,
     }
   }
 }

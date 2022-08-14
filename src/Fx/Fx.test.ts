@@ -32,7 +32,7 @@ describe(new URL(import.meta.url).pathname, () => {
         deepStrictEqual(await runMain(test), value)
       })
 
-      it.only('allows using try/catch within nested Fx', async () => {
+      it('allows using try/catch within nested Fx', async () => {
         const error = new Error('foo')
         const value = Math.random()
         const test = Fx(function* () {

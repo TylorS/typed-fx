@@ -6,10 +6,9 @@ import { Just, Nothing } from 'hkt-ts/Maybe'
 import { getTraceUpTo } from './Failure.js'
 
 import { set } from '@/Atomic/Atomic.js'
-import { increment } from '@/Atomic/AtomicCounter.js'
 import { Exit, makeParallelAssociative } from '@/Exit/Exit.js'
 import { FiberContext } from '@/FiberContext/index.js'
-import { FiberId } from '@/FiberId/FiberId.js'
+import { FiberId, Live } from '@/FiberId/FiberId.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { FxNode, InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
@@ -53,11 +52,7 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
 
     const deleted = 0
     const runtimes = zipAll.input.map((fx, i) => {
-      const id = new FiberId.Live(
-        increment(context.platform.sequenceNumber),
-        context.platform.timer,
-        context.platform.timer.getCurrentTime(),
-      )
+      const id = Live(context.platform)
       const scope = fiberScope.fork()
       const runtime: FiberRuntime<any, any> = make({
         fx,

@@ -8,7 +8,9 @@ import * as O from 'hkt-ts/Typeclass/Ord'
 import * as N from 'hkt-ts/number'
 import * as S from 'hkt-ts/string'
 
+import { increment } from '@/Atomic/AtomicCounter.js'
 import { Clock, timeToDate } from '@/Clock/Clock.js'
+import { Platform } from '@/Platform/Platform.js'
 import { Time } from '@/Time/index.js'
 
 export type FiberId = FiberId.None | FiberId.Live | FiberId.Synthetic
@@ -42,8 +44,8 @@ export const None = FiberId.None
 export type None = FiberId.None
 
 export type Live = FiberId.Live
-export const Live = (sequenceNumber: N.NonNegativeInteger, clock: Clock): FiberId.Live =>
-  new FiberId.Live(sequenceNumber, clock, clock.getCurrentTime())
+export const Live = ({ sequenceNumber, timer }: Platform): FiberId.Live =>
+  new FiberId.Live(increment(sequenceNumber), timer, timer.getCurrentTime())
 
 export type Synthetic = FiberId.Synthetic
 export const Synthetic = (fiberIds: ReadonlyArray<FiberId>): FiberId.Synthetic =>
