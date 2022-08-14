@@ -51,7 +51,7 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
     const trace = getTraceUpTo(state.trace, context.platform.maxTraceCount)
     const [future, onExit] = zipAllFuture(zipAll.input.length)
 
-    const deleted = 0
+    let deleted = 0
     const runtimes = zipAll.input.map((fx, i) => {
       const id = Live(context.platform)
       const scope = fiberScope.fork()
@@ -66,7 +66,7 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
 
       runtime.addObserver((exit) => {
         onExit(exit, i)
-        runtimes.splice(i - deleted, 1)
+        runtimes.splice(i - deleted++, 1)
       })
 
       return runtime

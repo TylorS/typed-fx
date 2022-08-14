@@ -31,7 +31,7 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
 
     const trace = getTraceUpTo(state.trace, context.platform.maxTraceCount)
     const future = Pending<never, never, Exit<any, any>>()
-    const deleted = 0
+    let deleted = 0
     const runtimes = raceAll.input.map((fx, i) => {
       const id = Live(context.platform)
       const scope = fiberScope.fork()
@@ -45,7 +45,7 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
       })
 
       runtime.addObserver((exit) => {
-        runtimes.splice(i - deleted, 1)
+        runtimes.splice(i - deleted++, 1)
         complete(future)(success(exit))
       })
 
