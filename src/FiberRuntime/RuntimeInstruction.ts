@@ -5,6 +5,7 @@ import { FiberState } from './FiberState.js'
 import { RuntimeProcessor, RuntimeUpdate } from './RuntimeProcessor.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
+import { Cause } from '@/Cause/Cause.js'
 import { AnyExit } from '@/Exit/Exit.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
 import { AnyFx } from '@/Fx/Fx.js'
@@ -13,6 +14,7 @@ import { Trace } from '@/Trace/Trace.js'
 
 export type RuntimeInstruction =
   | ExitNode
+  | FailureNode
   | FinalizerNode
   | FxNode
   | GeneratorNode
@@ -29,6 +31,7 @@ export namespace RuntimeInstruction {
     finalizer: (instr: FinalizerNode, state: FiberState) => RuntimeUpdate,
     pop: (instr: PopNode, state: FiberState) => RuntimeUpdate,
     exit: (instr: ExitNode, state: FiberState) => RuntimeUpdate,
+    failure: (instr: FailureNode, state: FiberState) => RuntimeUpdate,
   ): RuntimeProcessor {
     return (instr: RuntimeInstruction, state: FiberState) => {
       switch (instr.tag) {
@@ -46,6 +49,8 @@ export namespace RuntimeInstruction {
           return pop(instr, state)
         case 'Exit':
           return exit(instr, state)
+        case 'Failure':
+          return failure(instr, state)
       }
     }
   }
@@ -72,6 +77,7 @@ export class GeneratorNode {
     readonly previous: RuntimeInstruction,
     readonly method: Atomic<'next' | 'throw'> = Atomic<'next' | 'throw'>('next'),
     readonly next: Atomic<any> = Atomic(undefined),
+    readonly cause: Atomic<Maybe<Cause<any>>> = Atomic<Maybe<Cause<any>>>(Nothing),
   ) {}
 }
 
@@ -133,4 +139,10 @@ export class ExitNode {
   readonly tag = 'Exit'
 
   constructor(readonly exit: AnyExit) {}
+}
+
+export class FailureNode {
+  readonly tag = 'Failure'
+
+  constructor(readonly error: Cause<any> | Cause<never>, readonly previous: RuntimeInstruction) {}
 }

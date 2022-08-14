@@ -1,6 +1,6 @@
 import { pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
-import { Just } from 'hkt-ts/Maybe'
+import { Just, Nothing } from 'hkt-ts/Maybe'
 
 import { FiberState } from '../FiberState.js'
 import { ExitNode, GeneratorNode, InstructionNode } from '../RuntimeInstruction.js'
@@ -16,11 +16,12 @@ export function processGeneratorNode(
   node: GeneratorNode,
   state: FiberState,
 ): readonly [RuntimeDecision, FiberState] {
-  const { generator, previous, method, next } = node
+  const { generator, previous, method, next, cause } = node
   const result = generator[method.get()](next.get())
 
-  // Reset the Method to next
+  // Reset Failures since we made it to the next instruction w/o throwing
   pipe(method, set('next'))
+  pipe(cause, set(Nothing))
 
   if (!result.done) {
     const instr = result.value
@@ -75,6 +76,11 @@ export function processGeneratorNode(
       previous.exit.modify(() => [null, Just(exit)])
 
       return processPopNode(previous, state)
+    }
+    case 'Failure': {
+      throw new Error(
+        `Bug in @typed/fx. A FailureNode should never create new instructions directly.`,
+      )
     }
   }
 }

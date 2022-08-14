@@ -1,4 +1,5 @@
 export * from './ExitNode.js'
+export * from './FailureNode.js'
 export * from './FinalizerNode.js'
 export * from './FxNode.js'
 export * from './GeneratorNode.js'

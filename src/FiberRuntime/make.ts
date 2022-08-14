@@ -5,13 +5,18 @@ import { Maybe, getOrElse } from 'hkt-ts/Maybe'
 import { FiberRuntime } from './FiberRuntime.js'
 import { FiberState } from './FiberState.js'
 import { InstructionProcessors } from './InstructionProcessor.js'
-import { GeneratorNode, InitialNode, RuntimeInstruction } from './RuntimeInstruction.js'
-import { RuntimeProcessor } from './RuntimeProcessor.js'
+import {
+  FailureNode,
+  GeneratorNode,
+  InitialNode,
+  RuntimeInstruction,
+} from './RuntimeInstruction.js'
+import { RuntimeDecision, RuntimeProcessor } from './RuntimeProcessor.js'
 import { processAccess } from './processors/Instructions/Access.js'
 import { processAddTrace } from './processors/Instructions/AddTrace.js'
 import { processAsync } from './processors/Instructions/Async.js'
 import { processEnsuring } from './processors/Instructions/Ensuring.js'
-import { getTraceUpTo, processFailure } from './processors/Instructions/Failure.js'
+import { getTraceUpTo, getTrimmedTrace, processFailure } from './processors/Instructions/Failure.js'
 import { processFork } from './processors/Instructions/Fork.js'
 import { processFromLazy } from './processors/Instructions/FromLazy.js'
 import { processGetFiberContext } from './processors/Instructions/GetFiberContext.js'
@@ -29,6 +34,7 @@ import { processZipAll } from './processors/Instructions/ZipAll.js'
 import * as processors from './processors/index.js'
 
 import { Atomic, update } from '@/Atomic/Atomic.js'
+import { died, traced } from '@/Cause/Cause.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Eff } from '@/Eff/Eff.js'
 import { Env } from '@/Env/Env.js'
@@ -64,8 +70,6 @@ export interface FiberRuntimeParams<R, E, A> {
   readonly scope: Closeable
   readonly trace: Maybe<Trace>
 }
-
-// TODO: Add support for interrupting when the status changes.
 
 export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   // #region Private State
@@ -109,6 +113,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       processors.processFinalizerNode,
       processors.processPopNode,
       processors.processExitNode(scope),
+      processors.processFailureNode,
     )
     this._status = Suspended(this.getInterruptStatus)
   }
@@ -177,29 +182,33 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
     this.running()
 
     while (this._status.tag === 'Running') {
-      // Use the provided processor to update state and determine the next thing to do.
-      const decision = this._state.modify((s) => this.processor(this._current, s))
-      const tag = decision.tag
+      try {
+        // Use the provided processor to update state and determine the next thing to do.
+        const decision = this._state.modify((s) => this.processor(this._current, s))
+        const tag = decision.tag
 
-      // console.log(this.id.sequenceNumber, printDecision(decision))
+        console.log(this.id.sequenceNumber, printDecision(decision))
 
-      // Yield to other Fibers cooperatively by scheduling a task using Timer.
-      if (tag === 'Suspend') {
-        return this.suspend()
+        // Yield to other Fibers cooperatively by scheduling a task using Timer.
+        if (tag === 'Suspend') {
+          return this.suspend()
+        }
+
+        // Wait on a Future to resolve
+        if (tag === 'Await') {
+          return this.await(decision.future, decision.finalizer, decision.previous)
+        }
+
+        // The Fiber has completed
+        if (tag === 'Done') {
+          return this.done(decision.exit)
+        }
+
+        // Continue through the while-loop
+        this._current = decision.instruction
+      } catch (e) {
+        this.uncaughtException(e)
       }
-
-      // Wait on a Future to resolve
-      if (tag === 'Await') {
-        return this.await(decision.future, decision.finalizer, decision.previous)
-      }
-
-      // The Fiber has completed
-      if (tag === 'Done') {
-        return this.done(decision.exit)
-      }
-
-      // Continue through the while-loop
-      this._current = decision.instruction
     }
   }
 
@@ -245,14 +254,21 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
   protected done(exit: Exit<E, A>) {
     this._status = Done
-    this.notify(exit)
+    this._observers.forEach((o) => o(exit))
+    this._observers.splice(0, this._observers.length)
   }
 
   // #endregion
 
-  protected notify(exit: Exit<E, A>) {
-    this._observers.forEach((o) => o(exit))
-    this._observers.splice(0, this._observers.length)
+  protected uncaughtException(error: unknown) {
+    const cause = died(error)
+    const state = this._state.get()
+    const trace = getTrimmedTrace(cause, state.trace)
+    const finalCause = traced(
+      getTraceUpTo(state.trace.push(trace), this.context.platform.maxTraceCount),
+    )(cause)
+
+    this._current = new FailureNode(finalCause, this._current)
   }
 
   protected getInterruptStatus = () => this._state.get().interruptStatus.value
@@ -292,7 +308,7 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
     Provide: processProvide,
     RaceAll: processRaceAll(id, context, scope),
     SetInterruptStatus: processSetInterruptStatus,
-    Wait: processWait,
+    Wait: processWait(id),
     WithConcurrency: processWithConcurrency,
     ZipAll: processZipAll(id, context, scope),
   }
@@ -300,24 +316,24 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
   return processors
 }
 
-// function printDecision(decision: RuntimeDecision): string {
-//   switch (decision.tag) {
-//     case 'Await':
-//       return `Await ${JSON.stringify(decision.future.state.get(), null, 2)}`
-//     case 'Done':
-//       return `Done ${JSON.stringify(decision.exit, null, 2)}`
-//     case 'Running': {
-//       const instr = decision.instruction
+function printDecision(decision: RuntimeDecision): string {
+  switch (decision.tag) {
+    case 'Await':
+      return `Await ${JSON.stringify(decision.future.state.get(), null, 2)}`
+    case 'Done':
+      return `Done ${JSON.stringify(decision.exit, null, 2)}`
+    case 'Running': {
+      const instr = decision.instruction
 
-//       switch (instr.tag) {
-//         case 'Instruction':
-//           return `Running: Instruction: ${instr.instruction.tag}`
-//       }
+      switch (instr.tag) {
+        case 'Instruction':
+          return `Running: Instruction: ${instr.instruction.tag}`
+      }
 
-//       return `Running: ${decision.instruction.tag}`
-//     }
-//     case 'Suspend': {
-//       return `Suspend`
-//     }
-//   }
-// }
+      return `Running: ${decision.instruction.tag}`
+    }
+    case 'Suspend': {
+      return `Suspend`
+    }
+  }
+}

@@ -89,7 +89,7 @@ export type OutputOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _A : neve
 /**
  * Access the Fx Env to find services.
  */
-export const access = <R, R2, E, A>(
+export const access = <R = never, R2 = never, E = never, A = any>(
   f: (r: Env<R>) => Fx<R2, E, A>,
   __trace?: string,
 ): Fx<R | R2, E, A> => new Access(f, __trace)
