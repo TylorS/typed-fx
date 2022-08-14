@@ -2,7 +2,7 @@ import { constant, flow, pipe } from 'hkt-ts'
 import { Left, Right } from 'hkt-ts/Either'
 
 import { Cause } from '@/Cause/Cause.js'
-import { Fx, IO, getEnv, getFiberScope, provide, uninterruptable, unit } from '@/Fx/Fx.js'
+import { Fx, IO, getEnv, getFiberScope, provide, unit } from '@/Fx/Fx.js'
 
 export abstract class Sink<E, A> {
   readonly event: (a: A) => IO<E, unknown> = lazyUnit as any
@@ -50,9 +50,9 @@ export function makeSink<R, E, A>(
   return Fx(function* () {
     const env = yield* getEnv<R>()
     const sink: Sink<E, A> = {
-      event: flow(event, uninterruptable, provide(env)),
-      error: flow(error, uninterruptable, provide(env)),
-      end: pipe(end, uninterruptable, provide(env)),
+      event: flow(event, provide(env)),
+      error: flow(error, provide(env)),
+      end: pipe(end, provide(env)),
     }
 
     return sink
