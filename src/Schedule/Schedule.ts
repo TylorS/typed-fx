@@ -103,18 +103,9 @@ export const exponential = (delay: Delay): Schedule =>
   })
 
 export const retries = (retries: NonNegativeInteger): Schedule =>
-  Schedule((now, state) => {
-    const next = state.step(now)
+  recurring(NonNegativeInteger(retries + 1))
 
-    // If we've reached our retry limit, lets return Done.
-    if (state.iteration === retries) {
-      return [next, Done]
-    }
-
-    return [next, new Continue(asap)]
-  })
-
-export const once = retries(NonNegativeInteger(1))
+export const once = recurring(NonNegativeInteger(1))
 
 export const or =
   (second: Schedule) =>
