@@ -34,7 +34,7 @@ import { processZipAll } from './processors/Instructions/ZipAll.js'
 import * as processors from './processors/index.js'
 
 import { Atomic, update } from '@/Atomic/Atomic.js'
-import { died, traced } from '@/Cause/Cause.js'
+import { died, interrupted, traced } from '@/Cause/Cause.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Eff } from '@/Eff/Eff.js'
 import { Env } from '@/Env/Env.js'
@@ -234,15 +234,24 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   protected await(future: AnyFuture, finalizer: Finalizer, previous: RuntimeInstruction) {
     const inner = settable()
     const cleanup = this.scope.ensuring(finalizer)
-    this._status = Suspended(this.getInterruptStatus)
+    const state = future.state.get()
 
-    // reset the opCount to 0 when we do asynchronous operations as we naturally
-    // allow for other fibers to run cooperatively. We really just wanna yield for
-    // synchronous operations.
-    pipe(
-      this._state,
-      update((s) => ({ ...s, opCount: 0 })),
-    )
+    if (state.tag === 'Resolved') {
+      return (this._current = new GeneratorNode(
+        Eff.gen(
+          Fx(function* () {
+            yield* cleanup(Right(undefined))
+
+            return yield* state.fx
+          }),
+        ),
+        previous,
+      ))
+    }
+
+    if (state.tag === 'Interrupted') {
+      return new FailureNode(interrupted(state.fiberId), previous)
+    }
 
     inner.add(
       this._disposable.add(
@@ -259,9 +268,20 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
             ),
             previous,
           )
+
           this.setTimer(() => this.run(), Delay(0))
         }),
       ),
+    )
+
+    this._status = Suspended(this.getInterruptStatus)
+
+    // reset the opCount to 0 when we do asynchronous operations as we naturally
+    // allow for other fibers to run cooperatively. We really just wanna yield for
+    // synchronous operations.
+    pipe(
+      this._state,
+      update((s) => ({ ...s, opCount: 0 })),
     )
   }
 
@@ -321,7 +341,7 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
     Provide: processProvide,
     RaceAll: processRaceAll(id, context, scope),
     SetInterruptStatus: processSetInterruptStatus,
-    Wait: processWait(id),
+    Wait: processWait,
     WithConcurrency: processWithConcurrency,
     ZipAll: processZipAll(id, context, scope),
   }
