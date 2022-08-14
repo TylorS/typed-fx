@@ -59,7 +59,7 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
         fx: acquireFiber(state.concurrencyLevel.value)(fx),
         id,
         env: state.env.value,
-        context: FiberContext.fork(context),
+        context: FiberContext.fork(context, { fiberRefs: context.fiberRefs }),
         scope,
         trace: trace.tag === 'EmptyTrace' ? Nothing : Just(trace),
       })

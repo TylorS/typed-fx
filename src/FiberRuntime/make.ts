@@ -119,7 +119,8 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   }
 
   // #region Public API
-  readonly start = () => {
+
+  readonly start = (): boolean => {
     // Can only be manually started once.
     if (this._started) {
       return false
