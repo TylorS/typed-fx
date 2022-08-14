@@ -49,31 +49,31 @@ export function processGeneratorNode(
       return [new Done(previous.exit), state]
     }
     case 'Finalizer': {
-      previous.exit.modify(() => [null, Just(exit)])
+      pipe(previous.exit, set(Just(exit)))
 
       return processFinalizerNode(previous, state)
     }
     case 'Fx': {
       const prev = previous.previous.previous
 
-      prev.next.modify(() => [null, result.value])
+      pipe(prev.next, set(result.value))
 
       return processGeneratorNode(prev, state)
     }
     case 'Generator': {
-      previous.next.modify(() => [null, result.value])
+      pipe(previous.next, set(result.value))
 
       return processGeneratorNode(previous, state)
     }
     case 'Instruction': {
       const prev = previous.previous
 
-      prev.next.modify(() => [null, result.value])
+      pipe(prev.next, set(result.value))
 
       return processGeneratorNode(prev, previous.pop(state))
     }
     case 'Pop': {
-      previous.exit.modify(() => [null, Just(exit)])
+      pipe(previous.exit, set(Just(exit)))
 
       return processPopNode(previous, state)
     }

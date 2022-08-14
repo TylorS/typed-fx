@@ -20,6 +20,7 @@ import { complete } from '@/Future/complete.js'
 import { ZipAll } from '@/Fx/Instructions/ZipAll.js'
 import { AnyFx, Fx, success } from '@/Fx/index.js'
 import { Scope } from '@/Scope/Scope.js'
+import { acquireFiber } from '@/Semaphore/Semaphore.js'
 
 export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Scope) {
   return <FX extends ReadonlyArray<AnyFx>>(
@@ -55,7 +56,7 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
       const id = Live(context.platform)
       const scope = fiberScope.fork()
       const runtime: FiberRuntime<any, any> = make({
-        fx,
+        fx: acquireFiber(state.concurrencyLevel.value)(fx),
         id,
         env: state.env.value,
         context: FiberContext.fork(context),

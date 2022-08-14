@@ -27,7 +27,7 @@ export function RootScheduler(timer: Timer): Scheduler {
 
   const asap: Scheduler['asap'] = (fx, schedulerContext) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { env, scope, trace, ...context } = schedulerContext
+    const { env, scope, trace, transform, ...context } = schedulerContext
     const runtime = fiberRutimeFromSchedulerContext(
       runAt(fx, timeToUnixTime(timer.getCurrentTime())(timer)),
       schedulerContext,
@@ -39,7 +39,7 @@ export function RootScheduler(timer: Timer): Scheduler {
 
   const schedule: Scheduler['schedule'] = (fx, schedule, schedulerContext) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { env, scope, trace, ...context } = schedulerContext
+    const { env, scope, trace, transform, ...context } = schedulerContext
     const runtime = fiberRutimeFromSchedulerContext(
       scheduled(fx, schedule, timer, runAt),
       schedulerContext,

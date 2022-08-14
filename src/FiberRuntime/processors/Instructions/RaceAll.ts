@@ -17,6 +17,7 @@ import { complete } from '@/Future/complete.js'
 import { RaceAll } from '@/Fx/Instructions/RaceAll.js'
 import { AnyFx, Fx, success } from '@/Fx/index.js'
 import { Scope } from '@/Scope/Scope.js'
+import { acquireFiber } from '@/Semaphore/Semaphore.js'
 
 export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: Scope) {
   return <FX extends NonEmptyArray<AnyFx>>(
@@ -35,7 +36,7 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
       const id = Live(context.platform)
       const scope = fiberScope.fork()
       const runtime: FiberRuntime<any, any> = make({
-        fx,
+        fx: acquireFiber(state.concurrencyLevel.value)(fx),
         id,
         env: state.env.value,
         context: FiberContext.fork(context),

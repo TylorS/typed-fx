@@ -10,6 +10,7 @@ import { InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
 import { Running, RuntimeUpdate } from '@/FiberRuntime/RuntimeProcessor.js'
 import { Fork } from '@/Fx/Instructions/Fork.js'
 import { Scope } from '@/Scope/Scope.js'
+import { acquireFiber } from '@/Semaphore/Semaphore.js'
 
 export function processFork(initial: FiberContext, fiberScope: Scope) {
   return <R, E, A>(
@@ -28,6 +29,7 @@ export function processFork(initial: FiberContext, fiberScope: Scope) {
       env: state.env.value,
       scope: params.scope ?? params.forkScope?.fork() ?? fiberScope.fork(),
       trace: Just(getTraceUpTo(state.trace, current.platform.maxTraceCount)),
+      transform: acquireFiber(state.concurrencyLevel.value),
     })
 
     pipe(node.previous.next, set(fiber))
