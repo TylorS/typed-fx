@@ -32,9 +32,10 @@ export function RootScheduler(timer: Timer): Scheduler {
       runAt(fx, timeToUnixTime(timer.getCurrentTime())(timer)),
       schedulerContext,
     )
+    const fiber = toFiber(runtime, context, scope)
     runtime.start()
 
-    return toFiber(runtime, context, scope)
+    return fiber
   }
 
   const schedule: Scheduler['schedule'] = (fx, schedule, schedulerContext) => {
@@ -44,9 +45,11 @@ export function RootScheduler(timer: Timer): Scheduler {
       scheduled(fx, schedule, timer, runAt),
       schedulerContext,
     )
+    const fiber = toFiber(runtime, context, scope)
+
     runtime.start()
 
-    return toFiber(runtime, context, scope)
+    return fiber
   }
 
   const scheduler: Scheduler = {
