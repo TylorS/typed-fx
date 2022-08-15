@@ -1,10 +1,10 @@
-import { Either } from 'hkt-ts/Either'
+import type { Either } from 'hkt-ts/Either'
 
 import type { Fx } from '../Fx.js'
 
 import { FxInstruction } from './FxInstruction.js'
 
-import { FiberId } from '@/FiberId/FiberId.js'
+import type { FiberId } from '@/FiberId/FiberId.js'
 
 export class Async<R, E, A> extends FxInstruction<AsyncRegister<R, E, A>, R, E, A> {
   static tag = 'Async' as const

@@ -1,11 +1,15 @@
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 
+import { Env } from '@/Env/Env.js'
 import * as Fx from '@/Fx/index.js'
+import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import { Id, InstanceOf, Service } from '@/Service/index.js'
 
 export interface RefApi<R, E, A> {
   readonly get: Fx.Fx<R, E, A>
-  readonly modify: <B>(f: (a: A) => readonly [B, A]) => Fx.Fx<R, E, B>
+  readonly modify: <R2, E2, B>(
+    f: (a: A) => Fx.Fx<R2, E2, readonly [B, A]>,
+  ) => Fx.Fx<R | R2, E | E2, B>
 }
 
 export type AnyRefApi =
@@ -52,6 +56,17 @@ export function Ref<R, E, A>(initial: Fx.Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
     static modify<S extends AnyRefConstructor, B>(this: S, f: (a: A) => readonly [B, A]) {
       return Fx.asksFx_(this.id())((ref) => ref.modify(f))
     }
+
+    /**
+     * Add this service to the given Environment.
+     */
+    readonly add = <R>(env: Provideable<R>): Env<R | this> => env[PROVIDEABLE]().add(this.id, this);
+
+    /**
+     * Implement the PROVIDEABLE interface for "this"
+     */
+    readonly [PROVIDEABLE]: Provideable<this>[PROVIDEABLE] = () => this.add(Env.empty)
+    readonly provide: Provideable<this>['provide'] = Fx.provide(this)
   }
 }
 

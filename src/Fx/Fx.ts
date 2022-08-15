@@ -34,8 +34,9 @@ import type { Fiber, Live } from '@/Fiber/Fiber.js'
 import type { FiberContext } from '@/FiberContext/index.js'
 import type { FiberId } from '@/FiberId/FiberId.js'
 import type * as Layer from '@/Layer/Layer.js'
+import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import type { Closeable } from '@/Scope/Closeable.js'
-import * as Service from '@/Service/index.js'
+import type * as Service from '@/Service/index.js'
 import { Trace } from '@/Trace/Trace.js'
 
 /**
@@ -109,6 +110,22 @@ export const ask = <S extends Service.Service<any>>(
   access((r: Env<Service.OutputOf<S>>) => r.get(service), __trace)
 
 /**
+ * Ask for a Service from the Env
+ */
+export const askId = <
+  S extends {
+    readonly name: string
+    readonly id: <S extends { readonly name: string }>(this: S) => Service.Service<any>
+  },
+>(
+  service: S,
+  __trace?: string,
+): RIO<Service.InstanceOf<S>, Service.InstanceOf<S>> =>
+  access((r: Env<Service.InstanceOf<S>>) => r.get(service.id()), __trace)
+
+ask.id = askId
+
+/**
  * Apply a function to a Service.
  */
 export const asks =
@@ -148,9 +165,9 @@ export const asksFx_ =
  * Provide the entire Env for an Fx to run within.
  */
 export const provide =
-  <R>(env: Env<R>, __trace?: string) =>
+  <R>(env: Provideable<R>, __trace?: string) =>
   <E, A>(fx: Fx<R, E, A>): Fx<never, E, A> =>
-    new Provide([fx, env], __trace)
+    new Provide([fx, env[PROVIDEABLE]()], __trace)
 
 /**
  * Provide a single service to the Env.
@@ -180,7 +197,7 @@ export const provideLayer =
  * Provide any number of Layers.
  */
 export const provideLayers =
-  <Layers extends ReadonlyArray<Layer.AnyLayer>>(layers: readonly [...Layers], __trace: string) =>
+  <Layers extends ReadonlyArray<Layer.AnyLayer>>(layers: readonly [...Layers], __trace?: string) =>
   <R, E, A>(
     fx: Fx<R | Layer.OutputOf<Layers[number]>, E, A>,
   ): Fx<Exclude<R, Layer.OutputOf<Layers[number]>>, E | Layer.ErrorsOf<Layers[number]>, A> =>

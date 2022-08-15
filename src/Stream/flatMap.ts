@@ -44,15 +44,14 @@ export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {
     return pipe(
       Fx.Fx(function* () {
         const fiber = f(a).fork(
-          yield* makeSink<never, E | E2, B>(
-            sink.event,
-            sink.error,
-            lazy(() => {
+          yield* makeSink<never, E | E2, B>({
+            ...sink,
+            end: lazy(() => {
               decrement(running)
 
               return releaseIfCompleted
             }),
-          ),
+          }),
           SchedulerContext.fork(context),
         )
 

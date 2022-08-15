@@ -28,31 +28,35 @@ export function make<E, A>(effects: SinkEffects<E, A>) {
   }
 }
 
-export const Drain = new (class Drain extends make<never, any>({
-  error: (cause: Cause<never>) =>
+export class Drain<E, A> implements Sink<E, A> {
+  event: (a: A) => IO<E, unknown> = lazyUnit
+
+  error = (cause: Cause<E>) =>
     Fx(function* () {
       const scope = yield* getFiberScope
       yield* scope.close(Left(cause))
-    }),
-  end: Fx(function* () {
+    })
+
+  end = Fx(function* () {
     const scope = yield* getFiberScope
     yield* scope.close(Right(undefined))
-  }),
-}) {})() as any as Sink<any, any>
+  })
+}
 
-export type Drain = typeof Drain
+export type MakeSinkParams<R, E, A> = {
+  readonly event?: (a: A) => Fx<R, E, any>
+  readonly error?: (e: Cause<E>) => Fx<R, E, any>
+  readonly end?: Fx<R, E, any>
+}
 
-export function makeSink<R, E, A>(
-  event: (a: A) => Fx<R, E, any>,
-  error: (e: Cause<E>) => Fx<R, E, any> = Drain.error as any,
-  end: Fx<R, E, any> = Drain.end as any,
-) {
+export function makeSink<R, E, A>({ event, error, end }: MakeSinkParams<R, E, A>) {
   return Fx(function* () {
     const env = yield* getEnv<R>()
+    const drain = new Drain<E, A>()
     const sink: Sink<E, A> = {
-      event: flow(event, provide(env)),
-      error: flow(error, provide(env)),
-      end: pipe(end, provide(env)),
+      event: flow(event ?? drain.event, provide(env)),
+      error: flow(error ?? drain.error, provide(env)),
+      end: pipe(end ?? drain.end, provide(env)),
     }
 
     return sink

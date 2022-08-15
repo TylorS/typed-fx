@@ -1,6 +1,6 @@
 import { Lazy } from 'hkt-ts/function'
 
-import { InstanceOf } from '@/Service/index.js'
+import type { InstanceOf } from '@/Service/index.js'
 
 /**
  * Eff is a very thin abstraction over Generators which provides a way to

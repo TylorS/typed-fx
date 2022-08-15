@@ -5,7 +5,7 @@ import { Eq } from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
 import * as Cause from '@/Cause/Cause.js'
-import * as FiberId from '@/FiberId/FiberId.js'
+import type * as FiberId from '@/FiberId/FiberId.js'
 
 export type Exit<E, A> = Either.Either<Cause.Cause<E>, A>
 
