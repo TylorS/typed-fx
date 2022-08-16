@@ -43,8 +43,10 @@ export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {
 
     return pipe(
       Fx.Fx(function* () {
+        const localContext = SchedulerContext.fork(context)
         const fiber = f(a).fork(
           yield* makeSink<never, E | E2, B>({
+            scope: localContext.scope,
             ...sink,
             end: lazy(() => {
               decrement(running)
@@ -52,7 +54,7 @@ export class FlatMapSink<R, E, A, R2, E2, B> implements Sink<E | E2, A> {
               return releaseIfCompleted
             }),
           }),
-          SchedulerContext.fork(context),
+          localContext,
         )
 
         increment(running)
