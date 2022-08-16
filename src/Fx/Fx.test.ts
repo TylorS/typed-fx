@@ -2,8 +2,7 @@ import { deepEqual, deepStrictEqual } from 'assert'
 
 import { pipe } from 'hkt-ts'
 
-import { Fx, access, fromLazy, provideLayers, success } from './Fx.js'
-import { runMain } from './run.js'
+import { Fx, access, fromLazy, provideLayers, runMain, success } from './index.js'
 
 import { tagged } from '@/Service/index.js'
 

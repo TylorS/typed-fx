@@ -18,7 +18,7 @@ import { make } from '@/FiberRuntime/make.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { ZipAll } from '@/Fx/Instructions/ZipAll.js'
-import { AnyFx, Fx, success } from '@/Fx/index.js'
+import { AnyFx, Fx, fromExit } from '@/Fx/index.js'
 import { Scope } from '@/Scope/Scope.js'
 import { acquireFiber } from '@/Semaphore/Semaphore.js'
 
@@ -93,7 +93,7 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
 const { concat: concatPar } = makeParallelAssociative(makeAssociative<any>())
 
 function zipAllFuture<E, A>(length: number) {
-  const future = Pending<never, never, Exit<E, A>>()
+  const future = Pending<never, E, A>()
   const exits = Array(length)
 
   let remaining = length
@@ -104,11 +104,11 @@ function zipAllFuture<E, A>(length: number) {
       exits[index] = Either.tupled(exit)
 
       if (isLeft(exit)) {
-        return complete(future)(success(exit))
+        return complete(future)(fromExit(exit))
       }
 
       if (--remaining === 0) {
-        return complete(future)(success(exits.reduce(concatPar)))
+        return complete(future)(fromExit(exits.reduce(concatPar)))
       }
     },
   ] as const

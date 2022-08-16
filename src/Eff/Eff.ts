@@ -7,7 +7,7 @@ import type { InstanceOf } from '@/Service/index.js'
  * construct Effects that are interpreted.
  */
 export interface Eff<Y, R> {
-  readonly [Symbol.iterator]: () => Generator<Y, R, any> | Generator<Y, R, never>
+  readonly [Symbol.iterator]: () => Generator<Y, R, unknown> | Generator<Y, R, never>
 }
 
 /* eslint-disable @typescript-eslint/no-unused-vars */

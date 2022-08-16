@@ -3,7 +3,6 @@ import { NonEmptyArray } from 'hkt-ts/NonEmptyArray'
 
 import { getTraceUpTo } from './Failure.js'
 
-import { Exit } from '@/Exit/Exit.js'
 import { FiberContext } from '@/FiberContext/index.js'
 import { FiberId, Live } from '@/FiberId/FiberId.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
@@ -14,8 +13,8 @@ import { Await, Running, RuntimeUpdate } from '@/FiberRuntime/RuntimeProcessor.j
 import { make } from '@/FiberRuntime/make.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
+import { AnyFx, Fx, fromExit } from '@/Fx/Fx.js'
 import { RaceAll } from '@/Fx/Instructions/RaceAll.js'
-import { AnyFx, Fx, success } from '@/Fx/index.js'
 import { Scope } from '@/Scope/Scope.js'
 import { acquireFiber } from '@/Semaphore/Semaphore.js'
 
@@ -30,7 +29,7 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
     }
 
     const trace = getTraceUpTo(state.trace, context.platform.maxTraceCount)
-    const future = Pending<never, never, Exit<any, any>>()
+    const future = Pending<never, any, any>()
     let deleted = 0
     const runtimes = raceAll.input.map((fx, i) => {
       const id = Live(context.platform)
@@ -46,7 +45,7 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
 
       runtime.addObserver((exit) => {
         runtimes.splice(i - deleted++, 1)
-        complete(future)(success(exit))
+        complete(future)(fromExit(exit))
       })
 
       return runtime
