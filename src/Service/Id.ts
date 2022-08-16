@@ -60,12 +60,17 @@ export class Id {
   /**
    * Add the instance of this service to the given Environment.
    */
-  readonly add = <R>(env: Provideable<R>): Env<R | this> => env[PROVIDEABLE]().add(this.id, this);
+  public add<R>(env: Provideable<R>): Env<R | this> {
+    return env[PROVIDEABLE]().add(this.id, this)
+  }
 
   /**
    * Implement the PROVIDEABLE interface for "this"
    */
-  readonly [PROVIDEABLE]: Provideable<this>[PROVIDEABLE] = () => this.add(Env.empty)
+  [PROVIDEABLE](): Env<this> {
+    return this.add(Env.empty)
+  }
+
   readonly provide: Provideable<this>['provide'] = provide(this)
 }
 

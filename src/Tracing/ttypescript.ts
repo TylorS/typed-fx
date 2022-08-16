@@ -9,22 +9,27 @@ const INSTRUMENTED_REGEX = /^[a-z]+\s.+:[0-9]+:[0-9]+$/i
 
 const isInstrumentedTrace = (trace: string) => INSTRUMENTED_REGEX.test(trace)
 
-export const tracingPlugin = (program: ts.Program, config: { readonly root?: string }) => {
+export interface TracingPluginOptions {
+  readonly root?: string
+  readonly rewritePaths?: ReadonlyArray<readonly [string, string]>
+}
+
+export const tracingPlugin = (program: ts.Program, config: TracingPluginOptions) => {
   const checker = program.getTypeChecker()
   const root = config?.root ?? program.getCompilerOptions().rootDir ?? process.cwd()
 
   return (ctx: ts.TransformationContext) => {
     return (sourceFile: ts.SourceFile): ts.SourceFile => {
-      const fileName = relative(root, sourceFile.fileName)
+      const fileName = rewritePaths(relative(root, sourceFile.fileName), config.rewritePaths)
 
-      function getTrace(node: ts.Node, exisingText?: string): ts.Expression {
+      function getTrace(node: ts.Node, existingText?: string): ts.Expression {
         const nodeEnd = sourceFile.getLineAndCharacterOfPosition(node.getEnd())
 
         // Must be an expression, so we create a binary expression to concatenate the 2 parts of the string
         // and to handle existing expressions in existingText.
         const expression = ts.factory.createBinaryExpression(
           ts.factory.createStringLiteral(
-            exisingText ? trimQuotations(exisingText) : node.getText(),
+            existingText ? trimQuotations(existingText) : node.getText(),
           ),
           ts.factory.createToken(ts.SyntaxKind.PlusToken),
           ts.factory.createStringLiteral(
@@ -130,4 +135,21 @@ function trimQuotations(s: string) {
   }
 
   return s
+}
+
+function rewritePaths(
+  path: string,
+  rewritePaths?: ReadonlyArray<readonly [string, string]>,
+): string {
+  if (!rewritePaths) {
+    return path
+  }
+
+  for (const [from, to] of rewritePaths) {
+    const fromRegex = new RegExp(from, 'g')
+
+    path = path.replace(fromRegex, to)
+  }
+
+  return path
 }

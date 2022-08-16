@@ -3,7 +3,18 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "module": "commonjs",
-    "outDir": "cjs"
+    "outDir": "cjs",
+    "plugins": [
+      {
+        "transform": "./.tracing-plugin/ttypescript.cjs",
+        "rewritePaths": [
+          [
+            "^src/",
+            "node_modules/@typed/fx/src/"
+          ]
+        ]
+      }
+    ]
   },
   "include": [
     "src"

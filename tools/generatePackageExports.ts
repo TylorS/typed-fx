@@ -1,12 +1,13 @@
 import fs from 'node:fs'
 import path, { extname } from 'node:path'
+import process from 'node:process'
 
 import { MODULES, ROOT_DIR, SOURCE_DIR, findFilePaths } from './common.js'
 
 const TSX_REGEX = /.tsx?$/
 const INDEX_REGEX = /\/?index$/
 
-if (require.main === module) {
+if (new URL(import.meta.url).pathname === path.resolve(process.argv[1])) {
   const packageJsonPath = path.join(ROOT_DIR, 'package.json')
   const packageJsonContents = fs.readFileSync(packageJsonPath).toString()
   const packageJson = JSON.parse(packageJsonContents)

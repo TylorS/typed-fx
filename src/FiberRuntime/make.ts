@@ -1,7 +1,6 @@
 import { pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
 import { Maybe, getOrElse } from 'hkt-ts/Maybe'
-import { exit } from 'yargs'
 
 import { FiberRuntime } from './FiberRuntime.js'
 import { FiberState } from './FiberState.js'

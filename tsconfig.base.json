@@ -27,11 +27,6 @@
     "lib": [
       "DOM",
       "ES2022"
-    ],
-    "plugins": [
-      {
-        "transform": "./src/Tracing/plugin.ts"
-      }
     ]
   }
 }
