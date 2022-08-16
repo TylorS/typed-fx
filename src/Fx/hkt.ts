@@ -1,21 +1,25 @@
 import { HKT3, Params, Variance, pipe } from 'hkt-ts'
 import * as A from 'hkt-ts/Array'
-import { Left, Right } from 'hkt-ts/Either'
+import { Left, Right, isRight } from 'hkt-ts/Either'
 import * as M from 'hkt-ts/Map'
 import * as R from 'hkt-ts/Record'
 import * as S from 'hkt-ts/Set'
+import { Associative } from 'hkt-ts/Typeclass/Associative'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
 import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
 import * as AF from 'hkt-ts/Typeclass/AssociativeFlatten'
 import { Bottom3 } from 'hkt-ts/Typeclass/Bottom'
 import * as CB from 'hkt-ts/Typeclass/CommutativeBoth'
+import * as CE from 'hkt-ts/Typeclass/CommutativeEither'
 import * as C from 'hkt-ts/Typeclass/Covariant'
+import { Identity, fromIdentityEitherCovariant } from 'hkt-ts/Typeclass/Identity'
 import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import { IdentityEither3 } from 'hkt-ts/Typeclass/IdentityEither'
 import * as T from 'hkt-ts/Typeclass/Top'
 
 import * as Fx from './Fx.js'
 
+import { Sequential } from '@/Cause/index.js'
 import * as Eff from '@/Eff/index.js'
 
 export interface FxHKT extends HKT3 {
@@ -53,8 +57,7 @@ export const both = CommutativeBoth.both
 export const zipLeft = AB.zipLeft<FxHKT>({ ...CommutativeBoth, ...Covariant })
 export const zipRight = AB.zipRight<FxHKT>({ ...CommutativeBoth, ...Covariant })
 
-// TODO: There's a bug in hkt-ts that is incorrectly inferring these default values.
-export const Top: T.Top3REC<FxHKT, never, never> = {
+export const Top: T.Top3<FxHKT> = {
   top: Fx.fromValue([]),
 }
 
@@ -108,30 +111,47 @@ export const structSeq = IB.struct<FxHKT>({ ...IdentityBothSeq, ...Covariant }) 
 
 export const forEachArray = A.forEach<FxHKT>(IdentityBothCovariant) as <A, R, E, B>(
   f: (a: A) => Fx.Fx<R, E, B>,
-) => (kind: readonly A[]) => Fx.Fx<R, E, readonly B[]>
+) => (array: readonly A[]) => Fx.Fx<R, E, readonly B[]>
 
 export const sequenceArray = A.sequence<FxHKT>(IdentityBothCovariant) as <R, E, A>(
-  kind: readonly Fx.Fx<R, E, A>[],
+  fx: readonly Fx.Fx<R, E, A>[],
 ) => Fx.Fx<R, E, readonly A[]>
 
 export const forEachRecord = R.forEach<FxHKT>(IdentityBothCovariant) as <A, R, E, B>(
   f: (a: A) => Fx.Fx<R, E, B>,
-) => <K extends string>(kind: R.ReadonlyRecord<K, A>) => Fx.Fx<R, E, R.ReadonlyRecord<K, B>>
+) => <K extends string>(record: R.ReadonlyRecord<K, A>) => Fx.Fx<R, E, R.ReadonlyRecord<K, B>>
 
 export const forEachMap = M.forEach<FxHKT>(IdentityBothCovariant) as <A, R, E, B>(
   f: (a: A) => Fx.Fx<R, E, B>,
-) => <K>(kind: ReadonlyMap<K, A>) => Fx.Fx<R, E, ReadonlyMap<K, B>>
+) => <K>(map: ReadonlyMap<K, A>) => Fx.Fx<R, E, ReadonlyMap<K, B>>
 
 export const forEachSet = S.forEach<FxHKT>(IdentityBothCovariant) as <A, R, E, B>(
   f: (a: A) => Fx.Fx<R, E, B>,
-) => (kind: ReadonlySet<A>) => Fx.Fx<R, E, ReadonlySet<B>>
+) => (set: ReadonlySet<A>) => Fx.Fx<R, E, ReadonlySet<B>>
 
 export const sequenceSet = S.sequence<FxHKT>(IdentityBothCovariant) as <R, E, A>(
-  kind: ReadonlySet<Fx.Fx<R, E, A>>,
+  set: ReadonlySet<Fx.Fx<R, E, A>>,
 ) => Fx.Fx<R, E, ReadonlySet<A>>
 
 export const AssociativeEither: AE.AssociativeEither3<FxHKT> = {
-  either: (s) => (f) => Fx.raceAll([pipe(f, map(Left)), pipe(s, map(Right))] as const),
+  either:
+    <R, E, B>(s: Fx.Fx<R, E, B>) =>
+    <A>(f: Fx.Fx<R, E, A>) =>
+      Fx.Fx(function* () {
+        const fe = yield* Fx.attempt(f)
+
+        if (isRight(fe)) {
+          return Left(fe.right)
+        }
+
+        const se = yield* Fx.attempt(s)
+
+        if (isRight(se)) {
+          return Right(se.right)
+        }
+
+        return yield* Fx.fromCause(new Sequential(fe.left, se.left))
+      }),
 }
 
 export const either = AssociativeEither.either
@@ -149,3 +169,38 @@ export const IdentityEither: IdentityEither3<FxHKT> = {
   ...AssociativeEither,
   ...Bottom,
 }
+
+export const CommutativeEither: CE.CommutativeEither3<FxHKT> = {
+  either: (s) => (f) => Fx.raceAll([pipe(f, map(Left)), pipe(s, map(Right))]),
+}
+
+export const raceEither = AssociativeEither.either
+export const race = AE.tuple
+
+export const IdentityEitherPar: IdentityEither3<FxHKT> = {
+  ...CommutativeEither,
+  ...Bottom,
+}
+
+export const makeAssociative = <R, E, A>(A: Associative<A>): Associative<Fx.Fx<R, E, A>> => ({
+  concat: (f, s) =>
+    pipe(
+      Fx.zipAll([f, s]),
+      map(([a, b]) => A.concat(a, b)),
+    ),
+})
+
+export const makeIdentity = <R, E, A>(A: Identity<A>): Identity<Fx.Fx<R, E, A>> => ({
+  ...makeAssociative(A),
+  id: Fx.success(A.id),
+})
+
+export const makeEitherIdentity = fromIdentityEitherCovariant<FxHKT>({
+  ...IdentityEither,
+  ...Covariant,
+})
+
+export const makeEitherIdentityPar = fromIdentityEitherCovariant<FxHKT>({
+  ...IdentityEitherPar,
+  ...Covariant,
+})
