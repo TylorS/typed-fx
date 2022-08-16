@@ -1,6 +1,7 @@
 import { pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
 import { Maybe, getOrElse } from 'hkt-ts/Maybe'
+import { exit } from 'yargs'
 
 import { FiberRuntime } from './FiberRuntime.js'
 import { FiberState } from './FiberState.js'
@@ -232,7 +233,6 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   }
 
   protected await(future: AnyFuture, finalizer: Finalizer, previous: RuntimeInstruction) {
-    const inner = settable()
     const cleanup = this.scope.ensuring(finalizer)
     const state = future.state.get()
 
@@ -240,9 +240,11 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       return (this._current = new GeneratorNode(
         Eff.gen(
           Fx(function* () {
-            yield* cleanup(Right(undefined))
+            const a = yield* state.fx
 
-            return yield* state.fx
+            yield* cleanup(Right(a))
+
+            return a
           }),
         ),
         previous,
@@ -253,6 +255,8 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       return new FailureNode(interrupted(state.fiberId), previous)
     }
 
+    const inner = settable()
+
     inner.add(
       this._disposable.add(
         addObserver(future as Future<any, any, any>, (fx) => {
@@ -261,9 +265,11 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
               Fx(function* () {
                 inner.dispose()
 
-                yield* cleanup(Right(undefined))
+                const a = yield* fx
 
-                return yield* fx
+                yield* cleanup(Right(a))
+
+                return a
               }),
             ),
             previous,
@@ -310,10 +316,12 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
     const inner = settable()
 
     inner.add(
-      this.context.platform.timer.setTimer((time) => {
-        inner.dispose()
-        f(time)
-      }, delay),
+      this._disposable.add(
+        this.context.platform.timer.setTimer((time) => {
+          inner.dispose()
+          f(time)
+        }, delay),
+      ),
     )
 
     return inner
