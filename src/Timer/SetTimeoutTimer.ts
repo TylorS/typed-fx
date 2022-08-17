@@ -6,7 +6,13 @@ import { Disposable } from '@/Disposable/Disposable.js'
 
 export function SetTimeoutTimer(clock: Clock = DateClock()): Timer {
   return make(clock, (f, delay) => {
-    const id = setTimeout(f, delay)
+    if (delay <= 0) {
+      const id = setImmediate(() => f(clock.getCurrentTime()))
+
+      return Disposable(() => clearImmediate(id))
+    }
+
+    const id = setTimeout(() => f(clock.getCurrentTime()), delay)
 
     return Disposable(() => clearTimeout(id))
   })
