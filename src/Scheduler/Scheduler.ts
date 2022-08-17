@@ -1,14 +1,29 @@
-import { Maybe, identity } from 'hkt-ts'
+import { Maybe, identity, pipe } from 'hkt-ts'
+import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Disposable } from '@/Disposable/Disposable.js'
 import { Env } from '@/Env/Env.js'
 import * as Fiber from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/index.js'
-import { Fx, RIO, getEnv, getFiberContext, getFiberScope, getTrace } from '@/Fx/Fx.js'
+import { Pending } from '@/Future/Future.js'
+import { complete } from '@/Future/complete.js'
+import { wait } from '@/Future/wait.js'
+import {
+  Fx,
+  Of,
+  RIO,
+  fromLazy,
+  getEnv,
+  getFiberContext,
+  getFiberScope,
+  getTrace,
+  unit,
+} from '@/Fx/Fx.js'
 import { ForkParams } from '@/Fx/Instructions/Fork.js'
-import { Schedule } from '@/Schedule/Schedule.js'
+import * as Schedule from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Closeable } from '@/Scope/Closeable.js'
+import { Delay } from '@/Time/index.js'
 import { Trace } from '@/Trace/Trace.js'
 
 /**
@@ -21,7 +36,7 @@ export interface Scheduler extends Disposable {
 
   readonly schedule: <R, E, A>(
     fx: Fx<R, E, A>,
-    schedule: Schedule,
+    schedule: Schedule.Schedule,
     context: SchedulerContext<R>,
   ) => Fiber.Live<E, ScheduleState>
 }
@@ -34,7 +49,7 @@ export function asap<R, E, A>(fx: Fx<R, E, A>): RIO<R, Fiber.Live<E, A>> {
   })
 }
 
-export function schedule(schedule: Schedule) {
+export function scheduled(schedule: Schedule.Schedule) {
   return <R, E, A>(fx: Fx<R, E, A>): RIO<R, Fiber.Live<E, ScheduleState>> =>
     Fx(function* () {
       const context = yield* forkSchedulerContext<R>()
@@ -43,7 +58,7 @@ export function schedule(schedule: Schedule) {
     })
 }
 
-export function scheduleWith<R>(schedule: Schedule, context: SchedulerContext<R>) {
+export function scheduledWith<R>(schedule: Schedule.Schedule, context: SchedulerContext<R>) {
   return <E, A>(fx: Fx<R, E, A>): Fiber.Live<E, ScheduleState> =>
     context.scheduler.schedule(fx, schedule, context)
 }
@@ -89,4 +104,23 @@ export namespace SchedulerContext {
       transform: context.transform,
     }
   }
+}
+
+export function delayed(delay: Delay) {
+  return <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    Fx(function* () {
+      const task = Pending<R, E, A>()
+
+      // Allow the Scheduler to determine when to continue.
+      yield* pipe(
+        fromLazy(() => complete(task)(fx)),
+        scheduled(Schedule.delayed(delay).and(Schedule.once)),
+      )
+
+      return yield* wait(task)
+    })
+}
+
+export function sleep(ms: NonNegativeInteger | Delay): Of<void> {
+  return delayed(Delay(ms))(unit)
 }
