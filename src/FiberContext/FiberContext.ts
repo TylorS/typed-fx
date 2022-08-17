@@ -23,6 +23,7 @@ export namespace FiberContext {
     return {
       ...context,
       ...overrides,
+      platform: overrides?.platform ?? context.platform.fork(),
       fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
       parent: overrides?.parent ?? Just(context),
     }
