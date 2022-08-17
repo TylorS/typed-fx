@@ -15,7 +15,6 @@ import { GetFiberContext } from './Instructions/GetFiberContext.js'
 import { GetFiberScope } from './Instructions/GetFiberScope.js'
 import { GetTrace } from './Instructions/GetTrace.js'
 import type {
-  AnyInstruction,
   ErrorsFromInstruction,
   Instruction,
   ResourcesFromInstruction,
@@ -28,6 +27,7 @@ import { ZipAll } from './Instructions/ZipAll.js'
 
 import { Cause } from '@/Cause/Cause.js'
 import * as Eff from '@/Eff/index.js'
+import { ReturnOf, YieldOf } from '@/Eff/index.js'
 import type { Env } from '@/Env/Env.js'
 import * as Exit from '@/Exit/Exit.js'
 import type { Fiber, Live } from '@/Fiber/Fiber.js'
@@ -429,7 +429,7 @@ export const interruptable = <R, E, A>(
  * Combine an Array of Fx into an Fx of an array containing their output values.
  */
 export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
-  fxs: FX,
+  fxs: readonly [...FX],
   __trace?: string,
 ): Fx<
   ResourcesOf<FX[number]>,
@@ -437,7 +437,7 @@ export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   {
     readonly [K in keyof FX]: OutputOf<FX[K]>
   }
-> => new ZipAll(fxs, __trace)
+> => new ZipAll(fxs as FX, __trace)
 
 /**
  * Race an array of Fx into an Fx of the first resolved Fx, cancelling all other
@@ -460,8 +460,14 @@ export const withConcurrency =
 /**
  * Utilize a Generator function to construct an Fx.
  */
-export function Fx<Y extends AnyInstruction, R>(
-  f: () => Generator<Y, R, any>,
-): Fx<ResourcesFromInstruction<Y>, ErrorsFromInstruction<Y>, R> {
+export function Fx<
+  G extends
+    | Generator<any, any>
+    | Generator<never, never>
+    | Generator<never, any>
+    | Generator<any, never>,
+>(
+  f: () => G,
+): Fx<ResourcesFromInstruction<YieldOf<G>>, ErrorsFromInstruction<YieldOf<G>>, ReturnOf<G>> {
   return Eff.Eff(f)
 }
