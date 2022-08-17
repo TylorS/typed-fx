@@ -5,7 +5,7 @@ import { Fx } from '@/Fx/Fx.js'
 export function complete<R, E, A>(future: Future<R, E, A>) {
   return (fx: Fx<R, E, A>) =>
     future.state.modify<boolean>((s) => {
-      if (s.tag === 'Resolved' || s.tag === 'Interrupted') {
+      if (s.tag === 'Resolved') {
         return [false, s]
       }
 
