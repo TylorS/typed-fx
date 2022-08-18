@@ -9,7 +9,7 @@ import type { Fork } from './Fork.js'
 import type { FromLazy } from './FromLazy.js'
 import type { GetFiberContext } from './GetFiberContext.js'
 import type { GetFiberScope } from './GetFiberScope.js'
-import type { GetTrace } from './GetTrace.js'
+import type { GetStackTrace } from './GetStackTrace.js'
 import type { Join } from './Join.js'
 import type { RaceAll } from './RaceAll.js'
 import type { SetInterruptStatus } from './SetInterruptStatus.js'
@@ -29,7 +29,7 @@ export type Instruction<R, E, A> =
   | FromLazy<A>
   | GetFiberContext
   | GetFiberScope
-  | GetTrace
+  | GetStackTrace
   | Join<E, A>
   | Provide<any, E, A>
   | RaceAll<NonEmptyArray<Fx<R, E, any>>>

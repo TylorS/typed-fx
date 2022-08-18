@@ -1,10 +1,10 @@
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
 import { Running, RuntimeUpdate } from '@/FiberRuntime/RuntimeProcessor.js'
-import { GetTrace } from '@/Fx/Instructions/GetTrace.js'
+import { GetStackTrace } from '@/Fx/Instructions/GetStackTrace.js'
 
-export function processGetTrace(
-  _: GetTrace,
+export function processGetStackTrace(
+  _: GetStackTrace,
   state: FiberState,
   node: InstructionNode,
 ): RuntimeUpdate {

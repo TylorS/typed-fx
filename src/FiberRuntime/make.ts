@@ -20,7 +20,10 @@ import { processFork } from './processors/Instructions/Fork.js'
 import { processFromLazy } from './processors/Instructions/FromLazy.js'
 import { processGetFiberContext } from './processors/Instructions/GetFiberContext.js'
 import { processGetFiberScope } from './processors/Instructions/GetFiberScope.js'
-import { processGetTrace } from './processors/Instructions/GetTrace.js'
+import {
+  processGetStackTrace,
+  processGetStackTrace,
+} from './processors/Instructions/GetStackTrace.js'
 import { processJoin } from './processors/Instructions/Join.js'
 import { processProvide } from './processors/Instructions/Provide.js'
 // eslint-disable-next-line import/no-cycle
@@ -333,7 +336,7 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
     FromLazy: processFromLazy,
     GetFiberContext: processGetFiberContext(context),
     GetFiberScope: processGetFiberScope(scope),
-    GetTrace: processGetTrace,
+    GetStackTrace: processGetStackTrace,
     Join: processJoin,
     Provide: processProvide,
     RaceAll: processRaceAll(id, context, scope),

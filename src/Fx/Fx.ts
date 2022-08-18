@@ -13,7 +13,7 @@ import { Fork, ForkParams } from './Instructions/Fork.js'
 import { FromLazy } from './Instructions/FromLazy.js'
 import { GetFiberContext } from './Instructions/GetFiberContext.js'
 import { GetFiberScope } from './Instructions/GetFiberScope.js'
-import { GetTrace } from './Instructions/GetTrace.js'
+import { GetStackTrace } from './Instructions/GetStackTrace.js'
 import type {
   ErrorsFromInstruction,
   Instruction,
@@ -246,10 +246,13 @@ export const addRuntimeTrace =
     addTrace(Trace.runtime(error, targetObject))(fx)
 
 /**
- * Access the Current Trace
+ * Access the Current raw StackTrace
  */
-export const getStackTrace: Of<StackTrace> = new GetTrace()
+export const getStackTrace: Of<StackTrace> = new GetStackTrace()
 
+/**
+ * Access the Current Trace as configured by the Fiber's Platform.
+ */
 export const getTrace: Of<Trace> = Fx(function* () {
   const context = yield* getFiberContext
   const stackTrace = yield* getStackTrace
