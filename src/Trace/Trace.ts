@@ -200,7 +200,7 @@ export function getTraceUpTo(trace: StackTrace, amount: number): Trace {
 
 export function getTrimmedTrace<E>(cause: Cause<E>, stackTrace: StackTrace) {
   const error =
-    (cause.tag === 'Died' || cause.tag === 'Failed') && cause.error instanceof Error
+    (cause.tag === 'Unexpected' || cause.tag === 'Expected') && cause.error instanceof Error
       ? cause.error
       : new Error()
   const trace = Trace.runtime(error, getTrimmedTrace)

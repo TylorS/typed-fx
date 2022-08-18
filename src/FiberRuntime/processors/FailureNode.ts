@@ -83,5 +83,5 @@ export function processFailureNode(
 }
 
 function shouldRethrow(error: Cause.Cause<any>): boolean {
-  return error.tag === 'Died' || (error.tag === 'Traced' && shouldRethrow(error.cause))
+  return error.tag === 'Unexpected' || (error.tag === 'Traced' && shouldRethrow(error.cause))
 }

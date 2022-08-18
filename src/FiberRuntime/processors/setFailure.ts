@@ -16,7 +16,7 @@ export function getCauseError<E>(cause: Cause<E>): Error {
     return getCauseError(cause.cause)
   }
 
-  if ((cause.tag === 'Died' || cause.tag === 'Failed') && cause.error instanceof Error) {
+  if ((cause.tag === 'Unexpected' || cause.tag === 'Expected') && cause.error instanceof Error) {
     return cause.error
   }
 

@@ -1,7 +1,7 @@
 import * as M from 'hkt-ts/Maybe'
 import { pipe } from 'hkt-ts/function'
 
-import { Cause, Died, Failed, Interrupted } from './Cause.js'
+import { Cause, Expected, Interrupted, Unexpected } from './Cause.js'
 import { prettyStringify } from './prettyStringify.js'
 
 import { Debug as FiberIdDebug } from '@/FiberId/index.js'
@@ -74,7 +74,11 @@ export function renderInterrupted<E>(
   ])
 }
 
-export function renderFailed<E>(cause: Failed<E>, trace: M.Maybe<Trace>, renderer: Renderer<E>) {
+export function renderExpected<E>(
+  cause: Expected<E>,
+  trace: M.Maybe<Trace>,
+  renderer: Renderer<E>,
+) {
   return Sequential([
     Failure([
       'An expected error has occurred.',
@@ -88,7 +92,11 @@ export function renderFailed<E>(cause: Failed<E>, trace: M.Maybe<Trace>, rendere
   ])
 }
 
-export function renderDied<E>(cause: Died, trace: M.Maybe<Trace>, renderer: Renderer<E>) {
+export function renderUnexpected<E>(
+  cause: Unexpected,
+  trace: M.Maybe<Trace>,
+  renderer: Renderer<E>,
+) {
   return Sequential([
     Failure([
       'An unexpected error has occurred.',
@@ -106,10 +114,10 @@ export function renderCauseToSequential<E>(cause: Cause<E>, renderer: Renderer<E
   switch (cause.tag) {
     case 'Empty':
       return Sequential([])
-    case 'Failed':
-      return renderFailed(cause, M.Nothing, renderer)
-    case 'Died':
-      return renderDied(cause, M.Nothing, renderer)
+    case 'Expected':
+      return renderExpected(cause, M.Nothing, renderer)
+    case 'Unexpected':
+      return renderUnexpected(cause, M.Nothing, renderer)
     case 'Interrupted':
       return renderInterrupted(cause, M.Nothing, renderer)
     case 'Sequential':
@@ -118,10 +126,10 @@ export function renderCauseToSequential<E>(cause: Cause<E>, renderer: Renderer<E
       return Sequential([Parallel(parrallelSegments(cause, renderer))])
     case 'Traced': {
       switch (cause.cause.tag) {
-        case 'Failed':
-          return renderFailed(cause.cause, M.Just(cause.trace), renderer)
-        case 'Died':
-          return renderDied(cause.cause, M.Just(cause.trace), renderer)
+        case 'Expected':
+          return renderExpected(cause.cause, M.Just(cause.trace), renderer)
+        case 'Unexpected':
+          return renderUnexpected(cause.cause, M.Just(cause.trace), renderer)
         case 'Interrupted':
           return renderInterrupted(cause.cause, M.Just(cause.trace), renderer)
         default: {

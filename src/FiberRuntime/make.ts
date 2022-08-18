@@ -34,7 +34,7 @@ import * as processors from './processors/index.js'
 import { toFiber } from './toFiber.js'
 
 import { Atomic, update } from '@/Atomic/Atomic.js'
-import { died, traced } from '@/Cause/Cause.js'
+import { traced, unexpected } from '@/Cause/Cause.js'
 import { prettyPrint } from '@/Cause/Renderer.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Eff } from '@/Eff/Eff.js'
@@ -317,7 +317,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   // #endregion
 
   protected uncaughtException(error: unknown) {
-    const cause = died(error)
+    const cause = unexpected(error)
     const state = this._state.get()
     const trace = getTrimmedTrace(cause, state.trace)
     const finalCause = traced(

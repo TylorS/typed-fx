@@ -36,7 +36,7 @@ export function attempt<Y, E, R>(
 
         return success(result.value)
       } catch (e) {
-        return Left(Cause.traced(yield* getTrace)(Cause.died(e)))
+        return Left(Cause.traced(yield* getTrace)(Cause.unexpected(e)))
       }
     }),
   )

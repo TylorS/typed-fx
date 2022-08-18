@@ -16,14 +16,15 @@ export const success = <A>(value: A): Exit<never, A> => Either.Right(value)
 export const interrupt = (fiberId: FiberId.FiberId): Exit<never, never> =>
   Either.Left(Cause.interrupted(fiberId))
 
-export const die = (error: unknown): Exit<never, never> => Either.Left(Cause.died(error))
+export const unexpected = (error: unknown): Exit<never, never> =>
+  Either.Left(Cause.unexpected(error))
 
-export const failure = <E>(error: E): Exit<E, never> => Either.Left(Cause.failed(error))
+export const expected = <E>(error: E): Exit<E, never> => Either.Left(Cause.expected(error))
 
 export const fromEither = <E, A>(either: Either.Either<E, A>): Exit<E, A> =>
   pipe(
     either,
-    Either.mapLeft((e) => Cause.failed(e)),
+    Either.mapLeft((e) => Cause.expected(e)),
   )
 
 export const makeParallelAssociative = <A, E = never>(

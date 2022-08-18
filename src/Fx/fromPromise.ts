@@ -1,30 +1,34 @@
 import { Left } from 'hkt-ts/Either'
 
-import { async, die, fromExit, fromLazy, interrupt, success } from './Fx.js'
+import * as Fx from './Fx.js'
 
-import { Sequential, died, interrupted } from '@/Cause/Cause.js'
+import * as Cause from '@/Cause/Cause.js'
 import { settable } from '@/Disposable/Disposable.js'
 
 export function fromPromise<A>(f: () => Promise<A>) {
-  return async((cb, fiberId) => {
+  return Fx.async((cb, fiberId) => {
     const d = settable()
 
     f()
       .then((a) => {
         if (d.isDisposed()) {
-          return cb(interrupt(fiberId))
+          return cb(Fx.interrupt(fiberId))
         }
 
-        cb(success(a))
+        cb(Fx.success(a))
       })
       .catch((e) => {
         if (d.isDisposed()) {
-          return cb(fromExit(Left(new Sequential(interrupted(fiberId), died(e)))))
+          return cb(
+            Fx.fromExit(
+              Left(new Cause.Sequential(Cause.interrupted(fiberId), Cause.unexpected(e))),
+            ),
+          )
         }
 
-        cb(die(e))
+        cb(Fx.unexpected(e))
       })
 
-    return Left(fromLazy(() => d.dispose()))
+    return Left(Fx.fromLazy(() => d.dispose()))
   })
 }

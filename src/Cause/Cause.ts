@@ -11,8 +11,8 @@ import * as Trace from '@/Trace/Trace.js'
 export type Cause<E> =
   | Empty
   | Interrupted
-  | Died
-  | Failed<E>
+  | Unexpected
+  | Expected<E>
   | Sequential<E, E>
   | Parallel<E, E>
   | Traced<E>
@@ -29,19 +29,19 @@ export class Interrupted {
 
 export const interrupted = (fiberId: FiberId.FiberId): Cause<never> => new Interrupted(fiberId)
 
-export class Died {
-  readonly tag = 'Died'
+export class Unexpected {
+  readonly tag = 'Unexpected'
   constructor(readonly error: unknown) {}
 }
 
-export const died = (error: unknown): Cause<never> => new Died(error)
+export const unexpected = (error: unknown): Cause<never> => new Unexpected(error)
 
-export class Failed<E> {
-  readonly tag = 'Failed'
+export class Expected<E> {
+  readonly tag = 'Expected'
   constructor(readonly error: E) {}
 }
 
-export const failed = <E>(error: E) => new Failed(error)
+export const expected = <E>(error: E) => new Expected(error)
 
 export class Sequential<E1, E2> {
   readonly tag = 'Sequential'
@@ -73,8 +73,8 @@ export const match =
   <A, B, C, E, D, F, G, H>(
     onEmpty: () => A,
     onInterrupted: (fiberId: FiberId.FiberId) => B,
-    onDied: (error: unknown) => C,
-    onFailed: (e: E) => D,
+    onUnexpected: (error: unknown) => C,
+    onExpected: (e: E) => D,
     onSequential: (left: Cause<E>, right: Cause<E>) => F,
     onParallel: (left: Cause<E>, right: Cause<E>) => G,
     onTraced: (cause: Cause<E>, trace: Trace.Trace) => H,
@@ -85,10 +85,10 @@ export const match =
         return onEmpty()
       case 'Interrupted':
         return onInterrupted(cause.fiberId)
-      case 'Died':
-        return onDied(cause.error)
-      case 'Failed':
-        return onFailed(cause.error)
+      case 'Unexpected':
+        return onUnexpected(cause.error)
+      case 'Expected':
+        return onExpected(cause.error)
       case 'Sequential':
         return onSequential(cause.left, cause.right)
       case 'Parallel':
@@ -125,11 +125,11 @@ export const makeEq = <E>(Eq: EQ.Eq<E>): EQ.Eq<Cause<E>> => {
       tag: EQ.AlwaysEqual,
       fiberId: FiberId.Eq,
     }),
-    Died: EQ.struct({
+    Unexpected: EQ.struct({
       tag: EQ.AlwaysEqual,
       error: EQ.DeepEquals,
     }),
-    Failed: EQ.struct({
+    Expected: EQ.struct({
       tag: EQ.AlwaysEqual,
       error: Eq,
     }),
@@ -159,9 +159,9 @@ const tagOrd = pipe(
     switch (x) {
       case 'Empty':
         return 0
-      case 'Died':
+      case 'Unexpected':
         return 1
-      case 'Failed':
+      case 'Expected':
         return 2
       case 'Interrupted':
         return 3
@@ -182,11 +182,11 @@ export const makeOrd = <E>(Eq: ORD.Ord<E>): ORD.Ord<Cause<E>> => {
       fiberId: FiberId.Ord,
       tag: ORD.Static,
     })(ORD.Static),
-    Died: ORD.struct({
+    Unexpected: ORD.struct({
       error: ORD.Static,
       tag: ORD.Static,
     })(ORD.Static),
-    Failed: ORD.struct({
+    Expected: ORD.struct({
       error: Eq,
       tag: ORD.Static,
     })(ORD.Static),

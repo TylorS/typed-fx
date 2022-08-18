@@ -126,8 +126,8 @@ export const Top: Top2<FiberHKT> = {
 export const top = Top.top
 
 export const empty = fromExit<never, never>(Either.Left(Empty))
-export const die = flow(Exit.die, fromExit)
-export const failure = flow(Exit.failure, fromExit)
+export const die = flow(Exit.unexpected, fromExit)
+export const failure = flow(Exit.expected, fromExit)
 export const interrupt = flow(Exit.interrupt, fromExit)
 export const success = flow(Exit.success, fromExit)
 export const fromEither = flow(Exit.fromEither, fromExit)

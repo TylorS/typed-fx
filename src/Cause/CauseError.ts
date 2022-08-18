@@ -19,7 +19,7 @@ export class CauseError<E> extends Error {
     }
 
     // Ammend the Error that caused everything
-    if (cause.tag === 'Died' && cause.error instanceof Error) {
+    if (cause.tag === 'Unexpected' && cause.error instanceof Error) {
       this.cause = cause.error
     }
 

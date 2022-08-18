@@ -25,8 +25,8 @@ export const Covariant: C.Covariant1<CauseHKT> = {
     return Cause.match(
       () => Cause.Empty,
       (id) => new Cause.Interrupted(id),
-      (error) => new Cause.Died(error),
-      (e) => new Cause.Failed(f(e)),
+      (error) => new Cause.Unexpected(error),
+      (e) => new Cause.Expected(f(e)),
       (left, right) => new Cause.Sequential(map(f)(left), map(f)(right)),
       (left, right) => new Cause.Parallel(map(f)(left), map(f)(right)),
       (cause, trace) => new Cause.Traced(map(f)(cause), trace),
@@ -41,7 +41,7 @@ export const mapTo = C.mapTo(Covariant)
 export const tupled = C.tupled(Covariant)
 
 export const Top: T.Top1<CauseHKT> = {
-  top: Cause.failed([]),
+  top: Cause.expected([]),
 }
 
 export const top = Top.top
@@ -58,7 +58,7 @@ export const Flatten: AF.AssociativeFlatten1<CauseHKT> = {
   flatten: Cause.match(
     () => Cause.Empty,
     (id) => new Cause.Interrupted(id),
-    (error) => new Cause.Died(error),
+    (error) => new Cause.Unexpected(error),
     identity,
     (left, right) => new Cause.Sequential(flatten(left), flatten(right)),
     (left, right) => new Cause.Parallel(flatten(left), flatten(right)),
@@ -100,8 +100,8 @@ export const ForEach: FE.ForEach1<CauseHKT> = {
     const forEach_ =
       <A, B>(f: (a: A) => Kind<T2, B>) =>
       (cause: Cause.Cause<A>): Kind<T2, Cause.Cause<B>> => {
-        if (cause.tag === 'Failed') {
-          return IBC.map(Cause.failed)(f(cause.error))
+        if (cause.tag === 'Expected') {
+          return IBC.map(Cause.expected)(f(cause.error))
         }
 
         if (cause.tag === 'Sequential') {
@@ -180,12 +180,12 @@ export const FilterMap: FIM.FilterMap1<CauseHKT> = {
     Cause.match(
       () => Cause.Empty,
       (id) => new Cause.Interrupted(id),
-      (e) => new Cause.Died(e),
+      (e) => new Cause.Unexpected(e),
       (a) =>
         pipe(
           a,
           f,
-          Maybe.match(() => Cause.Empty, Cause.failed),
+          Maybe.match(() => Cause.Empty, Cause.expected),
         ),
       (left, right) =>
         new Cause.Sequential(FilterMap.filterMap(f)(left), FilterMap.filterMap(f)(right)),

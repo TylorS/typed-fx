@@ -288,8 +288,8 @@ export const fromExit = <E = never, A = unknown>(
 /**
  * Create an Expected Error
  */
-export const fail = <E>(error: E, __trace?: string): IO<E, never> =>
-  fromExit(Exit.failure(error), __trace)
+export const expected = <E>(error: E, __trace?: string): IO<E, never> =>
+  fromExit(Exit.expected(error), __trace)
 
 /**
  * Interrupt the current fiber with an FiberId.
@@ -300,8 +300,8 @@ export const interrupt = (id: FiberId, __trace?: string): Of<never> =>
 /**
  * Report an unexpected failure.
  */
-export const die = (error: unknown, __trace?: string): Of<never> =>
-  fromExit(Exit.die(error), __trace)
+export const unexpected = (error: unknown, __trace?: string): Of<never> =>
+  fromExit(Exit.unexpected(error), __trace)
 
 /**
  * Convert an Either into an Fx
