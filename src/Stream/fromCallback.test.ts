@@ -9,8 +9,8 @@ import { Fx, fromLazy, join, runMain, unit } from '@/Fx/index.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(fromCallback.name, () => {
-    it('creates a Stream from an Fx', async () => {
-      const stream = fromCallback<number>((event, _, end) => {
+    it('creates a Stream from a callback', async () => {
+      const stream = fromCallback<number>(({ event, end }) => {
         event(1)
         end()
 

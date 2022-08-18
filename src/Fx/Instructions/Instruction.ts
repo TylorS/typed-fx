@@ -46,10 +46,10 @@ export type AnyInstruction =
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-export type ResourcesFromInstruction<T extends AnyInstruction> = ReturnType<T['__R']> // Attempt to shortcut the inference process
+export type ResourcesFromInstruction<T extends AnyInstruction> = ReturnType<T['__R']>
 
-export type ErrorsFromInstruction<T extends AnyInstruction> = ReturnType<T['__E']> // Attempt to shortcut the inference process
+export type ErrorsFromInstruction<T extends AnyInstruction> = ReturnType<T['__E']>
 
-export type OutputFromInstruction<T extends AnyInstruction> = ReturnType<T['__A']> // Attempt to shortcut the inference process
+export type OutputFromInstruction<T extends AnyInstruction> = ReturnType<T['__A']>
 
 /* eslint-enable @typescript-eslint/no-unused-vars */

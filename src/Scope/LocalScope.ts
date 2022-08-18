@@ -44,8 +44,8 @@ export class LocalScope implements Closeable {
     const extended = new LocalScope(strategy)
 
     // Mutually track resources
-    extended.ensuring(this.ensuring(() => extended.release))
     extended.ensuring(() => this.release)
+    extended.ensuring(this.ensuring(() => extended.release))
     increment(this._refCount)
 
     return extended
@@ -53,7 +53,9 @@ export class LocalScope implements Closeable {
 
   readonly close = (exit: Exit<any, any>): Of<boolean> =>
     lazy(() => {
-      this.setExit(exit)
+      if (!this.isClosed) {
+        this.setExit(exit)
+      }
 
       return this.release
     })
@@ -61,7 +63,7 @@ export class LocalScope implements Closeable {
   // Internals
 
   protected release = lazy(() => {
-    if (decrement(this._refCount) > 0 || Maybe.isNothing(this._exit)) {
+    if (decrement(this._refCount) > 0 || Maybe.isNothing(this._exit) || this.isClosed) {
       return success(false)
     }
 

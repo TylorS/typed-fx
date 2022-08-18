@@ -1,8 +1,9 @@
 import { deepEqual, deepStrictEqual } from 'assert'
+import console from 'console'
 
 import { pipe } from 'hkt-ts'
 
-import { Fx, access, fromLazy, provideLayers, runMain, success } from './index.js'
+import { Fx, Of, access, fromLazy, provideLayers, runMain, success, zipAll } from './index.js'
 
 import { tagged } from '@/Service/index.js'
 
@@ -100,5 +101,22 @@ describe(new URL(import.meta.url).pathname, () => {
         )
       })
     })
+  })
+
+  it('runs fib recursively', async function () {
+    const fib = (n: number): Of<number> => {
+      if (n < 2) {
+        return success(1)
+      }
+
+      return Fx(function* () {
+        const [a, b] = yield* zipAll([fib(n - 1), fib(n - 2)])
+
+        return a + b
+      })
+    }
+
+    console.time('FIB10')
+    await runMain(fib(10)).then(() => console.timeEnd('FIB10'))
   })
 })
