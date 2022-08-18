@@ -9,7 +9,7 @@ export interface Platform {
   readonly maxOpCount: NonNegativeInteger
   readonly maxTraceCount: NonNegativeInteger
   readonly timer: Timer.Timer
-
+  readonly reportFailure: (message: string) => void
   readonly fork: () => Platform
 }
 
@@ -18,12 +18,14 @@ export function Platform(
   maxOpCount: NonNegativeInteger = NonNegativeInteger(500),
   maxTraceCount: NonNegativeInteger = NonNegativeInteger(50),
   timer: Timer.Timer = SetTimeoutTimer(),
+  reportFailure: (message: string) => void = console.error,
 ): Platform {
   const platform: Platform = {
     sequenceNumber,
     maxOpCount,
     maxTraceCount,
     timer,
+    reportFailure,
     fork: () => fork(platform),
   }
 

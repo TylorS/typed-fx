@@ -1,5 +1,5 @@
 import { pipe } from 'hkt-ts'
-import { Right } from 'hkt-ts/Either'
+import { Right, isLeft } from 'hkt-ts/Either'
 
 import { FiberRuntime } from './FiberRuntime.js'
 import { FiberState } from './FiberState.js'
@@ -35,6 +35,7 @@ import { toFiber } from './toFiber.js'
 
 import { Atomic, update } from '@/Atomic/Atomic.js'
 import { died, traced } from '@/Cause/Cause.js'
+import { prettyPrint } from '@/Cause/Renderer.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Eff } from '@/Eff/Eff.js'
 import { Env } from '@/Env/Env.js'
@@ -300,10 +301,17 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
   protected done(exit: Exit<E, A>) {
     this._status = Done
-    this._observers.forEach((o) => o(exit))
-    this._observers.splice(0, this._observers.length)
-
     this.withSupervisor((s) => s.onEnd(this.fiber, exit))
+
+    if (this._observers.length > 0) {
+      this._observers.forEach((o) => o(exit))
+      this._observers.splice(0, this._observers.length)
+    } else if (isLeft(exit)) {
+      // If there are no observers, report the Failure so it doesn't get lost.
+      const { platform, renderer } = this.context
+
+      platform.reportFailure(prettyPrint(exit.left, renderer))
+    }
   }
 
   // #endregion
