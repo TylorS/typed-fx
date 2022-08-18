@@ -1,4 +1,4 @@
-import { Endomorphism, identity } from 'hkt-ts'
+import { ArgsOf, Endomorphism, identity } from 'hkt-ts'
 import { Maybe, Nothing } from 'hkt-ts/Maybe'
 
 import { FiberState } from './FiberState.js'
@@ -32,26 +32,18 @@ export namespace RuntimeInstruction {
     exit: (instr: ExitNode, state: FiberState) => RuntimeUpdate,
     failure: (instr: FailureNode, state: FiberState) => RuntimeUpdate,
   ): RuntimeProcessor {
-    return (instr: RuntimeInstruction, state: FiberState) => {
-      switch (instr.tag) {
-        case 'Initial':
-          return initial(instr, state)
-        case 'Generator':
-          return generator(instr, state)
-        case 'Instruction':
-          return instruction(instr, state)
-        case 'Fx':
-          return fx(instr, state)
-        case 'Finalizer':
-          return finalizer(instr, state)
-        case 'Pop':
-          return pop(instr, state)
-        case 'Exit':
-          return exit(instr, state)
-        case 'Failure':
-          return failure(instr, state)
-      }
+    const lookup: Record<RuntimeInstruction['tag'], ArgsOf<typeof match>[number]> = {
+      Exit: exit,
+      Failure: failure,
+      Finalizer: finalizer,
+      Fx: fx,
+      Generator: generator,
+      Initial: initial,
+      Instruction: instruction,
+      Pop: pop,
     }
+
+    return (instr: RuntimeInstruction, state: FiberState) => lookup[instr.tag](instr as any, state)
   }
 }
 
