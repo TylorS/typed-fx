@@ -454,10 +454,10 @@ export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
  * operations not resolved.
  */
 export const raceAll = <FX extends NonEmptyArray<AnyFx>>(
-  fxs: FX,
+  fxs: readonly [...FX],
   __trace?: string,
 ): Fx<ResourcesOf<FX[number]>, ErrorsOf<FX[number]>, OutputOf<FX[number]>> =>
-  new RaceAll(fxs, __trace)
+  new RaceAll(fxs as FX, __trace)
 
 /**
  * Control the concurrency level of any region of Fx.

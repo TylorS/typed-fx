@@ -31,6 +31,7 @@ import { processWithConcurrency } from './processors/Instructions/WithConcurrenc
 // eslint-disable-next-line import/no-cycle
 import { processZipAll } from './processors/Instructions/ZipAll.js'
 import * as processors from './processors/index.js'
+import { toFiber } from './toFiber.js'
 
 import { Atomic, update } from '@/Atomic/Atomic.js'
 import { died, traced } from '@/Cause/Cause.js'
@@ -38,6 +39,7 @@ import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Eff } from '@/Eff/Eff.js'
 import { Env } from '@/Env/Env.js'
 import { Exit, interrupt } from '@/Exit/Exit.js'
+import { Live } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/index.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
@@ -47,6 +49,7 @@ import { Fx, Of, lazy, success } from '@/Fx/Fx.js'
 import { Closeable } from '@/Scope/Closeable.js'
 import { Semaphore } from '@/Semaphore/index.js'
 import { Stack } from '@/Stack/index.js'
+import { None, Supervisor } from '@/Supervisor/Supervisor.js'
 import { Delay, Time } from '@/Time/index.js'
 import { Trace, getTraceUpTo, getTrimmedTrace } from '@/Trace/Trace.js'
 
@@ -86,6 +89,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   })
   protected readonly _disposable: Settable = settable()
   protected readonly processor: RuntimeProcessor
+  protected readonly fiber: Live<E, A>
   // #endregion
 
   constructor(
@@ -110,6 +114,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       processors.processFailureNode,
     )
     this._status = Suspended(this.getInterruptStatus)
+    this.fiber = toFiber(this, context, scope)
   }
 
   // #region Public API
@@ -121,6 +126,8 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
     }
 
     this._started = true
+
+    this.withSupervisor((s) => s.onStart(this.fiber, this.fx))
 
     this.run()
 
@@ -187,7 +194,14 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
   protected process() {
     // Use the provided processor to update state and determine the next thing to do.
-    const decision = this._state.modify((s) => this.processor(this._current, s))
+
+    const current = this._current
+
+    if (current.tag === 'Instruction') {
+      this.withSupervisor((s) => s.onInstruction(this.fiber, current.instruction))
+    }
+
+    const decision = this._state.modify((s) => this.processor(current, s))
     const tag = decision.tag
 
     // console.log(this.id.sequenceNumber, printDecision(decision))
@@ -215,13 +229,15 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   protected running() {
     if (this._status.tag === 'Suspended') {
       this._status = Running(this.getInterruptStatus)
+      this.withSupervisor((s) => s.onRunning(this.fiber))
     }
   }
 
   protected suspend() {
     if (this._status.tag === 'Running') {
       this._status = Suspended(this.getInterruptStatus)
-      this.setTimer(() => this.run(), Delay(0))
+      this.setTimer(() => this.run())
+      this.withSupervisor((s) => s.onSuspended(this.fiber))
     }
   }
 
@@ -264,7 +280,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
             previous,
           )
 
-          this.setTimer(() => this.run(), Delay(0))
+          this.setTimer(() => this.run())
         }),
       ),
     )
@@ -278,12 +294,16 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       this._state,
       update((s) => ({ ...s, opCount: 0 })),
     )
+
+    this.withSupervisor((s) => s.onSuspended(this.fiber))
   }
 
   protected done(exit: Exit<E, A>) {
     this._status = Done
     this._observers.forEach((o) => o(exit))
     this._observers.splice(0, this._observers.length)
+
+    this.withSupervisor((s) => s.onEnd(this.fiber, exit))
   }
 
   // #endregion
@@ -301,7 +321,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
 
   protected getInterruptStatus = () => this._state.get().interruptStatus.value
 
-  protected setTimer = (f: (time: Time) => void, delay: Delay): Disposable => {
+  protected setTimer = (f: (time: Time) => void): Disposable => {
     const inner = settable()
 
     inner.add(
@@ -309,11 +329,17 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
         this.context.platform.timer.setTimer((time) => {
           inner.dispose()
           f(time)
-        }, delay),
+        }, Delay(0)),
       ),
     )
 
     return inner
+  }
+
+  protected withSupervisor = (f: (supervisor: Supervisor<any>) => void) => {
+    if (this.context.supervisor !== None) {
+      f(this.context.supervisor)
+    }
   }
 
   // #endregion
