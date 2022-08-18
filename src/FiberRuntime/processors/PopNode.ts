@@ -9,7 +9,6 @@ import { Running, RuntimeDecision } from '../RuntimeProcessor.js'
 
 import { setFailure } from './setFailure.js'
 
-import { set } from '@/Atomic/Atomic.js'
 import { Eff } from '@/Eff/Eff.js'
 import { interrupt, makeSequentialAssociative } from '@/Exit/Exit.js'
 
@@ -49,7 +48,7 @@ export function processPopNode(
     exit.value,
     match(
       (cause) => setFailure(cause, previous),
-      (value) => pipe(previous.next, set(value)),
+      (value) => previous.next.set(value),
     ),
   )
 

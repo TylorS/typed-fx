@@ -103,7 +103,9 @@ describe(new URL(import.meta.url).pathname, () => {
     })
   })
 
-  it('runs fib recursively', async function () {
+  it.skip('runs fib recursively', async function () {
+    this.timeout(60 * 1000)
+
     const fib = (n: number): Of<number> => {
       if (n < 2) {
         return success(1)
@@ -116,7 +118,9 @@ describe(new URL(import.meta.url).pathname, () => {
       })
     }
 
-    console.time('FIB10')
-    await runMain(fib(10)).then(() => console.timeEnd('FIB10'))
+    for (let i = 0; i < 100; i++) {
+      console.time('FIB10')
+      await runMain(fib(10)).then(() => console.timeEnd('FIB10'))
+    }
   })
 })

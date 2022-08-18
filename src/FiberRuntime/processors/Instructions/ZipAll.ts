@@ -1,8 +1,7 @@
-import { Either, pipe } from 'hkt-ts'
+import { Either } from 'hkt-ts'
 import { makeAssociative } from 'hkt-ts/Array'
 import { isLeft } from 'hkt-ts/Either'
 
-import { set } from '@/Atomic/Atomic.js'
 import { Exit, makeParallelAssociative } from '@/Exit/Exit.js'
 import { FiberContext } from '@/FiberContext/index.js'
 import { FiberId, Live } from '@/FiberId/FiberId.js'
@@ -14,7 +13,7 @@ import { make } from '@/FiberRuntime/make.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { ZipAll } from '@/Fx/Instructions/ZipAll.js'
-import { AnyFx, Fx, fromExit } from '@/Fx/index.js'
+import { AnyFx, Fx, fromExit, tupled } from '@/Fx/index.js'
 import { Scope } from '@/Scope/Scope.js'
 import { acquireFiber } from '@/Semaphore/Semaphore.js'
 
@@ -25,23 +24,13 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
     node: InstructionNode,
   ): RuntimeUpdate => {
     if (zipAll.input.length === 0) {
-      pipe(node.previous.next, set([]))
+      node.previous.next.set([])
 
       return [new Running(node.previous), state]
     }
 
     if (zipAll.input.length === 1) {
-      return [
-        new Running(
-          new FxNode(
-            Fx(function* () {
-              return [yield* zipAll.input[0]]
-            }),
-            node,
-          ),
-        ),
-        state,
-      ]
+      return [new Running(new FxNode(tupled(zipAll.input[0]), node)), state]
     }
 
     const [future, onExit] = zipAllFuture(zipAll.input.length)

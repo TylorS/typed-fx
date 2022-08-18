@@ -1,4 +1,3 @@
-import { pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
 import { Just, Nothing } from 'hkt-ts/Maybe'
 
@@ -9,7 +8,6 @@ import { Done, Running, RuntimeDecision } from '../RuntimeProcessor.js'
 import { processFinalizerNode } from './FinalizerNode.js'
 import { processPopNode } from './PopNode.js'
 
-import { set } from '@/Atomic/Atomic.js'
 import { Trace } from '@/Trace/Trace.js'
 
 export function processGeneratorNode(
@@ -20,8 +18,8 @@ export function processGeneratorNode(
   const result = generator[method.get()](next.get())
 
   // Reset Failures since we made it to the next instruction w/o throwing
-  pipe(method, set('next'))
-  pipe(cause, set(Nothing))
+  method.set('next')
+  cause.set(Nothing)
 
   if (!result.done) {
     const instr = result.value
@@ -49,31 +47,31 @@ export function processGeneratorNode(
       return [new Done(previous.exit), state]
     }
     case 'Finalizer': {
-      pipe(previous.exit, set(Just(exit)))
+      previous.exit.set(Just(exit))
 
       return processFinalizerNode(previous, state)
     }
     case 'Fx': {
       const prev = previous.previous.previous
 
-      pipe(prev.next, set(result.value))
+      prev.next.set(result.value)
 
       return processGeneratorNode(prev, state)
     }
     case 'Generator': {
-      pipe(previous.next, set(result.value))
+      previous.next.set(result.value)
 
       return processGeneratorNode(previous, state)
     }
     case 'Instruction': {
       const prev = previous.previous
 
-      pipe(prev.next, set(result.value))
+      prev.next.set(result.value)
 
       return processGeneratorNode(prev, previous.pop(state))
     }
     case 'Pop': {
-      pipe(previous.exit, set(Just(exit)))
+      previous.exit.set(Just(exit))
 
       return processPopNode(previous, state)
     }

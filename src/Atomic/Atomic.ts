@@ -12,6 +12,7 @@ import { Identity } from 'hkt-ts/Typeclass/Identity'
 export interface Atomic<A> extends Identity<A> {
   readonly get: () => A
   readonly modify: <B>(f: (a: A) => readonly [B, A]) => B
+  readonly set: (a: A) => A
 }
 
 /**
@@ -29,6 +30,7 @@ export function Atomic<A>(initial: A, A: Associative<A> = First): Atomic<A> {
       current = a
       return b
     },
+    set: (a) => (current = a),
   }
 }
 
@@ -112,7 +114,7 @@ export function compareAndSwap<A>(E: Eq<A>) {
   return (current: A, updated: A) =>
     (atomic: Atomic<A>): Maybe<A> => {
       if (E.equals(atomic.get(), current)) {
-        return pipe(atomic, set(updated), Just)
+        return Just(atomic.set(updated))
       }
 
       return Nothing

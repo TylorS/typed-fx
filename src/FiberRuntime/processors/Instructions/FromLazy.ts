@@ -1,6 +1,3 @@
-import { pipe } from 'hkt-ts'
-
-import { set } from '@/Atomic/Atomic.js'
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
 import { Running, RuntimeUpdate } from '@/FiberRuntime/RuntimeProcessor.js'
@@ -11,7 +8,7 @@ export function processFromLazy<A>(
   state: FiberState,
   node: InstructionNode,
 ): RuntimeUpdate {
-  pipe(node.previous.next, set(fromLazy.input()))
+  node.previous.next.set(fromLazy.input())
 
   return [new Running(node.previous), state]
 }

@@ -1,6 +1,3 @@
-import { pipe } from 'hkt-ts'
-
-import { set } from '@/Atomic/Atomic.js'
 import { FiberContext } from '@/FiberContext/index.js'
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
@@ -15,7 +12,7 @@ export function processGetFiberContext(initial: FiberContext) {
       interruptStatus: state.interruptStatus.value,
     }
 
-    pipe(node.previous.next, set(context))
+    node.previous.next.set(context)
 
     return [new Running(node.previous), state]
   }

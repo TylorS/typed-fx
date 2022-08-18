@@ -1,6 +1,3 @@
-import { pipe } from 'hkt-ts/function'
-
-import { set } from '@/Atomic/Atomic.js'
 import { FiberContext } from '@/FiberContext/index.js'
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
@@ -29,7 +26,7 @@ export function processFork(initial: FiberContext, fiberScope: Scope) {
       transform: acquireFiber(state.concurrencyLevel.value),
     })
 
-    pipe(node.previous.next, set(fiber))
+    node.previous.next.set(fiber)
 
     return [new Running(node.previous), state]
   }

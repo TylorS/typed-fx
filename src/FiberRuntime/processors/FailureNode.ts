@@ -11,7 +11,6 @@ import { processFinalizerNode } from './FinalizerNode.js'
 import { processPopNode } from './PopNode.js'
 import { setFailure } from './setFailure.js'
 
-import { set } from '@/Atomic/Atomic.js'
 import * as Cause from '@/Cause/Cause.js'
 import * as Exit from '@/Exit/Exit.js'
 
@@ -40,7 +39,7 @@ export function processFailureNode(
       ]
     }
     case 'Finalizer': {
-      pipe(prev.exit, set(Just(exit)))
+      prev.exit.set(Just(exit))
 
       return processFinalizerNode(prev, state)
     }
@@ -76,7 +75,7 @@ export function processFailureNode(
       return [new Running(new FailureNode(node.error, prev.previous)), prev.pop(state)]
     }
     case 'Pop': {
-      pipe(prev.exit, set(Just(exit)))
+      prev.exit.set(Just(exit))
 
       return processPopNode(prev, state)
     }
