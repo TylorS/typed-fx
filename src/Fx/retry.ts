@@ -23,10 +23,12 @@ export function retry(schedule: Schedule) {
         // Schedule a Task to run the next iteration of this Fx
         const exit: Exit<E, A> = yield* attempt(fx)
 
+        // Return a successful value immediately
         if (isRight(exit)) {
           return exit.right
         }
 
+        // Track all failures.
         exits.push(exit)
 
         // Calculate if we should continue or not
