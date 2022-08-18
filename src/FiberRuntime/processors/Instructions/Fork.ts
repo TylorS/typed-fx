@@ -1,7 +1,4 @@
-import { Just } from 'hkt-ts/Maybe'
 import { pipe } from 'hkt-ts/function'
-
-import { getTraceUpTo } from './Failure.js'
 
 import { set } from '@/Atomic/Atomic.js'
 import { FiberContext } from '@/FiberContext/index.js'
@@ -28,7 +25,7 @@ export function processFork(initial: FiberContext, fiberScope: Scope) {
       ...FiberContext.fork(current, params),
       env: state.env.value,
       scope: params.scope ?? params.forkScope?.fork() ?? fiberScope.fork(),
-      trace: Just(getTraceUpTo(state.trace, current.platform.maxTraceCount)),
+      trace: state.trace,
       transform: acquireFiber(state.concurrencyLevel.value),
     })
 

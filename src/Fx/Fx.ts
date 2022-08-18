@@ -37,7 +37,7 @@ import type * as Layer from '@/Layer/Layer.js'
 import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import type { Closeable } from '@/Scope/Closeable.js'
 import type * as Service from '@/Service/index.js'
-import { Trace } from '@/Trace/Trace.js'
+import { StackTrace, Trace, getTraceUpTo } from '@/Trace/Trace.js'
 
 /**
  * Fx is the immutable representation of an Effectful program. It utilizes Generators to
@@ -248,7 +248,14 @@ export const addRuntimeTrace =
 /**
  * Access the Current Trace
  */
-export const getTrace: Of<Trace> = new GetTrace()
+export const getStackTrace: Of<StackTrace> = new GetTrace()
+
+export const getTrace: Of<Trace> = Fx(function* () {
+  const context = yield* getFiberContext
+  const stackTrace = yield* getStackTrace
+
+  return getTraceUpTo(stackTrace, context.platform.maxTraceCount)
+})
 
 /**
  * Run a potentially Asynchronous Fx operation.

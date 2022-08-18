@@ -10,7 +10,6 @@ import { AnyExit } from '@/Exit/Exit.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
 import { AnyFx } from '@/Fx/Fx.js'
 import { AnyInstruction } from '@/Fx/Instructions/Instruction.js'
-import { Trace } from '@/Trace/Trace.js'
 
 export type RuntimeInstruction =
   | ExitNode
@@ -62,7 +61,7 @@ export namespace RuntimeInstruction {
 export class InitialNode {
   readonly tag = 'Initial'
 
-  constructor(readonly fx: AnyFx, readonly trace: Maybe<Trace>) {}
+  constructor(readonly fx: AnyFx) {}
 }
 
 /**

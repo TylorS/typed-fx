@@ -8,6 +8,8 @@ import * as O from 'hkt-ts/Typeclass/Ord'
 import * as N from 'hkt-ts/number'
 import * as S from 'hkt-ts/string'
 
+import type { Cause } from '@/Cause/index.js'
+import { Stack } from '@/Stack/index.js'
 import * as StackFrame from '@/StackFrame/index.js'
 
 export type Trace = EmptyTrace | StackFrameTrace
@@ -175,4 +177,34 @@ function trimOverlappingFrames(
   }
 
   return outgoing
+}
+
+export interface StackTrace extends Stack<Trace> {}
+
+// Traverse up the Stack<Trace> for a set amount of StackFrames.
+export function getTraceUpTo(trace: StackTrace, amount: number): Trace {
+  const frames: Array<StackFrame.StackFrame> = []
+
+  let current: StackTrace | undefined = trace
+
+  while (current && frames.length < amount) {
+    if (current.value.tag === 'StackFrameTrace') {
+      frames.push(...current.value.frames)
+    }
+
+    current = current.previous
+  }
+
+  return frames.length > 0 ? new StackFrameTrace(frames) : EmptyTrace
+}
+
+export function getTrimmedTrace<E>(cause: Cause<E>, stackTrace: StackTrace) {
+  const error =
+    (cause.tag === 'Died' || cause.tag === 'Failed') && cause.error instanceof Error
+      ? cause.error
+      : new Error()
+  const trace = Trace.runtime(error, getTrimmedTrace)
+  const toCompare = getTraceUpTo(stackTrace, trace.frames.length)
+
+  return trimOverlappingTraces(toCompare, trace)
 }

@@ -1,7 +1,4 @@
-import { Just, Nothing } from 'hkt-ts/Maybe'
 import { NonEmptyArray } from 'hkt-ts/NonEmptyArray'
-
-import { getTraceUpTo } from './Failure.js'
 
 import { FiberContext } from '@/FiberContext/index.js'
 import { FiberId, Live } from '@/FiberId/FiberId.js'
@@ -28,10 +25,9 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
       return [new Running(new FxNode(raceAll.input[0], node)), state]
     }
 
-    const trace = getTraceUpTo(state.trace, context.platform.maxTraceCount)
     const future = Pending<never, any, any>()
     let deleted = 0
-    const runtimes = raceAll.input.map((fx, i) => {
+    const runtimes = raceAll.input.map((fx) => {
       const id = Live(context.platform)
       const scope = fiberScope.fork()
       const runtime: FiberRuntime<any, any> = make({
@@ -40,19 +36,18 @@ export function processRaceAll(id: FiberId, context: FiberContext, fiberScope: S
         env: state.env.value,
         context: FiberContext.fork(context, { fiberRefs: context.fiberRefs }),
         scope,
-        trace: trace.tag === 'EmptyTrace' ? Nothing : Just(trace),
+        trace: state.trace,
       })
-
-      runtime.addObserver((exit) => {
-        runtimes.splice(i - deleted++, 1)
-        complete(future)(fromExit(exit))
-      })
-
       return runtime
     })
 
-    runtimes.forEach((f) => f.start())
-
+    runtimes.slice().forEach((r, i) => {
+      r.addObserver((exit) => {
+        runtimes.splice(i - deleted++, 1)
+        complete(future)(fromExit(exit))
+      })
+      r.start()
+    })
     return [
       new Await(
         future,

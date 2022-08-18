@@ -1,6 +1,5 @@
 import { pipe } from 'hkt-ts'
 import { Right } from 'hkt-ts/Either'
-import { Maybe, getOrElse } from 'hkt-ts/Maybe'
 
 import { FiberRuntime } from './FiberRuntime.js'
 import { FiberState } from './FiberState.js'
@@ -16,7 +15,7 @@ import { processAccess } from './processors/Instructions/Access.js'
 import { processAddTrace } from './processors/Instructions/AddTrace.js'
 import { processAsync } from './processors/Instructions/Async.js'
 import { processEnsuring } from './processors/Instructions/Ensuring.js'
-import { getTraceUpTo, getTrimmedTrace, processFailure } from './processors/Instructions/Failure.js'
+import { processFailure } from './processors/Instructions/Failure.js'
 import { processFork } from './processors/Instructions/Fork.js'
 import { processFromLazy } from './processors/Instructions/FromLazy.js'
 import { processGetFiberContext } from './processors/Instructions/GetFiberContext.js'
@@ -34,7 +33,7 @@ import { processZipAll } from './processors/Instructions/ZipAll.js'
 import * as processors from './processors/index.js'
 
 import { Atomic, update } from '@/Atomic/Atomic.js'
-import { died, interrupted, traced } from '@/Cause/Cause.js'
+import { died, traced } from '@/Cause/Cause.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Eff } from '@/Eff/Eff.js'
 import { Env } from '@/Env/Env.js'
@@ -49,7 +48,7 @@ import { Closeable } from '@/Scope/Closeable.js'
 import { Semaphore } from '@/Semaphore/index.js'
 import { Stack } from '@/Stack/index.js'
 import { Delay, Time } from '@/Time/index.js'
-import { EmptyTrace, Trace } from '@/Trace/Trace.js'
+import { Trace, getTraceUpTo, getTrimmedTrace } from '@/Trace/Trace.js'
 
 export function make<R, E, A>(params: FiberRuntimeParams<R, E, A>): FiberRuntime<E, A> {
   return new FiberRuntimeImpl(
@@ -68,13 +67,13 @@ export interface FiberRuntimeParams<R, E, A> {
   readonly env: Env<R>
   readonly context: FiberContext
   readonly scope: Closeable
-  readonly trace: Maybe<Trace>
+  readonly trace: Stack<Trace>
 }
 
 export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
   // #region Private State
   protected _started = false
-  protected _current: RuntimeInstruction = new InitialNode(this.fx, this.parentTrace)
+  protected _current: RuntimeInstruction = new InitialNode(this.fx)
   protected _status: FiberStatus
   protected readonly _observers: Array<(exit: Exit<E, A>) => void> = []
   protected readonly _state: Atomic<FiberState> = Atomic<FiberState>({
@@ -83,12 +82,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
     interruptStatus: new Stack(this.context.interruptStatus),
     interruptedBy: new Set(),
     env: new Stack(this.env),
-    trace: new Stack(
-      pipe(
-        this.parentTrace,
-        getOrElse(() => EmptyTrace),
-      ),
-    ),
+    trace: this.parentTrace,
   })
   protected readonly _disposable: Settable = settable()
   protected readonly processor: RuntimeProcessor
@@ -100,7 +94,7 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
     readonly env: Env<R>,
     readonly context: FiberContext,
     readonly scope: Closeable,
-    readonly parentTrace: Maybe<Trace>,
+    readonly parentTrace: Stack<Trace>,
   ) {
     this.processor = RuntimeInstruction.match(
       processors.processInitialNode,
@@ -250,10 +244,6 @@ export class FiberRuntimeImpl<R, E, A> implements FiberRuntime<E, A> {
       ))
     }
 
-    if (state.tag === 'Interrupted') {
-      return new FailureNode(interrupted(state.fiberId), previous)
-    }
-
     const inner = settable()
 
     inner.add(
@@ -343,7 +333,7 @@ const makeInstructionProcessors = <R, E, A>(runtime: FiberRuntimeImpl<R, E, A>) 
     FromLazy: processFromLazy,
     GetFiberContext: processGetFiberContext(context),
     GetFiberScope: processGetFiberScope(scope),
-    GetTrace: processGetTrace(maxTraceCount),
+    GetTrace: processGetTrace,
     Join: processJoin,
     Provide: processProvide,
     RaceAll: processRaceAll(id, context, scope),

@@ -1,15 +1,11 @@
 import { Either, pipe } from 'hkt-ts'
 import { makeAssociative } from 'hkt-ts/Array'
 import { isLeft } from 'hkt-ts/Either'
-import { Just, Nothing } from 'hkt-ts/Maybe'
-
-import { getTraceUpTo } from './Failure.js'
 
 import { set } from '@/Atomic/Atomic.js'
 import { Exit, makeParallelAssociative } from '@/Exit/Exit.js'
 import { FiberContext } from '@/FiberContext/index.js'
 import { FiberId, Live } from '@/FiberId/FiberId.js'
-import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { FiberState } from '@/FiberRuntime/FiberState.js'
 import { FxNode, InstructionNode } from '@/FiberRuntime/RuntimeInstruction.js'
 import { Await, Running, RuntimeUpdate } from '@/FiberRuntime/RuntimeProcessor.js'
@@ -48,31 +44,27 @@ export function processZipAll(id: FiberId, context: FiberContext, fiberScope: Sc
       ]
     }
 
-    const trace = getTraceUpTo(state.trace, context.platform.maxTraceCount)
     const [future, onExit] = zipAllFuture(zipAll.input.length)
 
     let deleted = 0
-    const runtimes = zipAll.input.map((fx, i) => {
-      const id = Live(context.platform)
-      const scope = fiberScope.fork()
-      const runtime: FiberRuntime<any, any> = make({
+    const runtimes = zipAll.input.map((fx) =>
+      make({
         fx: acquireFiber(state.concurrencyLevel.value)(fx),
-        id,
+        id: Live(context.platform),
         env: state.env.value,
         context: FiberContext.fork(context, { fiberRefs: context.fiberRefs }),
-        scope,
-        trace: trace.tag === 'EmptyTrace' ? Nothing : Just(trace),
-      })
+        scope: fiberScope.fork(),
+        trace: state.trace,
+      }),
+    )
 
-      runtime.addObserver((exit) => {
-        onExit(exit, i)
+    runtimes.slice().forEach((r, i) => {
+      r.addObserver((exit) => {
         runtimes.splice(i - deleted++, 1)
+        onExit(exit, i)
       })
-
-      return runtime
+      r.start()
     })
-
-    runtimes.forEach((r) => r.start())
 
     return [
       new Await(

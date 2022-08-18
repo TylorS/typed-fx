@@ -6,10 +6,10 @@ import type { Live } from '@/Fiber/Fiber.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { Closeable } from '@/Scope/Closeable.js'
 import type { Scope } from '@/Scope/Scope.js'
-import type { Trace } from '@/Trace/Trace.js'
+import type { StackTrace } from '@/Trace/Trace.js'
 
 export interface ForkParams extends FiberContext {
-  readonly trace?: Trace
+  readonly trace?: StackTrace
   readonly scope?: Closeable // Scope to use explicitly for this Fiber
   readonly forkScope?: Scope // Scope to use to fork for this Fiber, used only when `scope` is not provided.
 }

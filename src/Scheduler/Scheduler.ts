@@ -1,4 +1,4 @@
-import { Maybe, identity, pipe } from 'hkt-ts'
+import { identity, pipe } from 'hkt-ts'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Disposable } from '@/Disposable/Disposable.js'
@@ -16,15 +16,16 @@ import {
   getEnv,
   getFiberContext,
   getFiberScope,
-  getTrace,
+  getStackTrace,
   unit,
 } from '@/Fx/Fx.js'
 import { ForkParams } from '@/Fx/Instructions/Fork.js'
 import * as Schedule from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Closeable } from '@/Scope/Closeable.js'
+import { Stack } from '@/Stack/index.js'
 import { Delay } from '@/Time/index.js'
-import { Trace } from '@/Trace/Trace.js'
+import { EmptyTrace, StackTrace, Trace } from '@/Trace/Trace.js'
 
 /**
  * Scheduler is capable of converting Fx into a runnning Fiber given a particular Schedule.
@@ -67,12 +68,12 @@ export function getSchedulerContext<R>() {
   return Fx(function* () {
     const scope = yield* getFiberScope
     const env = yield* getEnv<R>()
-    const trace = yield* getTrace
+    const trace = yield* getStackTrace
     const fiberContext = yield* getFiberContext
     const context: SchedulerContext<R> = {
       env,
       scope,
-      trace: Maybe.Just(trace),
+      trace,
       transform: identity,
       ...fiberContext,
     }
@@ -90,7 +91,7 @@ export function forkSchedulerContext<R>(params?: ForkParams) {
 export interface SchedulerContext<R> extends FiberContext {
   readonly env: Env<R>
   readonly scope: Closeable
-  readonly trace: Maybe.Maybe<Trace>
+  readonly trace: StackTrace
   readonly transform: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A>
 }
 
@@ -99,7 +100,7 @@ export namespace SchedulerContext {
     return {
       ...FiberContext.fork(context, params),
       env: context.env,
-      trace: Maybe.fromNullable(params?.trace),
+      trace: params?.trace ?? new Stack<Trace>(EmptyTrace),
       scope: context.scope.fork(),
       transform: context.transform,
     }
