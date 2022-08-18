@@ -20,10 +20,7 @@ import { processFork } from './processors/Instructions/Fork.js'
 import { processFromLazy } from './processors/Instructions/FromLazy.js'
 import { processGetFiberContext } from './processors/Instructions/GetFiberContext.js'
 import { processGetFiberScope } from './processors/Instructions/GetFiberScope.js'
-import {
-  processGetStackTrace,
-  processGetStackTrace,
-} from './processors/Instructions/GetStackTrace.js'
+import { processGetStackTrace } from './processors/Instructions/GetStackTrace.js'
 import { processJoin } from './processors/Instructions/Join.js'
 import { processProvide } from './processors/Instructions/Provide.js'
 // eslint-disable-next-line import/no-cycle
