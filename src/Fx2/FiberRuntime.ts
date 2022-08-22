@@ -58,6 +58,14 @@ export function FinalizerFrame(step: (a: AnyExit) => AnyFx): FinalizerFrame {
 }
 
 // TODO: Handle Interrupts
+// TODO: Op Count
+// TODO: Supervisors
+// TODO: Layers
+// TODO: Fork Fibers
+// TODO: Join Fibers
+// TODO: Race
+// TODO: Zip
+// TODO:
 
 export class FiberRuntime<R, E, A> {
   protected _started = false
@@ -318,7 +326,7 @@ export class FiberRuntime<R, E, A> {
           addObserver(instr.future as any, (fx) => {
             if (!inner.isDisposed()) {
               inner.dispose()
-              this.run((this._current = fx.instr))
+              this.setTimer(() => this.run(fx.instr))
             }
           }),
         ),
