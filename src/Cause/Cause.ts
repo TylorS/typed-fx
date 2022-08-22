@@ -17,6 +17,8 @@ export type Cause<E> =
   | Parallel<E, E>
   | Traced<E>
 
+export type AnyCause = Cause<any> | Cause<never>
+
 export interface Empty {
   readonly tag: 'Empty'
 }
@@ -208,4 +210,8 @@ export const makeOrd = <E>(Eq: ORD.Ord<E>): ORD.Ord<Cause<E>> => {
   })
 
   return ord
+}
+
+export function shouldRethrow(error: Cause<any>): boolean {
+  return error.tag === 'Unexpected' || (error.tag === 'Traced' && shouldRethrow(error.cause))
 }

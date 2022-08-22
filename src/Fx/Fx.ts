@@ -33,7 +33,6 @@ import * as Exit from '@/Exit/Exit.js'
 import type { Fiber, Live } from '@/Fiber/Fiber.js'
 import type { FiberContext } from '@/FiberContext/index.js'
 import type { FiberId } from '@/FiberId/FiberId.js'
-import type * as Layer from '@/Layer/Layer.js'
 import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import type { Closeable } from '@/Scope/Closeable.js'
 import type * as Service from '@/Service/index.js'
@@ -131,24 +130,12 @@ ask.id = askId
 export const asks =
   <S, A>(f: (s: S) => A, __trace?: string) =>
   (service: Service.Service<S>) =>
-    access(
-      (r: Env<S>) =>
-        Fx(function* () {
-          return f(yield* r.get(service))
-        }),
-      __trace,
-    )
+    access((r: Env<S>) => fromLazy(() => f(r.get(service))), __trace)
 
 export const asksFx =
   <S, R, E, A>(f: (s: S) => Fx<R, E, A>, __trace?: string) =>
   (service: Service.Service<S>) =>
-    access(
-      (r: Env<S>) =>
-        Fx(function* () {
-          return yield* f(yield* r.get(service))
-        }),
-      __trace,
-    )
+    access((r: Env<S>) => f(r.get(service)), __trace)
 
 export const asksFx_ =
   <S extends Service.Service<any>>(service: S) =>
@@ -176,44 +163,6 @@ export const provideService =
   <S, I extends S>(service: Service.Service<S>, impl: I, __trace?: string) =>
   <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
     access((env) => pipe(fx, provide((env as Env<R>).add(service, impl))), __trace)
-
-/**
- * Use a Layer to provide a Service lazily and asynchronously.
- */
-export const provideLayer =
-  <R2, E2, S>(layer: Layer.Layer<R2, E2, S>, __trace?: string) =>
-  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R | R2, S>, E | E2, A> =>
-    access(
-      (env) =>
-        Fx(function* () {
-          const provided = yield* (env as Env<R | R2>).addLayer(layer)
-
-          return yield* pipe(fx, provide(provided))
-        }),
-      __trace,
-    ) as Fx<Exclude<R | R2, S>, E | E2, A>
-
-/**
- * Provide any number of Layers.
- */
-export const provideLayers =
-  <Layers extends ReadonlyArray<Layer.AnyLayer>>(layers: readonly [...Layers], __trace?: string) =>
-  <R, E, A>(
-    fx: Fx<R | Layer.OutputOf<Layers[number]>, E, A>,
-  ): Fx<Exclude<R, Layer.OutputOf<Layers[number]>>, E | Layer.ErrorsOf<Layers[number]>, A> =>
-    access(
-      (env) =>
-        Fx(function* () {
-          let provided: Env<any> = env
-
-          for (const layer of layers) {
-            provided = yield* provided.addLayer(layer)
-          }
-
-          return yield* pipe(fx, provide(provided))
-        }),
-      __trace,
-    )
 
 /**
  * Add a Trace to the Fx Stack for printing during failure.

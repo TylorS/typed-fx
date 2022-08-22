@@ -11,15 +11,19 @@ import {
   uninterruptable,
 } from './Fx.js'
 
+import { ConcurrentStrategy, FinalizationStrategy } from '@/Finalizer/Finalizer.js'
 import { Scope } from '@/Scope/Scope.js'
 
 /**
  * Run a Scoped Fx within an isolated Scope, cleaning up those resources as soon as complete.
  */
-export function scoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, E, A> {
+export function scoped<R, E, A>(
+  scoped: Fx<R | Scope, E, A>,
+  strategy: FinalizationStrategy = ConcurrentStrategy,
+): Fx<Exclude<R, Scope>, E, A> {
   return Fx(function* () {
     const fiberScope = yield* getFiberScope
-    const scope = fiberScope.fork()
+    const scope = fiberScope.fork(strategy)
 
     return yield* pipe(scoped, provideService(Scope, scope), ensuring(scope.close))
   })

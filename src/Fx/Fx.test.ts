@@ -3,7 +3,7 @@ import console from 'console'
 
 import { pipe } from 'hkt-ts'
 
-import { Fx, Of, access, fromLazy, provideLayers, runMain, success, zipAll } from './index.js'
+import { Fx, Of, access, runMain, success, zipAll } from './index.js'
 
 import { tagged } from '@/Service/index.js'
 
@@ -78,28 +78,28 @@ describe(new URL(import.meta.url).pathname, () => {
         await pipe(test, new Foo().add(new Bar()).provide, runMain)
       })
 
-      it('allows retrieving services from layers', async () => {
-        const test = Fx(function* () {
-          const foo: Foo = yield* Foo.ask()
+      // it('allows retrieving services from layers', async () => {
+      //   const test = Fx(function* () {
+      //     const foo: Foo = yield* Foo.ask()
 
-          deepEqual(foo.tag, 'Foo')
-          deepStrictEqual(foo.id, Foo.id())
+      //     deepEqual(foo.tag, 'Foo')
+      //     deepStrictEqual(foo.id, Foo.id())
 
-          const bar: Bar = yield* Bar.ask()
+      //     const bar: Bar = yield* Bar.ask()
 
-          deepEqual(bar.tag, 'Bar')
-          deepStrictEqual(bar.id, Bar.id())
-        })
+      //     deepEqual(bar.tag, 'Bar')
+      //     deepStrictEqual(bar.id, Bar.id())
+      //   })
 
-        await pipe(
-          test,
-          provideLayers([
-            Foo.layer(fromLazy(() => new Foo())),
-            Bar.layer(fromLazy(() => new Bar())),
-          ]),
-          runMain,
-        )
-      })
+      //   await pipe(
+      //     test,
+      //     provideLayers([
+      //       Foo.layer(fromLazy(() => new Foo())),
+      //       Bar.layer(fromLazy(() => new Bar())),
+      //     ]),
+      //     runMain,
+      //   )
+      // })
     })
   })
 
