@@ -1,9 +1,9 @@
 import type { Exit } from '@/Exit/Exit.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { FiberId } from '@/FiberId/FiberId.js'
+import { join } from '@/FiberRefs/FiberRefs.js'
 import type { FiberStatus } from '@/FiberStatus/index.js'
-import type { Of } from '@/Fx/Fx.js'
-import type { Closeable } from '@/Scope/Closeable.js'
+import { Fx, Of, fromLazy, getFiberContext } from '@/Fx/Fx.js'
 import type { Trace } from '@/Trace/Trace.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
@@ -22,9 +22,8 @@ export interface Live<E, A> {
   readonly status: Of<FiberStatus>
   readonly exit: Of<Exit<E, A>>
   readonly context: Of<FiberContext>
-  readonly scope: Of<Closeable>
   readonly trace: Of<Trace>
-  readonly interruptAs: (id: FiberId) => Of<boolean>
+  readonly interruptAs: (id: FiberId) => Of<Exit<E, A>>
 }
 
 export type AnyLiveFiber = Live<any, any> | Live<never, never> | Live<any, never> | Live<never, any>
@@ -51,3 +50,15 @@ export const match =
   <E, A, B, C>(onLive: (live: Live<E, A>) => B, onSynthetic: (synthetic: Synthetic<E, A>) => C) =>
   (fiber: Fiber<E, A>) =>
     fiber.tag === 'Live' ? onLive(fiber) : onSynthetic(fiber)
+
+export const inheritFiberRefs = <E, A>(fiber: Fiber<E, A>) =>
+  Fx(function* () {
+    if (fiber.tag === 'Synthetic') {
+      return yield* fiber.inheritFiberRefs
+    }
+
+    const { fiberRefs: current } = yield* getFiberContext
+    const { fiberRefs: incoming } = yield* fiber.context
+
+    yield* fromLazy(() => join(current, incoming))
+  })

@@ -3,7 +3,7 @@ import { Scope } from 'ts-morph'
 import { Service } from './Service.js'
 
 import { Env } from '@/Env/Env.js'
-import { Fx, RIO, ask, provide } from '@/Fx/Fx.js'
+import { Fx, RIO, ask } from '@/Fx/Fx.js'
 import type { Layer } from '@/Layer/Layer.js'
 import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 
@@ -37,7 +37,7 @@ export class Id {
       new (...args: any): any
     },
   >(this: S): RIO<InstanceOf<S>, InstanceOf<S>> {
-    return ask.id(this)
+    return ask(this.id())
   }
 
   /**
@@ -70,8 +70,6 @@ export class Id {
   [PROVIDEABLE](): Env<this> {
     return this.add(Env.empty)
   }
-
-  readonly provide: Provideable<this>['provide'] = provide(this)
 }
 
 /**

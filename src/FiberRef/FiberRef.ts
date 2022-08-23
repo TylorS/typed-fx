@@ -1,8 +1,11 @@
 import { Just, Maybe } from 'hkt-ts/Maybe'
-import { Second } from 'hkt-ts/Typeclass/Associative'
+import { Second } from 'hkt-ts/Typeclass/Concat'
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
+import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { Fx } from '@/Fx/Fx.js'
+import { Env } from '@/Env/Env.js'
+import { Fx, now } from '@/Fx/Fx.js'
+import { EmptyTrace, Trace } from '@/Trace/Trace.js'
 
 export class FiberRef<R, E, A> {
   constructor(
@@ -36,3 +39,11 @@ export type Params<A> = {
   readonly join?: (current: A, incoming: A) => A
   readonly Eq?: Eq<A>
 }
+
+export const CurrentEnv = make(now(Env.empty as Env<unknown>))
+
+export const CurrentInterruptStatus = make(now<boolean>(true))
+
+export const CurrentConcurrencyLevel = make(now<NonNegativeInteger>(NonNegativeInteger(Infinity)))
+
+export const CurrentTrace = make(now<Trace>(EmptyTrace))

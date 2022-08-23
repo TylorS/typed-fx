@@ -3,7 +3,7 @@ import { pipe } from 'hkt-ts/function'
 import { Future, Pending } from './Future.js'
 import { complete } from './complete.js'
 
-import { Fx } from '@/Fx2/Fx.js'
+import { Fx } from '@/Fx/Fx.js'
 
 /**
  * A Future Queue is a synchronously-used, mutable, Queue for managing Futures that need to be handled in FIFO ordering.

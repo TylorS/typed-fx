@@ -5,7 +5,7 @@ import {
   ask,
   ensuring,
   getEnv,
-  getFiberScope,
+  getFiberContext,
   provide,
   provideService,
   uninterruptable,
@@ -22,7 +22,7 @@ export function scoped<R, E, A>(
   strategy: FinalizationStrategy = ConcurrentStrategy,
 ): Fx<Exclude<R, Scope>, E, A> {
   return Fx(function* () {
-    const fiberScope = yield* getFiberScope
+    const { scope: fiberScope } = yield* getFiberContext
     const scope = fiberScope.fork(strategy)
 
     return yield* pipe(scoped, provideService(Scope, scope), ensuring(scope.close))
@@ -70,8 +70,8 @@ export function bracket<R, E, A, R2, E2, B, R3>(
  */
 export function fiberScoped<R, E, A>(scoped: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, E, A> {
   return Fx(function* () {
-    const fiberScope = yield* getFiberScope
+    const { scope } = yield* getFiberContext
 
-    return yield* pipe(scoped, provideService(Scope, fiberScope))
+    return yield* pipe(scoped, provideService(Scope, scope))
   })
 }

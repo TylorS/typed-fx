@@ -1,6 +1,6 @@
 import type { Future } from './Future.js'
 
-import type { Fx } from '@/Fx2/Fx.js'
+import type { Fx } from '@/Fx/Fx.js'
 
 export function complete<R, E, A>(future: Future<R, E, A>) {
   return (fx: Fx<R, E, A>) =>

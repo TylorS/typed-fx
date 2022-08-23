@@ -4,7 +4,7 @@ import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
  * ImmutableMap is a small wrapper around ReadonlyMap that makes it a little
  * easier to deal wih immutable data.
  */
-export interface ImmutableMap<K, V> {
+export interface ImmutableMap<K, V> extends Iterable<readonly [K, V]> {
   readonly get: (key: K) => Maybe<V>
   readonly set: (key: K, value: V) => ImmutableMap<K, V>
   readonly remove: (key: K) => ImmutableMap<K, V>
@@ -14,7 +14,7 @@ export function ImmutableMap<K, V>(cache: ReadonlyMap<K, V> = new Map()) {
   return new ImmutableMapImpl<K, V>(cache)
 }
 
-class ImmutableMapImpl<K, V> {
+class ImmutableMapImpl<K, V> implements ImmutableMap<K, V> {
   constructor(readonly cache: ReadonlyMap<K, V> = new Map()) {}
 
   /**
@@ -39,5 +39,9 @@ class ImmutableMapImpl<K, V> {
    * Removes the key from the map, returning a new ImmutableMap with the key removed.
    */
   readonly remove = (key: K): ImmutableMap<K, V> =>
-    ImmutableMap(new Map([...this.cache].filter(([k]) => k !== key)))
+    ImmutableMap(new Map([...this.cache].filter(([k]) => k !== key)));
+
+  *[Symbol.iterator]() {
+    return yield* this.cache
+  }
 }

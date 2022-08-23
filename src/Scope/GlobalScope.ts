@@ -11,5 +11,5 @@ export const GlobalScope: Closeable = {
   state: Open,
   ensuring: constant(constant(unit)),
   fork: (s: FinalizationStrategy = SequentialStrategy) => new LocalScope(s),
-  close: constant(success(false)),
+  close: constant(success(false)) as Closeable['close'],
 }

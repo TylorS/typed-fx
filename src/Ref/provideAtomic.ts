@@ -26,7 +26,7 @@ export function atomic<REF extends AnyRefConstructor>(
           }),
         )
 
-      return new ref(get, modify)
+      return new ref(get as InstanceOf<REF>['get'], modify)
     }),
   )
 }

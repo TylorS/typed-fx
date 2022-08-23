@@ -1,7 +1,7 @@
 import * as M from 'hkt-ts/Maybe'
 import { pipe } from 'hkt-ts/function'
 
-import { Cause, Expected, Interrupted, Unexpected } from './Cause.js'
+import type { Cause, Expected, Interrupted, Unexpected } from './Cause.js'
 import { prettyStringify } from './prettyStringify.js'
 
 import { Debug as FiberIdDebug } from '@/FiberId/index.js'

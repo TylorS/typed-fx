@@ -46,7 +46,7 @@ export class Environment<R> implements Env<R> {
 Env.empty = new Environment<never>() as Env<never>
 
 export const makeAssociative = <A>(): Associative<Env<A>> => ({
-  concat: (f, s) => s.getAll().reduce((a, [s, i]) => a.add(s, i), f),
+  concat: (f, s) => (s as Environment<any>).getAll().reduce((a, [s, i]) => a.add(s, i), f),
 })
 
 export const makeIdentity = <A>(): Identity<Env<A>> => ({

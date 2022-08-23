@@ -1,9 +1,10 @@
 import { Left, Right } from 'hkt-ts/Either'
+import { pipe } from 'hkt-ts/function'
 
 import { Scope } from './Scope.js'
 
-import { Exit } from '@/Exit/Exit.js'
-import { Of, async, fromLazy, lazy, success } from '@/Fx/Fx.js'
+import { AnyExit, Exit } from '@/Exit/Exit.js'
+import { Of, async, flatMap, fromLazy, lazy, success } from '@/Fx/Fx.js'
 import { Service } from '@/Service/index.js'
 
 export interface Closeable extends Scope {
@@ -22,4 +23,11 @@ export function wait(scope: Closeable) {
 
     return Right(success(scope.state.exit))
   })
+}
+
+export function closeOrWait(scope: Closeable, exit: AnyExit) {
+  return pipe(
+    scope.close(exit),
+    flatMap((closed) => (closed ? success(exit) : wait(scope))),
+  )
 }

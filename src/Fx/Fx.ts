@@ -1,74 +1,69 @@
-import { Either, isRight } from 'hkt-ts/Either'
-import { Just } from 'hkt-ts/Maybe'
-import { NonEmptyArray } from 'hkt-ts/NonEmptyArray'
-import { Lazy, pipe } from 'hkt-ts/function'
+import { HKT3, Lazy, Params, Variance, constant, flow, identity, pipe } from 'hkt-ts'
+import * as Either from 'hkt-ts/Either'
+import { isNonEmpty } from 'hkt-ts/NonEmptyArray'
+import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
+import * as CB from 'hkt-ts/Typeclass/CommutativeBoth'
+import { Covariant3 } from 'hkt-ts/Typeclass/Covariant'
+import { Unary } from 'hkt-ts/Unary'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { Access, Provide } from './Instructions/Access.js'
-import { AddTrace } from './Instructions/AddTrace.js'
-import { Async, AsyncRegister } from './Instructions/Async.js'
-import { Ensuring } from './Instructions/Ensuring.js'
-import { Failure } from './Instructions/Failure.js'
-import { Fork, ForkParams } from './Instructions/Fork.js'
-import { FromLazy } from './Instructions/FromLazy.js'
-import { GetFiberContext } from './Instructions/GetFiberContext.js'
-import { GetFiberScope } from './Instructions/GetFiberScope.js'
-import { GetStackTrace } from './Instructions/GetStackTrace.js'
-import type {
-  ErrorsFromInstruction,
+import {
+  Access,
+  AddTrace,
+  BothFx,
+  EitherFx,
+  Ensuring,
+  FlatMap,
+  FromCause,
+  FromLazy,
+  GetFiberContext,
+  GetTrace,
   Instruction,
-  ResourcesFromInstruction,
-} from './Instructions/Instruction.js'
-import { Join } from './Instructions/Join.js'
-import { RaceAll } from './Instructions/RaceAll.js'
-import { SetInterruptStatus } from './Instructions/SetInterruptStatus.js'
-import { WithConcurrency } from './Instructions/WithConcurrency.js'
-import { ZipAll } from './Instructions/ZipAll.js'
+  LazyFx,
+  MapFx,
+  Match,
+  Now,
+  Provide,
+  SetConcurrencyLevel,
+  SetInterruptStatus,
+} from './Instruction.js'
 
-import { Cause } from '@/Cause/Cause.js'
-import * as Eff from '@/Eff/index.js'
-import { ReturnOf, YieldOf } from '@/Eff/index.js'
-import type { Env } from '@/Env/Env.js'
-import * as Exit from '@/Exit/Exit.js'
-import type { Fiber, Live } from '@/Fiber/Fiber.js'
-import type { FiberContext } from '@/FiberContext/index.js'
-import type { FiberId } from '@/FiberId/FiberId.js'
-import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
-import type { Closeable } from '@/Scope/Closeable.js'
-import type * as Service from '@/Service/index.js'
-import { StackTrace, Trace, getTraceUpTo } from '@/Trace/Trace.js'
+import { getCauseError } from '@/Cause/CauseError.js'
+import * as Cause from '@/Cause/index.js'
+import { Env } from '@/Env/Env.js'
+import { Exit } from '@/Exit/index.js'
+import { FiberId } from '@/FiberId/FiberId.js'
+import { Pending } from '@/Future/Future.js'
+import { complete } from '@/Future/complete.js'
+import { wait } from '@/Future/wait.js'
+import { Service } from '@/Service/Service.js'
+import { Trace } from '@/Trace/Trace.js'
 
-/**
- * Fx is the immutable representation of an Effectful program. It utilizes Generators to
- * encode type-safe dependency injection of `R`, type-safe errors `E`, and an Output of `A`.
- *
- * Features:
- *  - Asynchrony, write Async code using synchronous Generators.
- *  - Failures, respond to expected and unexpected failures.
- *  - Dependency Injection, Access the Environment to retrieve Services.
- *  - Interruption
- *      - Mark regions of Fx as "uninterruptable" to safely acquire resources.
- *      - Interrupt an Fx, waiting until it can do so, immediately if possible.
- *  - Tracing, Add custom traces or use our plugins to improve your stack traces.
- *  - Concurrency, control the concurrency level at at region of Fx
- *  - Fibers, fork fibers to enhance the way you manage Fx.
- */
-export interface Fx<R, E, A> extends Eff.Eff<Instruction<R, E, any>, A> {}
+export interface Fx<out R, out E, out A> {
+  readonly instr: Instruction<R, E, A>
+  readonly [Symbol.iterator]: () => Generator<Instruction<R, E, any>, A, any>
+}
 
-/**
- * An Fx which has Resource requirements and outputs a value.
- */
-export interface RIO<R, A> extends Fx<R, never, A> {}
+/* eslint-disable @typescript-eslint/no-unused-vars */
+export type ResourcesOf<T> = [T] extends [never]
+  ? never
+  : [T] extends [Fx<infer _R, infer _E, infer _A>]
+  ? _R
+  : never
 
-/**
- * An Fx which may fail with E or output an A.
- */
+export type ErrorsOf<T> = [T] extends [never]
+  ? never
+  : [T] extends [Fx<infer _R, infer _E, infer _A>]
+  ? _E
+  : never
+
+export type OutputOf<T> = [T] extends [Fx<infer _R, infer _E, infer _A>] ? _A : never
+/* eslint-enable @typescript-eslint/no-unused-vars */
+
 export interface IO<E, A> extends Fx<never, E, A> {}
+export interface Of<A> extends IO<never, A> {}
 
-/**
- * An Fx which should only ever output an A.
- */
-export interface Of<A> extends Fx<never, never, A> {}
+export interface RIO<R, A> extends Fx<R, never, A> {}
 
 export type AnyFx =
   | Fx<any, any, any>
@@ -76,317 +71,233 @@ export type AnyFx =
   | Fx<never, any, any>
   | Fx<any, never, any>
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
+export const now = <A>(a: A, __trace?: string): Of<A> => Now.make(a, __trace)
+export const success = now
 
-export type ResourcesOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _R : never
+export const unit = now<void>(undefined)
 
-export type ErrorsOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _E : never
+export const fromLazy = <A>(a: Lazy<A>, __trace?: string): Of<A> => FromLazy.make(a, __trace)
 
-export type OutputOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _A : never
+export const lazy = <T extends AnyFx>(a: Lazy<T>, __trace?: string): T =>
+  LazyFx.make(a as any, __trace) as T
 
-/* eslint-enable @typescript-eslint/no-unused-vars */
+export const flatMap =
+  <A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>, __trace?: string) =>
+  <R, E>(fx: Fx<R, E, A>) =>
+    FlatMap.make(fx, f, __trace)
 
-/**
- * Access the Fx Env to find services.
- */
 export const access = <R = never, R2 = never, E = never, A = any>(
   f: (r: Env<R>) => Fx<R2, E, A>,
   __trace?: string,
-): Fx<R | R2, E, A> => new Access(f, __trace)
+): Fx<R | R2, E, A> => Access.make(f, __trace)
 
-/**
- * Get the Current Fx Env
- */
-export const getEnv = <R>(__trace?: string): Fx<R, never, Env<R>> => access(fromValue, __trace)
+export const getEnv = <R>(__trace?: string): RIO<R, Env<R>> => access(now, __trace)
 
-/**
- * Ask for a Service from the Env
- */
-export const ask = <S extends Service.Service<any>>(
-  service: S,
-  __trace?: string,
-): RIO<Service.OutputOf<S>, Service.OutputOf<S>> =>
-  access((r: Env<Service.OutputOf<S>>) => r.get(service), __trace)
+export const provide =
+  <R>(env: Env<R>, __trace?: string) =>
+  <E, A>(fx: Fx<R, E, A>): IO<E, A> =>
+    new Provide(fx, env, __trace) as IO<E, A>
 
-/**
- * Ask for a Service from the Env
- */
-export const askId = <
-  S extends {
-    readonly name: string
-    readonly id: <S extends { readonly name: string }>(this: S) => Service.Service<any>
-  },
->(
-  service: S,
-  __trace?: string,
-): RIO<Service.InstanceOf<S>, Service.InstanceOf<S>> =>
-  access((r: Env<Service.InstanceOf<S>>) => r.get(service.id()), __trace)
+export const provideService =
+  <S, I extends S>(s: Service<S>, impl: I) =>
+  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
+    access((env) => pipe(fx, provide((env as Env<R>).add(s, impl))))
 
-ask.id = askId
+export const ask = <S>(s: Service<S>, __trace?: string): RIO<S, S> =>
+  access((e) => now(e.get(s)), __trace)
 
-/**
- * Apply a function to a Service.
- */
-export const asks =
-  <S, A>(f: (s: S) => A, __trace?: string) =>
-  (service: Service.Service<S>) =>
-    access((r: Env<S>) => fromLazy(() => f(r.get(service))), __trace)
+export const ensuring =
+  <E, A, R2, E2, B>(ensure: (a: Exit<E, A>) => Fx<R2, E2, B>, __trace?: string) =>
+  <R>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, A> =>
+    Ensuring.make(fx, ensure, __trace)
 
-export const asksFx =
-  <S, R, E, A>(f: (s: S) => Fx<R, E, A>, __trace?: string) =>
-  (service: Service.Service<S>) =>
-    access((r: Env<S>) => f(r.get(service)), __trace)
+export const fromCause = <E>(cause: Cause.Cause<E>, __trace?: string): IO<E, never> =>
+  FromCause.make(cause, __trace)
 
-export const asksFx_ =
-  <S extends Service.Service<any>>(service: S) =>
-  <R, E, A>(f: (s: Service.OutputOf<S>) => Fx<R, E, A>, __trace?: string) =>
-    access(
-      (r: Env<Service.OutputOf<S>>) =>
-        Fx(function* () {
-          return yield* f(yield* r.get(service))
-        }),
+export const fromExit = <E, A>(exit: Exit<E, A>, __trace?: string): IO<E, A> =>
+  exit.tag === 'Left' ? (fromCause(exit.left, __trace) as any) : now(exit.right, __trace)
+
+export const interrupted = (id: FiberId, __trace?: string) =>
+  fromCause(Cause.interrupted(id), __trace)
+
+export const map =
+  <A, B>(f: Unary<A, B>, __trace?: string) =>
+  <R, E>(fx: Fx<R, E, A>): Fx<R, E, B> =>
+    MapFx.make(fx, f, __trace)
+
+export const mapTo =
+  <B>(b: B, __trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, B> =>
+    MapFx.make(fx, constant(b), __trace)
+
+export const matchCause =
+  <E, R2, E2, B, A, R3, E3, C>(
+    onLeft: (cause: Cause.Cause<E>) => Fx<R2, E2, B>,
+    onRight: (a: A) => Fx<R3, E3, C>,
+    __trace?: string,
+  ) =>
+  <R>(fx: Fx<R, E, A>): Fx<R | R2 | R3, E2 | E3, B | C> =>
+    Match.make(fx, onLeft, onRight, __trace)
+
+export const match =
+  <E, R2, E2, B, A, R3, E3, C>(
+    onLeft: (cause: E) => Fx<R2, E2, B>,
+    onRight: (a: A) => Fx<R3, E3, C>,
+    __trace?: string,
+  ) =>
+  <R>(fx: Fx<R, E, A>): Fx<R | R2 | R3, E2 | E3, B | C> =>
+    Match.make(
+      fx,
+      (cause) =>
+        cause.tag === 'Expected' ? onLeft(cause.error) : (fromCause(cause) as Fx<R2, E2, B>),
+      onRight,
       __trace,
     )
 
-/**
- * Provide the entire Env for an Fx to run within.
- */
-export const provide =
-  <R>(env: Provideable<R>, __trace?: string) =>
-  <E, A>(fx: Fx<R, E, A>): Fx<never, E, A> =>
-    new Provide([fx, env[PROVIDEABLE]()], __trace)
+export const orElseCause =
+  <E, R2, E2, B>(onLeft: (cause: Cause.Cause<E>) => Fx<R2, E2, B>, __trace?: string) =>
+  <R, A>(fx: Fx<R, E, A>): Fx<R | R2, E2, A | B> =>
+    Match.make(fx, onLeft, now, __trace)
 
-/**
- * Provide a single service to the Env.
- */
-export const provideService =
-  <S, I extends S>(service: Service.Service<S>, impl: I, __trace?: string) =>
-  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
-    access((env) => pipe(fx, provide((env as Env<R>).add(service, impl))), __trace)
+export const orElse =
+  <E, R2, E2, B>(onLeft: (cause: E) => Fx<R2, E2, B>, __trace?: string) =>
+  <R, A>(fx: Fx<R, E, A>): Fx<R | R2, E2, A | B> =>
+    Match.make(
+      fx,
+      (cause) =>
+        cause.tag === 'Expected' ? onLeft(cause.error) : (fromCause(cause) as Fx<R2, E2, B>),
+      now,
+      __trace,
+    )
 
-/**
- * Add a Trace to the Fx Stack for printing during failure.
- */
+export const mapLeft = <E, E2>(f: (e: E) => E2) => orElseCause(flow(Cause.map(f), fromCause))
+
+export const attempt = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Exit<E, A>> =>
+  pipe(fx, matchCause(flow(Either.Left, now), flow(Either.Right, now), __trace))
+
+export const bimap =
+  <A, B, C, D>(f: (a: A) => B, g: (c: C) => D) =>
+  <R>(fx: Fx<R, A, C>): Fx<R, B, D> =>
+    pipe(fx, mapLeft(f), map(g))
+
 export const addTrace =
   (trace: Trace) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
-    new AddTrace([fx, trace])
+    new AddTrace(fx, trace)
 
-/**
- * Adds a custom trace to the Fx stack using a string. It
- * parses these strings as expected by the typescript plugin
- * to produce better stack traces.
- */
 export const addCustomTrace =
   (trace?: string) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
     trace ? addTrace(Trace.custom(trace))(fx) : fx
 
-/**
- * Adds a Trace using an Error or Error-like object to generate the stack.
- */
-export const addRuntimeTrace =
-  <E extends { readonly stack?: string }>(
-    error: E = new Error() as any,
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    targetObject?: Function,
-  ) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
-    addTrace(Trace.runtime(error, targetObject))(fx)
+export const getTrace: Of<Trace> = GetTrace.make()
 
-/**
- * Access the Current raw StackTrace
- */
-export const getStackTrace: Of<StackTrace> = new GetStackTrace()
-
-/**
- * Access the Current Trace as configured by the Fiber's Platform.
- */
-export const getTrace: Of<Trace> = Fx(function* () {
-  const context = yield* getFiberContext
-  const stackTrace = yield* getStackTrace
-
-  return getTraceUpTo(stackTrace, context.platform.maxTraceCount)
-})
-
-/**
- * Run a potentially Asynchronous Fx operation.
- */
-export const async = <R, E, A>(register: AsyncRegister<R, E, A>, __trace?: string): Fx<R, E, A> =>
-  new Async(register, __trace)
-
-/**
- * Convert a Cause into an Fx
- */
-export const fromCause = <E>(cause: Cause<E>, __trace?: string): IO<E, never> =>
-  new Failure(cause, __trace)
-
-/**
- * Convert an Exit into an Fx
- */
-export const fromExit = <E = never, A = unknown>(
-  exit: Exit.Exit<E, A>,
-  __trace?: string,
-): IO<E, A> =>
-  Fx(function* () {
-    return yield* exit.tag === 'Left'
-      ? fromCause(exit.left, __trace)
-      : fromValue(exit.right, __trace)
-  })
-
-/**
- * Create an Expected Error
- */
-export const expected = <E>(error: E, __trace?: string): IO<E, never> =>
-  fromExit(Exit.expected(error), __trace)
-
-/**
- * Interrupt the current fiber with an FiberId.
- */
-export const interrupt = (id: FiberId, __trace?: string): Of<never> =>
-  fromExit(Exit.interrupt(id), __trace)
-
-/**
- * Report an unexpected failure.
- */
-export const unexpected = (error: unknown, __trace?: string): Of<never> =>
-  fromExit(Exit.unexpected(error), __trace)
-
-/**
- * Convert an Either into an Fx
- */
-export const fromEither = <E, A>(either: Either<E, A>, __trace?: string): IO<E, A> =>
-  fromExit(Exit.fromEither(either), __trace)
-
-/**
- * Lazily construct a value with an Fx.
- */
-export const fromLazy = <A>(f: Lazy<A>, __trace?: string): Of<A> => new FromLazy(f, __trace)
-
-/**
- * Convert a value into an Fx
- */
-export const fromValue = <A>(value: A, __trace?: string): Of<A> => fromLazy(() => value, __trace)
-
-/**
- * Lazily reference an Fx
- */
-export const lazy = <R, E, A>(f: () => Fx<R, E, A>, __trace?: string) =>
-  Fx(function* () {
-    return yield* yield* fromLazy(f, __trace)
-  })
-
-/**
- * Create a successful Fx
- */
-export const success = fromValue
-
-/**
- * An Fx with no value
- */
-export const unit = success<void>(undefined, 'unit')
-
-/**
- * Get the current FiberContext
- */
-export const getFiberContext: Of<FiberContext> = new GetFiberContext(undefined, 'getFiberContext')
-
-/**
- * Get the current FiberScope
- */
-export const getFiberScope: Of<Closeable> = new GetFiberScope(undefined, 'getFiberScope')
-
-/**
- * Add a Finalizer to the Fx stack.
- */
-export const ensuring =
-  <E, A, R2, E2>(finalizer: (exit: Exit.Exit<E, A>) => Fx<R2, E2, any>, __trace?: string) =>
-  <R>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, A> =>
-    new Ensuring<R | R2, E | E2, A>([fx, finalizer], __trace)
-
-/**
- * Fork a Fiber with ForkParams.
- */
-export const forkWithParams =
-  (params: ForkParams, __trace?: string) =>
+export const withConcurrency =
+  (level: NonNegativeInteger) =>
   <R, E, A>(fx: Fx<R, E, A>) =>
-    new Fork([fx, params], __trace)
+    new SetConcurrencyLevel(fx, level)
 
-/**
- * Fork a Fiber with default parameters.
- */
-export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Live<E, A>> =>
-  Fx(function* () {
-    return yield* forkWithParams(yield* forkFiberContext, __trace)(fx)
-  })
+export const uninterruptable = <R, E, A>(fx: Fx<R, E, A>) => new SetInterruptStatus(fx, false)
 
-export const forkFiberContext: Of<FiberContext> = Fx(function* () {
-  const context = yield* getFiberContext
+export const interruptable = <R, E, A>(fx: Fx<R, E, A>) => new SetInterruptStatus(fx, true)
 
-  return {
-    ...context,
-    fiberRefs: context.fiberRefs.fork(),
-    parent: Just(context),
-  }
-})
+export const getFiberContext = GetFiberContext.make()
 
-/**
- * Join a Fiber back with its parent.
- */
-export const join = <E, A>(fiber: Fiber<E, A>, __trace?: string): IO<E, A> =>
-  new Join(fiber, __trace)
+export const both =
+  <R2, E2, B>(second: Fx<R2, E2, B>, __trace?: string) =>
+  <R, E, A>(first: Fx<R2, E, A>): Fx<R | R2, E | E2, readonly [A, B]> =>
+    BothFx.make(first, second, __trace) as Fx<R | R2, E | E2, readonly [A, B]>
 
-/**
- * Capture any failures locally.
- */
-export const attempt = <R, E, A>(fx: Fx<R, E, A>): RIO<R, Exit.Exit<E, A>> =>
-  Fx(function* () {
-    const fiber: Live<E, A> = yield* fork(fx)
-    const exit = yield* fiber.exit
+export const either =
+  <R2, E2, B>(second: Fx<R2, E2, B>, __trace?: string) =>
+  <R, E, A>(first: Fx<R2, E, A>): Fx<R | R2, E | E2, Either.Either<A, B>> =>
+    EitherFx.make(first, second, __trace) as Fx<R | R2, E | E2, Either.Either<A, B>>
 
-    if (isRight(exit)) {
-      yield* inheritFiberRefs(fiber)
-    }
+export function Fx<Y extends AnyFx = never, R = any>(
+  f: () => Generator<Y, R, any>,
+  __trace?: string,
+): Fx<ResourcesOf<Y>, ErrorsOf<Y>, R> {
+  return lazy(() => {
+    const gen = f()
 
-    return exit
-  })
-
-/**
- * Inherit the FiberRefs of another Fiber into the current.
- */
-export function inheritFiberRefs<E, A>(fiber: Fiber<E, A>): Of<void> {
-  return Fx(function* () {
-    if (fiber.tag === 'Synthetic') {
-      return yield* fiber.inheritFiberRefs
-    }
-
-    const context = yield* fiber.context
-
-    yield* context.fiberRefs.inherit
-  })
+    return pipe(
+      runFxGenerator(gen, gen.next()),
+      // Allow running Gen.throw to attempt to use try/catch to handle any errors
+      orElseCause(
+        (cause) =>
+          (Cause.shouldRethrow(cause)
+            ? pipe(
+                lazy(() => runFxGenerator(gen, gen.throw(getCauseError(cause)))),
+                orElseCause((inner) =>
+                  // Ensure the the most useful error is continued up the stack
+                  getCauseError(inner) === getCauseError(cause)
+                    ? fromCause(cause)
+                    : fromCause(new Cause.Sequential(cause, inner)),
+                ),
+              )
+            : fromCause(cause)) as Fx<ResourcesOf<Y>, ErrorsOf<Y>, R>,
+      ),
+    )
+  }, __trace)
 }
 
-/**
- * Mark a region of the Fx stack as uninterruptable, disallowing the Fiber to be interrupted
- * until completion.
- */
-export const uninterruptable = <R, E, A>(
-  fx: Fx<R, E, A>,
-  __trace?: string | undefined,
-): Fx<R, E, A> => new SetInterruptStatus([fx, false], __trace)
+function runFxGenerator<Y extends AnyFx, R>(
+  gen: Generator<Y, R>,
+  result: IteratorResult<Y, R>,
+): Fx<ResourcesOf<Y>, ErrorsOf<Y>, R> {
+  if (result.done) {
+    return now(result.value) as Fx<ResourcesOf<Y>, ErrorsOf<Y>, R>
+  }
 
-/**
- * Mark a region of the Fx stack as interruptable. Be careful using this operator, it will interrupts
- * to flow back into uninterruptable regions.
- */
-export const interruptable = <R, E, A>(
-  fx: Fx<R, E, A>,
-  __trace?: string | undefined,
-): Fx<R, E, A> => new SetInterruptStatus([fx, true], __trace)
+  return pipe(
+    result.value as Fx<ResourcesOf<Y>, ErrorsOf<Y>, any>,
+    flatMap((a) => runFxGenerator(gen, gen.next(a) as typeof result)),
+  )
+}
 
-/**
- * Combine an Array of Fx into an Fx of an array containing their output values.
- */
+export function async<R, E, A, R2 = never, E2 = never>(
+  register: AsyncRegister<R, E, A, R2, E2>,
+  __trace?: string,
+): Fx<R | R2, E | E2, A> {
+  return addCustomTrace(__trace)(
+    lazy(() => {
+      const future = Pending<R, E, A>()
+      const either = register(complete(future))
+
+      return pipe(
+        either,
+        Either.match(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          (finalizer) => ensuring((_: Exit<E, A>) => finalizer)(wait(future)),
+          identity,
+        ),
+      ) as Fx<R | R2, E | E2, A>
+    }),
+  )
+}
+
+export interface AsyncRegister<R, E, A, R2, E2> {
+  (cb: (fx: Fx<R, E, A>) => void): Either.Either<Fx<R2, E2, any>, Fx<R, E, A>>
+}
+
+export interface FxHKT extends HKT3 {
+  readonly type: Fx<this[Params.R], this[Params.E], this[Params.A]>
+  readonly defaults?: {
+    [Params.R]: Variance.Covariant<unknown>
+    [Params.E]: Variance.Covariant<unknown>
+  }
+}
+
+export const Covariant: Covariant3<FxHKT> = {
+  map,
+}
+
+export const CommutativeBoth: CB.CommutativeBoth3<FxHKT> = {
+  both,
+}
+
+const zipAll_ = AB.tuple<FxHKT>({ ...CommutativeBoth, ...Covariant })
+
 export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   fxs: readonly [...FX],
   __trace?: string,
@@ -396,37 +307,4 @@ export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   {
     readonly [K in keyof FX]: OutputOf<FX[K]>
   }
-> => new ZipAll(fxs as FX, __trace)
-
-/**
- * Race an array of Fx into an Fx of the first resolved Fx, cancelling all other
- * operations not resolved.
- */
-export const raceAll = <FX extends NonEmptyArray<AnyFx>>(
-  fxs: readonly [...FX],
-  __trace?: string,
-): Fx<ResourcesOf<FX[number]>, ErrorsOf<FX[number]>, OutputOf<FX[number]>> =>
-  new RaceAll(fxs as FX, __trace)
-
-/**
- * Control the concurrency level of any region of Fx.
- */
-export const withConcurrency =
-  (concurrencyLevel: NonNegativeInteger, __trace?: string) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
-    new WithConcurrency([fx, concurrencyLevel], __trace)
-
-/**
- * Utilize a Generator function to construct an Fx.
- */
-export function Fx<
-  G extends
-    | Generator<any, any>
-    | Generator<never, never>
-    | Generator<never, any>
-    | Generator<any, never>,
->(
-  f: () => G,
-): Fx<ResourcesFromInstruction<YieldOf<G>>, ErrorsFromInstruction<YieldOf<G>>, ReturnOf<G>> {
-  return Eff.Eff(f)
-}
+> => (isNonEmpty(fxs) ? addCustomTrace(__trace)(zipAll_(...(fxs as any))) : success([])) as any
