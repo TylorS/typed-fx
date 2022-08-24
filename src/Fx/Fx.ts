@@ -8,6 +8,7 @@ import { Bottom3 } from 'hkt-ts/Typeclass/Bottom'
 import * as CB from 'hkt-ts/Typeclass/CommutativeBoth'
 import { CommutativeEither3 } from 'hkt-ts/Typeclass/CommutativeEither'
 import * as C from 'hkt-ts/Typeclass/Covariant'
+import { DeepEquals } from 'hkt-ts/Typeclass/Eq'
 import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import * as T from 'hkt-ts/Typeclass/Top'
 import { Unary } from 'hkt-ts/Unary'
@@ -24,11 +25,13 @@ import {
   FromCause,
   FromLazy,
   GetFiberContext,
+  GetFiberRef,
   GetTrace,
   Instruction,
   LazyFx,
   MapFx,
   Match,
+  ModifyFiberRef,
   Now,
   Provide,
   SetConcurrencyLevel,
@@ -41,6 +44,7 @@ import { Env } from '@/Env/Env.js'
 import { Exit } from '@/Exit/index.js'
 import type * as Fiber from '@/Fiber/Fiber.js'
 import { FiberId } from '@/FiberId/FiberId.js'
+import type { FiberRef } from '@/FiberRef/FiberRef.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
@@ -234,6 +238,14 @@ export const either =
 export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
   Fork.make(fx, __trace)
 
+export const getFiberRef = <R, E, A>(ref: FiberRef<R, E, A>, __trace?: string): Fx<R, E, A> =>
+  new GetFiberRef(ref, __trace)
+
+export const modifyFiberRef =
+  <A, B>(f: (a: A) => readonly [B, A], __trace?: string) =>
+  <R, E>(ref: FiberRef<R, E, A>): Fx<R, E, B> =>
+    new ModifyFiberRef(ref, f, __trace)
+
 export function Fx<Y = never, R = any>(
   f: () => Generator<Y, R, any>,
   __trace?: string,
@@ -251,7 +263,7 @@ export function Fx<Y = never, R = any>(
                 lazy(() => runFxGenerator(gen, gen.throw(getCauseError(cause)))),
                 orElseCause((inner) =>
                   // Ensure the the most useful error is continued up the stack
-                  getCauseError(inner) === getCauseError(cause)
+                  DeepEquals.equals(getCauseError(inner), getCauseError(cause))
                     ? fromCause(cause)
                     : fromCause(new Cause.Sequential(cause, inner)),
                 ),
@@ -313,6 +325,7 @@ export const Covariant: C.Covariant3<FxHKT> = {
   map,
 }
 
+export const Do = success({})
 export const bindTo = C.bindTo(Covariant)
 export const flap = C.flap(Covariant)
 export const tupled = C.tupled(Covariant)

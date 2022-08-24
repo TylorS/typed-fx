@@ -203,6 +203,14 @@ export class Ensuring<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, A> {
   ): Fx<R | R2, E | E2, A> {
     const prev = fx.instr
 
+    if (prev.tag === 'Ensuring') {
+      return Ensuring.make(
+        prev.fx as Fx<any, any, any>,
+        (a) => BothFx.make(prev.ensure(a), ensure(a)),
+        __trace,
+      ) as Fx<R | R2, E | E2, A>
+    }
+
     if (prev.tag === 'Now') {
       return Match.make(
         ensure(Right(prev.value)),
@@ -407,7 +415,7 @@ export class BothFx<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, readonly [
     second: Fx<R2, E2, B>,
     __trace?: string,
   ): Fx<R | R2, E | E2, readonly [A, B]> {
-    return new BothFx(first, second, __trace) as any
+    return new BothFx(first, second, __trace) as Fx<R | R2, E | E2, readonly [A, B]>
   }
 }
 
