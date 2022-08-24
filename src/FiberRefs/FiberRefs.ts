@@ -6,6 +6,7 @@ import { Atomic } from '@/Atomic/Atomic.js'
 import { Env } from '@/Env/index.js'
 import * as FiberRef from '@/FiberRef/FiberRef.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
+import { Semaphore } from '@/Semaphore/index.js'
 import * as Stack from '@/Stack/index.js'
 import { EmptyTrace, Trace } from '@/Trace/Trace.js'
 
@@ -22,7 +23,7 @@ const defaultFiberLocals = <R = never>(
 ) =>
   new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>([
     [FiberRef.CurrentEnv, new Stack.Stack(env)],
-    [FiberRef.CurrentConcurrencyLevel, new Stack.Stack(concurrencyLevel)],
+    [FiberRef.CurrentConcurrencyLevel, new Stack.Stack(new Semaphore(concurrencyLevel))],
     [FiberRef.CurrentInterruptStatus, new Stack.Stack(interruptStatus)],
     [FiberRef.CurrentTrace, new Stack.Stack(trace)],
   ])
@@ -126,7 +127,10 @@ export function fork(fiberRefs: FiberRefs): FiberRefs {
     const forked = key.fork(stack.value)
 
     if (Maybe.isJust(forked)) {
-      updated.set(key, forked.value)
+      updated.set(
+        key,
+        stack.replace(() => forked.value),
+      )
     }
   }
 

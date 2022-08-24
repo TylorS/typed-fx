@@ -38,5 +38,10 @@ export type PROVIDEABLE = typeof PROVIDEABLE
  * })
  */
 export interface Provideable<R> {
+  readonly name: string
   readonly [PROVIDEABLE]: () => Env<R>
+}
+
+export namespace Provideable {
+  export const get = <R>(p: Provideable<R>): Env<R> => p[PROVIDEABLE]()
 }

@@ -1,16 +1,18 @@
 import { AnyRefConstructor, ErrorsOf, OutputOf, ResourcesOf } from './Ref.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
+import { Env } from '@/Env/Env.js'
 import { Fx, fromLazy } from '@/Fx/Fx.js'
-import { Layer } from '@/Layer/Layer.js'
+import { Layer, LayerId } from '@/Layer/Layer.js'
 import { Lock, acquire } from '@/Semaphore/Semaphore.js'
 import { InstanceOf } from '@/Service/index.js'
 
 export function atomic<REF extends AnyRefConstructor>(
   ref: REF,
 ): Layer<ResourcesOf<REF>, ErrorsOf<REF>, InstanceOf<REF>> {
-  return Layer(
-    ref.id(),
+  const service = ref.id()
+
+  return Layer(LayerId(service), () =>
     Fx(function* () {
       const atomic = Atomic(yield* ref.initial)
       const get = fromLazy(atomic.get)
@@ -25,8 +27,9 @@ export function atomic<REF extends AnyRefConstructor>(
             return atomic.modify(() => computed)
           }),
         )
+      const i = new ref(get as InstanceOf<REF>['get'], modify)
 
-      return new ref(get as InstanceOf<REF>['get'], modify)
+      return Env(service, i)
     }),
   )
 }

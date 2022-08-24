@@ -1,7 +1,7 @@
 import { flow, pipe } from 'hkt-ts'
 import * as A from 'hkt-ts/Array'
 import * as Either from 'hkt-ts/Either'
-import { isJust } from 'hkt-ts/Maybe'
+import * as Maybe from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Concat'
 
 import { AtomicCounter, decrement } from '@/Atomic/AtomicCounter.js'
@@ -17,8 +17,8 @@ import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
 import { Pending, addObserver, complete, wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/Fx.js'
 import { AnyInstruction, Match, Now } from '@/Fx/Instruction.js'
-import { Platform } from '@/Platform/Platform.js'
-import { Closeable, closeOrWait } from '@/Scope/Closeable.js'
+import { closeOrWait } from '@/Scope/Closeable.js'
+import { Semaphore } from '@/Semaphore/Semaphore.js'
 import { Stack } from '@/Stack/index.js'
 import { Delay, Time } from '@/Time/index.js'
 import * as Trace from '@/Trace/Trace.js'
@@ -66,50 +66,40 @@ export function FinalizerFrame(step: (a: Exit.AnyExit) => Fx.AnyFx): FinalizerFr
   }
 }
 
-// TODO: Handle Interrupts
 // TODO: Supervisors
 // TODO: Layers
-// TODO: Fork Fibers
-// TODO: Join Fibers
+// TODO: Logging
+// TODO: Metrics?
+// TODO: Allow configuring
 
-export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
+export class FiberRuntime<F extends Fx.AnyFx>
+  implements Fiber.Live<Fx.ErrorsOf<F>, Fx.OutputOf<F>>
+{
   protected _started = false
   protected _current: AnyInstruction | null = this.fx.instr
   protected _status: FiberStatus
-  protected _observers: Array<(exit: Exit.Exit<E, A>) => void> = []
-  protected _children: Array<FiberRuntime<any, any, any>> = []
-  protected _opCountRemaining = AtomicCounter(this.platform.maxOpCount)
+  protected _observers: Array<(exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) => void> = []
+  protected _children: Array<FiberRuntime<Fx.AnyFx>> = []
+  protected _opCountRemaining = AtomicCounter(this.context.platform.maxOpCount)
   protected _interruptedBy: Set<FiberId.FiberId> = new Set()
 
   protected readonly _frames: Array<Frame> = []
   protected readonly _disposable: Settable = settable()
 
-  constructor(
-    readonly fx: Fx.Fx<R, E, A>,
-    readonly fiberRefs: FiberRefs.FiberRefs,
-    readonly scope: Closeable,
-    readonly platform: Platform,
-  ) {
+  constructor(readonly fx: F, readonly context: FiberContext = FiberContext()) {
     // All Fibers start Suspended
     this._status = Suspended(this.getInterruptStatus)
 
     // The last thing every Fiber should do is wait for its Scope to close
-    this._frames.push(FinalizerFrame((exit) => closeOrWait(scope, exit)))
-
-    this.id = FiberId.Live(platform)
+    this._frames.push(FinalizerFrame((exit) => closeOrWait(context.scope, exit)))
   }
 
   readonly tag = 'Live'
-  readonly id: FiberId.Live
+  readonly id: FiberId.Live = this.context.id
   readonly status = Fx.fromLazy(() => this._status)
   readonly trace = Fx.fromLazy(() => this.getCurrentTrace())
-  readonly context = Fx.success<FiberContext>({
-    fiberRefs: this.fiberRefs,
-    scope: this.scope,
-    platform: this.platform,
-  })
   readonly exit = Fx.lazy(() => {
-    const future = Pending<never, never, Exit.Exit<E, A>>()
+    const future = Pending<never, never, Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>>()
 
     this.addObserver(flow(Fx.success, complete(future)))
 
@@ -129,7 +119,9 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
   /**
    * Add an Observer to the current Fiber's Exit value
    */
-  readonly addObserver = (observer: (exit: Exit.Exit<E, A>) => void): Disposable => {
+  readonly addObserver = (
+    observer: (exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) => void,
+  ): Disposable => {
     this._observers.push(observer)
 
     return Disposable(() => {
@@ -141,13 +133,13 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
     })
   }
 
-  readonly interruptAs = (id: FiberId.FiberId): Fx.Of<Exit.Exit<E, A>> =>
+  readonly interruptAs = (id: FiberId.FiberId): Fx.Of<Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>> =>
     Fx.lazy(() => {
       if (this._status.tag === 'Done') {
         return Now.make(this._status.exit)
       }
 
-      const future = Pending<never, never, Exit.Exit<E, A>>()
+      const future = Pending<never, never, Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>>()
       this.addObserver((exit) => complete(future)(Now.make(exit)))
 
       if (this.getInterruptStatus()) {
@@ -271,16 +263,12 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
 
   protected processBoth(instr: Extract<AnyInstruction, { readonly tag: 'Both' }>) {
     const f = new FiberRuntime(
-      instr.first as Fx.Fx<any, any, any>,
-      this.fiberRefs.fork(),
-      this.scope.fork(),
-      this.platform,
+      instr.first,
+      this.context.fork({ fiberRefs: this.context.fiberRefs }),
     )
     const s = new FiberRuntime(
-      instr.first as Fx.Fx<any, any, any>,
-      this.fiberRefs.fork(),
-      this.scope.fork(),
-      this.platform,
+      instr.second,
+      this.context.fork({ fiberRefs: this.context.fiberRefs }),
     )
 
     const [future, onExit] = bothFuture(f, s)
@@ -300,24 +288,22 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
 
   protected processEither(instr: Extract<AnyInstruction, { readonly tag: 'Either' }>) {
     const f = new FiberRuntime(
-      instr.first as Fx.Fx<any, any, any>,
-      this.fiberRefs.fork(),
-      this.scope.fork(),
-      this.platform,
+      instr.first,
+      this.context.fork({ fiberRefs: this.context.fiberRefs }),
     )
     const s = new FiberRuntime(
-      instr.first as Fx.Fx<any, any, any>,
-      this.fiberRefs.fork(),
-      this.scope.fork(),
-      this.platform,
+      instr.first,
+      this.context.fork({ fiberRefs: this.context.fiberRefs }),
     )
 
     const future = Pending<never, any, any>()
-    const onExit = (exit: Exit.Exit<E, any>, index: 0 | 1) => {
+    const onExit = (exit: Exit.Exit<Fx.ErrorsOf<F>, any>, index: 0 | 1) => {
       complete(future)(
         pipe(
           Fx.fromExit(exit),
-          Fx.ensuring(() => (index === 0 ? s.interruptAs(f.id) : f.interruptAs(s.id))),
+          Fx.ensuring(() =>
+            index === 0 ? s.interruptAs(f.context.id) : f.interruptAs(s.context.id),
+          ),
         ),
       )
     }
@@ -350,11 +336,12 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
   }
 
   protected processFork(instr: Extract<AnyInstruction, { readonly tag: 'Fork' }>) {
-    const runtime = new FiberRuntime(
-      instr.fx as Fx.Fx<any, any, any>,
-      this.fiberRefs.fork(),
-      this.scope.fork(),
-      this.platform.fork(),
+    const scope = this.context.scope.fork()
+    const runtime = new FiberRuntime(instr.fx, this.context.fork({ scope }))
+
+    this._children.push(runtime)
+    scope.ensuring(() =>
+      Fx.fromLazy(() => this._children.splice(this._children.indexOf(runtime), 1)),
     )
 
     runtime.startAsync()
@@ -373,9 +360,9 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
   protected processGetFiberRef(instr: Extract<AnyInstruction, { readonly tag: 'GetFiberRef' }>) {
     const current = FiberRefs.maybeGetFiberRefValue(
       instr.fiberRef as FiberRef.FiberRef<any, any, any>,
-    )(this.fiberRefs)
+    )(this.context.fiberRefs)
 
-    if (isJust(current)) {
+    if (Maybe.isJust(current)) {
       return this.continueWith(current.value)
     }
 
@@ -385,7 +372,7 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
           FiberRefs.setFiberRef(
             instr.fiberRef as FiberRef.FiberRef<any, any, any>,
             a,
-          )(this.fiberRefs)
+          )(this.context.fiberRefs)
 
           return a
         }),
@@ -425,12 +412,12 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
     instr: Extract<AnyInstruction, { readonly tag: 'ModifyFiberRef' }>,
   ) {
     const ref = instr.fiberRef as FiberRef.FiberRef<any, any, any>
-    const current = FiberRefs.maybeGetFiberRefValue(ref)(this.fiberRefs)
+    const current = FiberRefs.maybeGetFiberRefValue(ref)(this.context.fiberRefs)
 
-    if (isJust(current)) {
+    if (Maybe.isJust(current)) {
       const [b, a] = instr.modify(current.value)
 
-      FiberRefs.setFiberRef(ref, a)(this.fiberRefs)
+      FiberRefs.setFiberRef(ref, a)(this.context.fiberRefs)
 
       return this.continueWith(b)
     }
@@ -440,14 +427,17 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
         Fx.fromLazy(() => {
           const [b, a] = instr.modify(i)
 
-          FiberRefs.setFiberRef(ref, a)(this.fiberRefs)
+          FiberRefs.setFiberRef(ref, a)(this.context.fiberRefs)
 
           return b
         }),
       ),
     )
 
-    this._current = instr.fiberRef.initial.instr
+    this._current = pipe(
+      FiberRefs.maybeGetFiberRefValue(ref)(this.context.fiberRefs),
+      Maybe.match(() => instr.fiberRef.initial, Now.make),
+    ).instr
   }
 
   protected processNow(instr: Extract<AnyInstruction, { readonly tag: 'Now' }>) {
@@ -462,7 +452,7 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
   protected processSetConcurrencyLevel(
     instr: Extract<AnyInstruction, { readonly tag: 'SetConcurrencyLevel' }>,
   ) {
-    this.pushPopFiberRef(FiberRef.CurrentConcurrencyLevel, instr.concurrencyLevel)
+    this.pushPopFiberRef(FiberRef.CurrentConcurrencyLevel, new Semaphore(instr.concurrencyLevel))
     this._current = instr.fx.instr
   }
 
@@ -474,12 +464,12 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
     FiberRefs.setFiberRefLocally(
       FiberRef.CurrentInterruptStatus,
       instr.interruptStatus,
-    )(this.fiberRefs)
+    )(this.context.fiberRefs)
 
     this.pushFrame(
       ExitFrame((exit) =>
         Fx.lazy(() => {
-          FiberRefs.popLocalFiberRef(FiberRef.CurrentInterruptStatus)(this.fiberRefs)
+          FiberRefs.popLocalFiberRef(FiberRef.CurrentInterruptStatus)(this.context.fiberRefs)
 
           if (current && this._interruptedBy.size > 0) {
             return Fx.fromExit(
@@ -528,7 +518,7 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
   protected uncaughtException(error: unknown) {
     const stackTrace = this.getInternalFiberRef(FiberRef.CurrentTrace)
     const trimmed = Trace.getTrimmedTrace(Cause.unexpected(error), stackTrace)
-    const current = Trace.getTraceUpTo(stackTrace, this.platform.maxTraceCount)
+    const current = Trace.getTraceUpTo(stackTrace, this.context.platform.maxTraceCount)
     const cause = Cause.traced(Trace.concat(trimmed, current))(Cause.unexpected(error))
 
     this.unwindStack(cause)
@@ -606,7 +596,7 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
     }
   }
 
-  protected done(exit: Exit.Exit<E, A>) {
+  protected done(exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) {
     this._status = Done(exit)
     this._observers.forEach((o) => o(exit))
     this._observers = []
@@ -618,7 +608,7 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
 
     inner.add(
       this._disposable.add(
-        this.platform.timer.setTimer((time) => {
+        this.context.platform.timer.setTimer((time) => {
           inner.dispose()
           f(time)
         }, Delay(0)),
@@ -632,12 +622,12 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
     this.getInternalFiberRef(FiberRef.CurrentInterruptStatus).value
 
   protected pushPopFiberRef = (ref: FiberRef.AnyFiberRef, value: any) => {
-    FiberRefs.setFiberRefLocally(ref as any, value)(this.fiberRefs)
+    FiberRefs.setFiberRefLocally(ref as any, value)(this.context.fiberRefs)
 
     this.pushFrame(
       ExitFrame((exit) =>
         Fx.lazy(() => {
-          FiberRefs.popLocalFiberRef(ref as any)(this.fiberRefs)
+          FiberRefs.popLocalFiberRef(ref as any)(this.context.fiberRefs)
 
           return Fx.fromExit(exit)
         }),
@@ -646,34 +636,34 @@ export class FiberRuntime<R, E, A> implements Fiber.Live<E, A> {
   }
 
   protected getInternalFiberRef<R, E, A>(ref: FiberRef.FiberRef<R, E, A>): Stack<A> {
-    const maybe = this.fiberRefs.locals.get().get(ref)
+    const maybe = this.context.fiberRefs.locals.get().get(ref)
 
     if (maybe.tag === 'Just') {
       return maybe.value
     }
 
     throw new Error(
-      `There is a bug in @typed/Fx's FiberRuntime now having access to expected FiberRef`,
+      `There is a bug in @typed/Fx's FiberRuntime not having access to expected FiberRef`,
     )
   }
 
   protected getCurrentTrace(): Trace.Trace {
-    const maybe = this.fiberRefs.locals.get().get(FiberRef.CurrentTrace)
+    const maybe = this.context.fiberRefs.locals.get().get(FiberRef.CurrentTrace)
 
     if (maybe.tag === 'Just') {
       return Trace.getTraceUpTo(
         this.getInternalFiberRef(FiberRef.CurrentTrace),
-        this.platform.maxTraceCount,
+        this.context.platform.maxTraceCount,
       )
     }
 
     throw new Error(
-      `There is a bug in @typed/Fx's FiberRuntime now having access to the StackTrace`,
+      `There is a bug in @typed/Fx's FiberRuntime not having access to the StackTrace`,
     )
   }
 }
 
-function bothFuture(f: FiberRuntime<any, any, any>, s: FiberRuntime<any, any, any>) {
+function bothFuture(f: FiberRuntime<Fx.AnyFx>, s: FiberRuntime<Fx.AnyFx>) {
   const exits: Exit.Exit<any, any>[] = []
   const future = Pending<never, any, any>()
 

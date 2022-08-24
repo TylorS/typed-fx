@@ -1,9 +1,15 @@
 import { HKT3, Lazy, Params, Variance, constant, flow, identity, pipe } from 'hkt-ts'
 import * as Either from 'hkt-ts/Either'
-import { isNonEmpty } from 'hkt-ts/NonEmptyArray'
+import { ReadonlyRecord } from 'hkt-ts/Record'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
+import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
+import * as AF from 'hkt-ts/Typeclass/AssociativeFlatten'
+import { Bottom3 } from 'hkt-ts/Typeclass/Bottom'
 import * as CB from 'hkt-ts/Typeclass/CommutativeBoth'
-import { Covariant3 } from 'hkt-ts/Typeclass/Covariant'
+import { CommutativeEither3 } from 'hkt-ts/Typeclass/CommutativeEither'
+import * as C from 'hkt-ts/Typeclass/Covariant'
+import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
+import * as T from 'hkt-ts/Typeclass/Top'
 import { Unary } from 'hkt-ts/Unary'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
@@ -14,6 +20,7 @@ import {
   EitherFx,
   Ensuring,
   FlatMap,
+  Fork,
   FromCause,
   FromLazy,
   GetFiberContext,
@@ -32,6 +39,7 @@ import { getCauseError } from '@/Cause/CauseError.js'
 import * as Cause from '@/Cause/index.js'
 import { Env } from '@/Env/Env.js'
 import { Exit } from '@/Exit/index.js'
+import type * as Fiber from '@/Fiber/Fiber.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
@@ -41,8 +49,18 @@ import { Trace } from '@/Trace/Trace.js'
 
 export interface Fx<out R, out E, out A> {
   readonly instr: Instruction<R, E, A>
-  readonly [Symbol.iterator]: () => Generator<Instruction<R, E, any>, A, any>
+  readonly [Symbol.iterator]: () => Generator<
+    AnyFxInstruction<R, E, any> | AnyFxInstruction<R, E, never>,
+    A,
+    any
+  >
 }
+
+type AnyFxInstruction<R, E, A> =
+  | Instruction<R, E, A>
+  | Instruction<never, E, A>
+  | Instruction<R, never, A>
+  | Instruction<never, never, A>
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 export type ResourcesOf<T> = [T] extends [never]
@@ -96,7 +114,7 @@ export const getEnv = <R>(__trace?: string): RIO<R, Env<R>> => access(now, __tra
 export const provide =
   <R>(env: Env<R>, __trace?: string) =>
   <E, A>(fx: Fx<R, E, A>): IO<E, A> =>
-    new Provide(fx, env, __trace) as IO<E, A>
+    new Provide(fx, env, __trace)
 
 export const provideService =
   <S, I extends S>(s: Service<S>, impl: I) =>
@@ -115,7 +133,7 @@ export const fromCause = <E>(cause: Cause.Cause<E>, __trace?: string): IO<E, nev
   FromCause.make(cause, __trace)
 
 export const fromExit = <E, A>(exit: Exit<E, A>, __trace?: string): IO<E, A> =>
-  exit.tag === 'Left' ? (fromCause(exit.left, __trace) as any) : now(exit.right, __trace)
+  (exit.tag === 'Left' ? fromCause(exit.left, __trace) : now(exit.right, __trace)) as IO<E, A>
 
 export const interrupted = (id: FiberId, __trace?: string) =>
   fromCause(Cause.interrupted(id), __trace)
@@ -213,7 +231,10 @@ export const either =
   <R, E, A>(first: Fx<R2, E, A>): Fx<R | R2, E | E2, Either.Either<A, B>> =>
     EitherFx.make(first, second, __trace) as Fx<R | R2, E | E2, Either.Either<A, B>>
 
-export function Fx<Y extends AnyFx = never, R = any>(
+export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
+  Fork.make(fx, __trace)
+
+export function Fx<Y = never, R = any>(
   f: () => Generator<Y, R, any>,
   __trace?: string,
 ): Fx<ResourcesOf<Y>, ErrorsOf<Y>, R> {
@@ -241,7 +262,7 @@ export function Fx<Y extends AnyFx = never, R = any>(
   }, __trace)
 }
 
-function runFxGenerator<Y extends AnyFx, R>(
+function runFxGenerator<Y, R>(
   gen: Generator<Y, R>,
   result: IteratorResult<Y, R>,
 ): Fx<ResourcesOf<Y>, ErrorsOf<Y>, R> {
@@ -250,7 +271,7 @@ function runFxGenerator<Y extends AnyFx, R>(
   }
 
   return pipe(
-    result.value as Fx<ResourcesOf<Y>, ErrorsOf<Y>, any>,
+    result.value as any as Fx<ResourcesOf<Y>, ErrorsOf<Y>, any>,
     flatMap((a) => runFxGenerator(gen, gen.next(a) as typeof result)),
   )
 }
@@ -271,7 +292,7 @@ export function async<R, E, A, R2 = never, E2 = never>(
           (finalizer) => ensuring((_: Exit<E, A>) => finalizer)(wait(future)),
           identity,
         ),
-      ) as Fx<R | R2, E | E2, A>
+      )
     }),
   )
 }
@@ -283,20 +304,65 @@ export interface AsyncRegister<R, E, A, R2, E2> {
 export interface FxHKT extends HKT3 {
   readonly type: Fx<this[Params.R], this[Params.E], this[Params.A]>
   readonly defaults?: {
-    [Params.R]: Variance.Covariant<unknown>
-    [Params.E]: Variance.Covariant<unknown>
+    [Params.R]: Variance.Covariant<never>
+    [Params.E]: Variance.Covariant<never>
   }
 }
 
-export const Covariant: Covariant3<FxHKT> = {
+export const Covariant: C.Covariant3<FxHKT> = {
   map,
+}
+
+export const bindTo = C.bindTo(Covariant)
+export const flap = C.flap(Covariant)
+export const tupled = C.tupled(Covariant)
+
+export const Top: T.Top3REC<FxHKT, never, never> = {
+  top: now<unknown>([]),
+}
+
+export const top = T.top
+
+export const never = async<never, never, never>(() => Either.Left(unit))
+
+export const Bottom: Bottom3<FxHKT> = {
+  bottom: never,
+}
+
+export const bottom = Bottom.bottom
+
+export const flatten = <R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>): Fx<R | R2, E | E2, A> =>
+  pipe(fx, flatMap(identity))
+
+export const Flatten: AF.AssociativeFlatten3<FxHKT> = {
+  flatten,
+}
+
+export const bind = AF.bind<FxHKT>({ ...Flatten, ...Covariant })
+
+export const AssociativeBoth = AF.makeAssociativeBoth<FxHKT>({ ...Flatten, ...Covariant })
+
+export const zipLeftSeq = AB.zipLeft<FxHKT>({ ...AssociativeBoth, ...Covariant })
+export const zipRightSeq = AB.zipRight<FxHKT>({ ...AssociativeBoth, ...Covariant })
+
+export const IdentityBoth: IB.IdentityBoth3<FxHKT> = {
+  ...AssociativeBoth,
+  ...Top,
 }
 
 export const CommutativeBoth: CB.CommutativeBoth3<FxHKT> = {
   both,
 }
 
-const zipAll_ = AB.tuple<FxHKT>({ ...CommutativeBoth, ...Covariant })
+export const zipLeft = AB.zipLeft<FxHKT>({ ...CommutativeBoth, ...Covariant })
+export const zipRight = AB.zipRight<FxHKT>({ ...CommutativeBoth, ...Covariant })
+
+export const IdentityBothPar: IB.IdentityBoth3<FxHKT> = {
+  ...CommutativeBoth,
+  ...Top,
+}
+
+const zipAll_ = IB.tuple<FxHKT>({ ...IdentityBothPar, ...Covariant })
 
 export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   fxs: readonly [...FX],
@@ -307,4 +373,90 @@ export const zipAll = <FX extends ReadonlyArray<AnyFx>>(
   {
     readonly [K in keyof FX]: OutputOf<FX[K]>
   }
-> => (isNonEmpty(fxs) ? addCustomTrace(__trace)(zipAll_(...(fxs as any))) : success([])) as any
+> =>
+  addCustomTrace(__trace)(zipAll_(...(fxs as any))) as Fx<
+    ResourcesOf<FX[number]>,
+    ErrorsOf<FX[number]>,
+    {
+      readonly [K in keyof FX]: OutputOf<FX[K]>
+    }
+  >
+
+export const struct = IB.struct<FxHKT>({ ...IdentityBothPar, ...Covariant }) as <
+  FX extends ReadonlyRecord<string, AnyFx>,
+>(
+  fxs: FX,
+  __trace?: string,
+) => Fx<
+  ResourcesOf<FX[string]>,
+  ErrorsOf<FX[string]>,
+  {
+    readonly [K in keyof FX]: OutputOf<FX[K]>
+  }
+>
+
+export const zipAllSeq = IB.tuple<FxHKT>({ ...IdentityBoth, ...Covariant }) as <
+  FX extends ReadonlyArray<AnyFx>,
+>(
+  fxs: readonly [...FX],
+  __trace?: string,
+) => Fx<
+  ResourcesOf<FX[number]>,
+  ErrorsOf<FX[number]>,
+  {
+    readonly [K in keyof FX]: OutputOf<FX[K]>
+  }
+>
+
+export const structSeq = IB.struct<FxHKT>({ ...IdentityBoth, ...Covariant }) as <
+  FX extends ReadonlyRecord<string, AnyFx>,
+>(
+  fxs: FX,
+  __trace?: string,
+) => Fx<
+  ResourcesOf<FX[string]>,
+  ErrorsOf<FX[string]>,
+  {
+    readonly [K in keyof FX]: OutputOf<FX[K]>
+  }
+>
+
+export const CommutativeEither: CommutativeEither3<FxHKT> = {
+  either,
+}
+
+const raceAll_ = AE.tuple<FxHKT>({ ...CommutativeEither, ...Covariant })
+
+export const raceAll = <FX extends ReadonlyArray<AnyFx>>(
+  fxs: readonly [...FX],
+  __trace?: string,
+): Fx<ResourcesOf<FX[number]>, ErrorsOf<FX[number]>, OutputOf<FX[number]>> =>
+  addCustomTrace(__trace)(raceAll_(...(fxs as any))) as Fx<
+    ResourcesOf<FX[number]>,
+    ErrorsOf<FX[number]>,
+    OutputOf<FX[number]>
+  >
+
+export const AssociativeEither: AE.AssociativeEither3<FxHKT> = {
+  either:
+    <R, E, B>(s: Fx<R, E, B>) =>
+    <A>(f: Fx<R, E, A>) =>
+      Fx(function* () {
+        const fe = yield* attempt(f)
+
+        if (Either.isRight(fe)) {
+          return Either.Left(fe.right)
+        }
+
+        const se = yield* attempt(s)
+
+        if (Either.isRight(se)) {
+          return se
+        }
+
+        return yield* fromCause(new Cause.Sequential(fe.left, se.left))
+      }),
+}
+
+export const eitherSeq = AssociativeEither.either
+export const eventually = AE.eventually<FxHKT>({ ...AssociativeEither, ...Covariant })

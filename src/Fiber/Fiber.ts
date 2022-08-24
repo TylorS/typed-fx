@@ -19,9 +19,9 @@ export type OutputOf<T> = [T] extends [Fiber<infer _E, infer A>] ? A : never
 export interface Live<E, A> {
   readonly tag: 'Live'
   readonly id: FiberId.Live
+  readonly context: FiberContext
   readonly status: Of<FiberStatus>
   readonly exit: Of<Exit<E, A>>
-  readonly context: Of<FiberContext>
   readonly trace: Of<Trace>
   readonly interruptAs: (id: FiberId) => Of<Exit<E, A>>
 }
@@ -57,8 +57,7 @@ export const inheritFiberRefs = <E, A>(fiber: Fiber<E, A>) =>
       return yield* fiber.inheritFiberRefs
     }
 
-    const { fiberRefs: current } = yield* getFiberContext
-    const { fiberRefs: incoming } = yield* fiber.context
+    const { fiberRefs } = yield* getFiberContext
 
-    yield* fromLazy(() => join(current, incoming))
+    yield* fromLazy(() => join(fiberRefs, fiber.context.fiberRefs))
   })

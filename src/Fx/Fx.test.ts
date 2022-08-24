@@ -5,11 +5,7 @@ import { pipe } from 'hkt-ts/function'
 import { Fx, IO, Of, access, flatMap, map, now } from './Fx.js'
 
 import { CauseError } from '@/Cause/CauseError.js'
-import { FiberRefs } from '@/FiberRefs/FiberRefs.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
-import { SequentialStrategy } from '@/Finalizer/Finalizer.js'
-import { Platform } from '@/Platform/Platform.js'
-import { LocalScope } from '@/Scope/LocalScope.js'
 
 describe.only(new URL(import.meta.url).pathname, () => {
   describe(Fx.name, () => {
@@ -88,12 +84,7 @@ describe.only(new URL(import.meta.url).pathname, () => {
 
 export function runTest<E, A>(io: IO<E, A>): Promise<A> {
   return new Promise((resolve, reject) => {
-    const runtime = new FiberRuntime(
-      io,
-      FiberRefs(),
-      new LocalScope(SequentialStrategy),
-      Platform(),
-    )
+    const runtime = new FiberRuntime(io)
     runtime.addObserver((exit) =>
       exit.tag === 'Right' ? resolve(exit.right) : reject(new CauseError(exit.left)),
     )

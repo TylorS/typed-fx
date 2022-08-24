@@ -4,7 +4,11 @@ import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Env } from '@/Env/Env.js'
+import type { AnyFiber } from '@/Fiber/Fiber.js'
 import { Fx, now } from '@/Fx/Fx.js'
+import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
+import { AnyLayer } from '@/Layer/Layer.js'
+import { Semaphore } from '@/Semaphore/Semaphore.js'
 import { EmptyTrace, Trace } from '@/Trace/Trace.js'
 
 export class FiberRef<R, E, A> {
@@ -40,10 +44,14 @@ export type Params<A> = {
   readonly Eq?: Eq<A>
 }
 
-export const CurrentEnv = make(now(Env.empty as Env<unknown>))
+export const CurrentEnv = make(now(Env.empty as Env<any>))
 
 export const CurrentInterruptStatus = make(now<boolean>(true))
 
-export const CurrentConcurrencyLevel = make(now<NonNegativeInteger>(NonNegativeInteger(Infinity)))
+export const CurrentConcurrencyLevel = make(
+  now<Semaphore>(new Semaphore(NonNegativeInteger(Infinity))),
+)
 
 export const CurrentTrace = make(now<Trace>(EmptyTrace))
+
+export const Layers = FiberRef.make(now(ImmutableMap<AnyLayer, AnyFiber>()))

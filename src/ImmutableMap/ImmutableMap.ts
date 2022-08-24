@@ -10,7 +10,7 @@ export interface ImmutableMap<K, V> extends Iterable<readonly [K, V]> {
   readonly remove: (key: K) => ImmutableMap<K, V>
 }
 
-export function ImmutableMap<K, V>(cache: ReadonlyMap<K, V> = new Map()) {
+export function ImmutableMap<K, V>(cache: ReadonlyMap<K, V> = new Map()): ImmutableMap<K, V> {
   return new ImmutableMapImpl<K, V>(cache)
 }
 
