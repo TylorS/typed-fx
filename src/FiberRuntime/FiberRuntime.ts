@@ -679,13 +679,7 @@ function bothFuture(f: FiberRuntime<Fx.AnyFx>, s: FiberRuntime<Fx.AnyFx>) {
       return complete(future)(
         pipe(
           Fx.fromExit(exit),
-          Fx.ensuring(() =>
-            Either.isLeft(exit)
-              ? i === 0
-                ? s.interruptAs(f.id)
-                : f.interruptAs(s.id)
-              : Now.make<any>(null),
-          ),
+          Fx.ensuring(() => (i === 0 ? s.interruptAs(f.id) : f.interruptAs(s.id))),
         ),
       )
     }
