@@ -1,11 +1,10 @@
-import { Scope } from 'ts-morph'
-
 import { Service } from './Service.js'
 
 import { Env } from '@/Env/Env.js'
-import { Fx, RIO, ask, provide } from '@/Fx/Fx.js'
-import type { Layer } from '@/Layer/Layer.js'
+import { Fx, RIO, ask } from '@/Fx/Fx.js'
+import * as Layer from '@/Layer/Layer.js'
 import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
+import { Scope } from '@/Scope/Scope.js'
 
 const idCache = new WeakMap<object, Service<any>>()
 
@@ -37,7 +36,7 @@ export class Id {
       new (...args: any): any
     },
   >(this: S): RIO<InstanceOf<S>, InstanceOf<S>> {
-    return ask.id(this)
+    return ask(this.id())
   }
 
   /**
@@ -50,11 +49,8 @@ export class Id {
     },
     R,
     E,
-  >(this: S, provider: Fx<R | Scope, E, InstanceOf<S>>): Layer<R, E, InstanceOf<S>> {
-    return {
-      service: this.id(),
-      provider,
-    } as Layer<R, E, InstanceOf<S>>
+  >(this: S, provider: Fx<R | Scope, E, InstanceOf<S>>): Layer.Layer<R, E, InstanceOf<S>> {
+    return Layer.fromFx(this.id(), provider)
   }
 
   /**
@@ -70,8 +66,6 @@ export class Id {
   [PROVIDEABLE](): Env<this> {
     return this.add(Env.empty)
   }
-
-  readonly provide: Provideable<this>['provide'] = provide(this)
 }
 
 /**

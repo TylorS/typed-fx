@@ -29,32 +29,35 @@ export interface Settable extends Disposable {
 }
 
 export function settable(): Settable {
-  const disposables = new Set<Disposable>()
+  return new SettableDisposable()
+}
 
-  let disposed = false
-  const add = (d: Disposable) => {
-    if (disposed) {
+export class SettableDisposable implements Settable {
+  protected disposables = new Set<Disposable>()
+  protected disposed = false
+
+  readonly isDisposed = () => this.disposed
+
+  readonly add = (d: Disposable) => {
+    if (d === None) {
+      return d
+    }
+
+    if (this.disposed) {
       d.dispose()
 
       return None
     }
 
-    disposables.add(d)
+    this.disposables.add(d)
 
-    return Disposable(() => disposables.delete(d))
+    return Disposable(() => this.disposables.delete(d))
   }
 
-  const dispose = () => {
-    disposed = true
-
-    const disposable = all(...Array.from(disposables))
-    disposables.clear()
+  readonly dispose = () => {
+    this.disposed = true
+    const disposable = all(...Array.from(this.disposables))
+    this.disposables.clear()
     disposable.dispose()
-  }
-
-  return {
-    dispose,
-    isDisposed: () => disposed,
-    add,
   }
 }

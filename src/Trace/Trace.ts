@@ -185,7 +185,7 @@ export interface StackTrace extends Stack<Trace> {}
 export function getTraceUpTo(trace: StackTrace, amount: number): Trace {
   const frames: Array<StackFrame.StackFrame> = []
 
-  let current: StackTrace | undefined = trace
+  let current: StackTrace | null = trace
 
   while (current && frames.length < amount) {
     if (current.value.tag === 'StackFrameTrace') {

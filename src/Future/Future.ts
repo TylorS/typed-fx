@@ -1,6 +1,6 @@
 import { Atomic } from '@/Atomic/Atomic.js'
 import { Disposable } from '@/Disposable/Disposable.js'
-import { Fx } from '@/Fx/Fx.js'
+import type { Fx } from '@/Fx/Fx.js'
 
 export interface Future<R, E, A> {
   readonly state: Atomic<FutureState<R, E, A>>

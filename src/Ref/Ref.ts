@@ -50,11 +50,11 @@ export function Ref<R, E, A>(initial: Fx.Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
     }
 
     static get<S extends AnyRefConstructor>(this: S) {
-      return Fx.asksFx_(this.id())((ref) => ref.get)
+      return Fx.access((env: Env<InstanceOf<S>>) => env.get(this.id()).get)
     }
 
     static modify<S extends AnyRefConstructor, B>(this: S, f: (a: A) => readonly [B, A]) {
-      return Fx.asksFx_(this.id())((ref) => ref.modify(f))
+      return Fx.access((env: Env<InstanceOf<S>>) => env.get(this.id()).modify(f))
     }
 
     /**
@@ -66,7 +66,6 @@ export function Ref<R, E, A>(initial: Fx.Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
      * Implement the PROVIDEABLE interface for "this"
      */
     readonly [PROVIDEABLE]: Provideable<this>[PROVIDEABLE] = () => this.add(Env.empty)
-    readonly provide: Provideable<this>['provide'] = Fx.provide(this)
   }
 }
 

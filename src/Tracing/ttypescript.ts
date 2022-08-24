@@ -2,7 +2,7 @@
 /* eslint-disable import/no-named-as-default-member */
 import { relative } from 'path'
 
-import { ProgramPattern } from 'ttypescript/lib/PluginCreator.js'
+import { ProgramPattern } from 'ts-patch'
 import ts from 'typescript'
 
 const INSTRUMENTED_REGEX = /^[a-z]+\s.+:[0-9]+:[0-9]+$/i
@@ -14,7 +14,7 @@ export interface TracingPluginOptions {
   readonly rewritePaths?: ReadonlyArray<readonly [string, string]>
 }
 
-export const tracingPlugin = (program: ts.Program, config: TracingPluginOptions) => {
+export const makeTracingTransformer = (program: ts.Program, config: TracingPluginOptions) => {
   const checker = program.getTypeChecker()
   const root = config?.root ?? program.getCompilerOptions().rootDir ?? process.cwd()
 
@@ -104,7 +104,7 @@ export const tracingPlugin = (program: ts.Program, config: TracingPluginOptions)
   }
 }
 
-export default tracingPlugin as ProgramPattern
+export default makeTracingTransformer as ProgramPattern
 
 function getSignatureIfSole(
   checker: ts.TypeChecker,

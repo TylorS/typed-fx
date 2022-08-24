@@ -4,7 +4,6 @@
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import { pipe } from 'hkt-ts/function'
 
-import { unit } from '@/Eff/Eff.js'
 import { Exit } from '@/Exit/Exit.js'
 import {
   FinalizationStrategy,
@@ -12,7 +11,7 @@ import {
   FinalizerKey,
   finalizationStrategyToConcurrency,
 } from '@/Finalizer/Finalizer.js'
-import { Fx, Of, lazy, mapTo, withConcurrency, zipAll } from '@/Fx/index.js'
+import { Fx, Of, lazy, mapTo, unit, withConcurrency, zipAll } from '@/Fx/Fx.js'
 
 let nextId = 0
 

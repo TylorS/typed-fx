@@ -1,13 +1,14 @@
 import { deepStrictEqual } from 'assert'
 
 import { Right } from 'hkt-ts/Either'
+import { constant } from 'hkt-ts/function'
 
 import { Closeable, wait } from './Closeable.js'
 import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 
 import { Finalizer } from '@/Finalizer/Finalizer.js'
 import { Fx, success } from '@/Fx/Fx.js'
-import { runMain } from '@/Fx/run.js'
+import { runTest } from '@/Fx/Fx.test.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(wait.name, () => {
@@ -15,7 +16,7 @@ describe(new URL(import.meta.url).pathname, () => {
       it('returns the Exit value', async () => {
         const exit = Right(42)
         const scope = stateCloseable(Closing(exit))
-        const actual = await runMain(wait(scope))
+        const actual = await runTest(wait(scope))
 
         deepStrictEqual(actual, exit)
       })
@@ -25,7 +26,7 @@ describe(new URL(import.meta.url).pathname, () => {
       it('returns the Exit value', async () => {
         const exit = Right(42)
         const scope = stateCloseable(Closed(exit))
-        const actual = await runMain(wait(scope))
+        const actual = await runTest(wait(scope))
 
         deepStrictEqual(actual, exit)
       })
@@ -35,12 +36,12 @@ describe(new URL(import.meta.url).pathname, () => {
       it('awaits the closed value', async () => {
         const exit = Right(42)
         const scope = stateCloseable(Open)
-        const promise = runMain(wait(scope))
+        const promise = runTest(wait(scope))
 
         await Promise.resolve() // Allow "wait" to start
 
         // Close the Scope
-        await runMain(scope.close(exit))
+        await runTest(scope.close(exit))
 
         // Validate that Async runs
         deepStrictEqual(await promise, exit)
@@ -57,7 +58,7 @@ const stateCloseable = (state: ScopeState): Closeable => {
     ensuring(f) {
       finalizers.add(f)
 
-      return () => success(finalizers.delete(f))
+      return constant(success(finalizers.delete(f)))
     },
     fork: () => scope,
     close: (exit) =>

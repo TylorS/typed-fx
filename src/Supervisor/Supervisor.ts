@@ -3,7 +3,7 @@ import { constVoid } from 'hkt-ts'
 import { AnyExit } from '@/Exit/Exit.js'
 import { AnyLiveFiber } from '@/Fiber/Fiber.js'
 import { AnyFx, Of, unit, zipAll } from '@/Fx/Fx.js'
-import { AnyInstruction } from '@/Fx/Instructions/Instruction.js'
+import { AnyInstruction } from '@/Fx/Instruction.js'
 
 export class Supervisor<A> {
   constructor(

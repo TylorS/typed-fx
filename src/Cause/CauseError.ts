@@ -1,4 +1,4 @@
-import { Cause } from './Cause.js'
+import type { Cause } from './Cause.js'
 import { Renderer, defaultRenderer, prettyPrint } from './Renderer.js'
 
 import * as Trace from '@/Trace/Trace.js'
@@ -40,4 +40,16 @@ export function causeAndTrace<E>(cause: Cause<E>): readonly [Cause<E>, Trace.Tra
   }
 
   return [causeToPrint, trace] as const
+}
+
+export function getCauseError<E>(cause: Cause<E>): Error {
+  if (cause.tag === 'Traced') {
+    return getCauseError(cause.cause)
+  }
+
+  if ((cause.tag === 'Unexpected' || cause.tag === 'Expected') && cause.error instanceof Error) {
+    return cause.error
+  }
+
+  return new CauseError(cause)
 }

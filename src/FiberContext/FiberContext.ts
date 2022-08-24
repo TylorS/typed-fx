@@ -1,38 +1,52 @@
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
-import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { Renderer, defaultRenderer } from '@/Cause/Renderer.js'
+import * as FiberId from '@/FiberId/FiberId.js'
 import { FiberRefs } from '@/FiberRefs/FiberRefs.js'
+import { SequentialStrategy } from '@/Finalizer/Finalizer.js'
 import { Platform } from '@/Platform/Platform.js'
-import type { Scheduler } from '@/Scheduler/Scheduler.js'
-import { Supervisor, and } from '@/Supervisor/index.js'
+import { Closeable } from '@/Scope/Closeable.js'
+import { LocalScope } from '@/Scope/LocalScope.js'
 
-export class FiberContext {
-  constructor(
-    readonly platform: Platform,
-    readonly scheduler: Scheduler,
-    readonly supervisor: Supervisor<any>,
-    readonly fiberRefs: FiberRefs = FiberRefs(),
-    readonly concurrencyLevel: NonNegativeInteger = NonNegativeInteger(Infinity),
-    readonly interruptStatus: boolean = true,
-    readonly renderer: Renderer<any> = defaultRenderer,
-    readonly parent: Maybe<FiberContext> = Nothing,
-  ) {}
+export interface FiberContext {
+  readonly id: FiberId.Live
+  readonly platform: Platform
+  readonly fiberRefs: FiberRefs
+  readonly scope: Closeable
+  readonly parent: Maybe<FiberContext>
+
+  readonly fork: (overrides?: Partial<FiberContext>) => FiberContext
 }
 
-export namespace FiberContext {
-  export function fork(context: FiberContext, overrides?: Partial<FiberContext>): FiberContext {
-    return {
-      ...context,
-      ...overrides,
-      supervisor: overrides?.supervisor
-        ? and(overrides.supervisor)(context.supervisor)
-        : context.supervisor,
-      platform: overrides?.platform ?? context.platform.fork(),
-      fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
-      parent: overrides?.parent ?? Just(context),
-    }
+export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): FiberContext {
+  const {
+    platform = Platform(),
+    id = FiberId.Live(platform),
+    fiberRefs = FiberRefs(),
+    scope = new LocalScope(SequentialStrategy),
+    parent = Nothing,
+  } = params
+
+  const context: FiberContext = {
+    id,
+    platform,
+    fiberRefs,
+    scope,
+    parent,
+    fork: (overrides?: Partial<FiberContext>) => fork(context, overrides),
   }
+
+  return context
 }
 
-export const fork = FiberContext.fork
+export function fork(
+  context: FiberContext,
+  overrides?: Partial<Omit<FiberContext, 'fork'>>,
+): FiberContext {
+  return FiberContext({
+    id: overrides?.id ?? FiberId.Live(context.platform),
+    platform: overrides?.platform ?? context.platform.fork(),
+    fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
+    scope: overrides?.scope ?? context.scope.fork(),
+    parent: overrides?.parent ?? Just(context),
+  })
+}

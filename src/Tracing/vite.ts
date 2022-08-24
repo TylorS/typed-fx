@@ -2,7 +2,7 @@ import { Project } from 'ts-morph'
 import ts from 'typescript'
 import type { Plugin } from 'vite'
 
-import { tracingPlugin as ttypescriptPlugin } from './ttypescript.js'
+import { makeTracingTransformer as ttypescriptPlugin } from './ttypescript.js'
 
 export interface TracingParams {
   // Where to find the tsconfig.json file.

@@ -1,10 +1,20 @@
-import { Fx } from '@/Fx/Fx.js'
+import { Branded } from 'hkt-ts/Branded'
+import { pipe } from 'hkt-ts/function'
+
+import { Env } from '@/Env/Env.js'
+import * as Fx from '@/Fx/Fx.js'
+import { Provideable } from '@/Provideable/index.js'
 import { Scope } from '@/Scope/Scope.js'
-import { Service } from '@/Service/index.js'
+import { Service } from '@/Service/Service.js'
+
+// TODO: Global Layers
+// TODO: Refreshing
+// TODO: Combinators for providing fallbacks
+// TODO: Combinators for composing layers
 
 export interface Layer<R, E, A> {
-  readonly service: Service<A>
-  readonly provider: Fx<R | Scope, E, A>
+  readonly id: LayerId
+  readonly build: (scope: Scope) => Fx.Fx<R, E, Env<A>>
 }
 
 export type AnyLayer =
@@ -19,9 +29,26 @@ export type ErrorsOf<T> = T extends Layer<infer _R, infer _E, infer _A> ? _E : n
 export type OutputOf<T> = T extends Layer<infer _R, infer _E, infer _A> ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export function Layer<A, R, E>(service: Service<A>, provider: Fx<R | Scope, E, A>): Layer<R, E, A> {
+export type LayerId = Branded<{ readonly LayerId: LayerId }, symbol>
+export const LayerId = Branded<LayerId>()
+
+export function Layer<R, E, A>(id: LayerId, build: Layer<R, E, A>['build']): Layer<R, E, A> {
   return {
-    service,
-    provider,
+    id,
+    build,
   }
+}
+
+export function fromFx<S, R, E, A extends S>(s: Service<S>, fx: Fx.Fx<R | Scope, E, A>) {
+  return Layer(LayerId(s), (scope) =>
+    pipe(
+      fx,
+      Fx.provideService(Scope, scope),
+      Fx.map((a) => Env(s, a)),
+    ),
+  )
+}
+
+export function fromProvideable<R>(p: Provideable<R>) {
+  return Layer(LayerId(Symbol(p.name)), () => Fx.fromLazy(() => Provideable.get(p)))
 }
