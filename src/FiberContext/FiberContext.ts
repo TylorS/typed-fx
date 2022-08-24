@@ -17,7 +17,7 @@ export interface FiberContext {
   readonly fork: (overrides?: Partial<FiberContext>) => FiberContext
 }
 
-export function FiberContext(params: Partial<FiberContext> = {}): FiberContext {
+export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): FiberContext {
   const {
     platform = Platform(),
     id = FiberId.Live(platform),
@@ -38,7 +38,10 @@ export function FiberContext(params: Partial<FiberContext> = {}): FiberContext {
   return context
 }
 
-export function fork(context: FiberContext, overrides?: Partial<FiberContext>): FiberContext {
+export function fork(
+  context: FiberContext,
+  overrides?: Partial<Omit<FiberContext, 'fork'>>,
+): FiberContext {
   return FiberContext({
     id: overrides?.id ?? FiberId.Live(context.platform),
     platform: overrides?.platform ?? context.platform.fork(),

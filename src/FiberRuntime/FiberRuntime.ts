@@ -67,7 +67,6 @@ export function FinalizerFrame(step: (a: Exit.AnyExit) => Fx.AnyFx): FinalizerFr
 }
 
 // TODO: Supervisors
-// TODO: Layers
 // TODO: Logging
 // TODO: Metrics?
 // TODO: Allow configuring

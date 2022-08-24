@@ -7,6 +7,11 @@ import { Provideable } from '@/Provideable/index.js'
 import { Scope } from '@/Scope/Scope.js'
 import { Service } from '@/Service/Service.js'
 
+// TODO: Global Layers
+// TODO: Refreshing
+// TODO: Combinators for providing fallbacks
+// TODO: Combinators for composing layers
+
 export interface Layer<R, E, A> {
   readonly id: LayerId
   readonly build: (scope: Scope) => Fx.Fx<R, E, Env<A>>
