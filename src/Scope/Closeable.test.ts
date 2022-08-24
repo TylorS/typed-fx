@@ -6,9 +6,12 @@ import { constant } from 'hkt-ts/function'
 import { Closeable, wait } from './Closeable.js'
 import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 
+import { CauseError } from '@/Cause/CauseError.js'
+import { FiberContext } from '@/FiberContext/FiberContext.js'
+import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
-import { Fx, success } from '@/Fx/Fx.js'
-import { runTest } from '@/Fx/Fx.test.js'
+import { Fx, IO, fork, fromLazy } from '@/Fx/Fx.js'
+import { join } from '@/Fx/join.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(wait.name, () => {
@@ -36,44 +39,60 @@ describe(new URL(import.meta.url).pathname, () => {
       it('awaits the closed value', async () => {
         const exit = Right(42)
         const scope = stateCloseable(Open)
-        const promise = runTest(wait(scope))
+        const test = Fx(function* () {
+          const fiber = yield* fork(wait(scope))
 
-        await Promise.resolve() // Allow "wait" to start
+          yield* scope.close(exit)
 
-        // Close the Scope
-        await runTest(scope.close(exit))
+          deepStrictEqual(yield* join(fiber), exit)
+        })
 
-        // Validate that Async runs
-        deepStrictEqual(await promise, exit)
+        await runTest(test)
       })
     })
   })
 })
 
-const stateCloseable = (state: ScopeState): Closeable => {
+const stateCloseable = (_state: ScopeState): Closeable => {
   const finalizers = new Set<Finalizer>()
 
   const scope: Closeable = {
-    state,
+    get state() {
+      return _state
+    },
     ensuring(f) {
       finalizers.add(f)
 
-      return constant(success(finalizers.delete(f)))
+      return constant(fromLazy(() => finalizers.delete(f)))
     },
     fork: () => scope,
     close: (exit) =>
       Fx(function* () {
-        if (finalizers.size === 0) {
+        if (_state.tag !== 'Open') {
           return false
         }
+
+        _state = Closing(exit)
 
         for (const f of Array.from(finalizers).reverse()) {
           yield* f(exit)
         }
+
+        _state = Closed(exit)
 
         return true
       }),
   }
 
   return scope
+}
+
+function runTest<E, A>(io: IO<E, A>, context: FiberContext = FiberContext()): Promise<A> {
+  return new Promise((resolve, reject) => {
+    const runtime = new FiberRuntime(io, context)
+    runtime.addObserver((exit) =>
+      exit.tag === 'Right' ? resolve(exit.right) : reject(new CauseError(exit.left)),
+    )
+    runtime.startSync()
+  })
 }

@@ -7,7 +7,7 @@ import { Fx, IO, Of, access, flatMap, map, now } from './Fx.js'
 import { CauseError } from '@/Cause/CauseError.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 
-describe.only(new URL(import.meta.url).pathname, () => {
+describe(new URL(import.meta.url).pathname, () => {
   describe(Fx.name, () => {
     describe('Sync', () => {
       it('allows running sync effects', async () => {
@@ -75,6 +75,23 @@ describe.only(new URL(import.meta.url).pathname, () => {
         ),
       )
     }
+
+    for (let i = 0; i < 25; i++) {
+      console.time('Fib25')
+      deepStrictEqual(await runTest(fib(25)), 75025)
+      console.timeEnd('Fib25')
+    }
+  })
+
+  it('runs Fib w/ generators', async () => {
+    const fib = (n: number): Of<number> =>
+      Fx(function* () {
+        if (n < 2) {
+          return n
+        }
+
+        return (yield* fib(n - 1)) + (yield* fib(n - 2))
+      })
 
     console.time('Fib25')
     deepStrictEqual(await runTest(fib(25)), 75025)

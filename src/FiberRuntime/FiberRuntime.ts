@@ -81,9 +81,9 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected _children: Array<FiberRuntime<Fx.AnyFx>> = []
   protected _opCountRemaining = AtomicCounter(this.context.platform.maxOpCount)
   protected _interruptedBy: Set<FiberId.FiberId> = new Set()
+  protected _disposable: Settable = settable()
 
   protected readonly _frames: Array<Frame> = []
-  protected readonly _disposable: Settable = settable()
 
   constructor(readonly fx: F, readonly context: FiberContext = FiberContext()) {
     // All Fibers start Suspended
@@ -144,6 +144,8 @@ export class FiberRuntime<F extends Fx.AnyFx>
       if (this.getInterruptStatus()) {
         // Immediately interrupt the Fiber
         this.unwindStack(Cause.interrupted(id))
+        this._disposable.dispose()
+        this._disposable = settable()
 
         return wait(future)
       }
@@ -224,6 +226,8 @@ export class FiberRuntime<F extends Fx.AnyFx>
         return this.processFromCause(instr)
       case 'FromLazy':
         return this.processFromLazy(instr)
+      case 'GetFiberContext':
+        return this.continueWith(this.context)
       case 'GetFiberRef':
         return this.processGetFiberRef(instr)
       case 'GetInterruptStatus':
@@ -498,18 +502,16 @@ export class FiberRuntime<F extends Fx.AnyFx>
     const inner = settable()
 
     inner.add(
-      this._disposable.add(
-        inner.add(
-          addObserver(instr.future as any, (fx) => {
-            if (!inner.isDisposed()) {
-              inner.dispose()
-              this._current = fx.instr
-              this.setTimer(() => this.loop())
-            }
-          }),
-        ),
-      ),
+      addObserver(instr.future as any, (fx) => {
+        if (!inner.isDisposed()) {
+          inner.dispose()
+          this._current = fx.instr
+          this.setTimer(() => this.loop())
+        }
+      }),
     )
+
+    inner.add(this._disposable.add(inner))
 
     this._current = null
   }

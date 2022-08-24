@@ -40,6 +40,7 @@ import {
 
 import { getCauseError } from '@/Cause/CauseError.js'
 import * as Cause from '@/Cause/index.js'
+import { settable } from '@/Disposable/Disposable.js'
 import { Env } from '@/Env/Env.js'
 import { Exit } from '@/Exit/index.js'
 import type * as Fiber from '@/Fiber/Fiber.js'
@@ -312,6 +313,28 @@ export function async<R, E, A, R2 = never, E2 = never>(
 export interface AsyncRegister<R, E, A, R2, E2> {
   (cb: (fx: Fx<R, E, A>) => void): Either.Either<Fx<R2, E2, any>, Fx<R, E, A>>
 }
+
+export const fromPromise = <A>(f: () => Promise<A>, __trace?: string): Of<A> =>
+  async((cb) => {
+    const d = settable()
+
+    f().then(
+      (a) => {
+        if (!d.isDisposed()) {
+          cb(now(a))
+        }
+      },
+      (e) => {
+        if (!d.isDisposed()) {
+          cb(fromCause(Cause.unexpected(e)) as Of<A>)
+        }
+      },
+    )
+
+    return Either.Left(fromLazy(() => d.dispose()))
+  }, __trace)
+
+export const yieldNow = fromPromise(() => Promise.resolve(), 'yieldNow')
 
 export interface FxHKT extends HKT3 {
   readonly type: Fx<this[Params.R], this[Params.E], this[Params.A]>
