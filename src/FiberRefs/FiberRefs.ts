@@ -138,14 +138,15 @@ export function fork(fiberRefs: FiberRefs): FiberRefs {
 }
 
 export function join(first: FiberRefs, second: FiberRefs): void {
-  const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>(first.locals.get())
+  const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>(second.locals.get())
 
-  for (const [key, stack] of second.locals.get()) {
+  for (const [key, stack] of first.locals.get()) {
     if (updated.has(key)) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      updated.set(key, key.join(updated.get(key)!.value, stack.value))
-    } else {
-      updated.set(key, stack.value)
+      updated.set(
+        key,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        stack.replace((a) => key.join(a, updated.get(key)!.value)),
+      )
     }
   }
 
