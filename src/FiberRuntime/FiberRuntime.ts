@@ -24,7 +24,7 @@ import { Delay, Time } from '@/Time/index.js'
 import * as Trace from '@/Trace/Trace.js'
 
 const concatExitSeq = Exit.makeSequentialAssociative<any, any>(First).concat
-const concatExitPar = Exit.makeParallelAssociative<any, readonly any[]>(
+const concatExitPar = Exit.makeParallelAssociative<readonly any[], any>(
   A.makeAssociative<any>(),
 ).concat
 
