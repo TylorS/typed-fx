@@ -113,8 +113,10 @@ export const Debug: D.Debug<FiberId> = D.sum<FiberId>()('tag')({
     debug: (id) => `Fiber #${id.sequenceNumber} (started at ${idToIsoString(id)})`,
   },
   Synthetic: {
-    debug: (id) => `Synthetic Fiber\n  -${id.fiberIds.map(Debug.debug).join('\n  -')}`,
+    debug: (id) => `Synthetic Fiber\n  -${id.fiberIds.map(debug).join('\n  -')}`,
   },
 })
+
+export const debug = Debug.debug
 
 const idToIsoString = (id: FiberId.Live) => timeToDate(id.startTime)(id.clock).toISOString()

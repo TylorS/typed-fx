@@ -25,9 +25,11 @@ export function wait(scope: Closeable) {
   })
 }
 
-export function closeOrWait(scope: Closeable, exit: AnyExit) {
-  return pipe(
-    scope.close(exit),
-    flatMap((closed) => (closed ? success(exit) : wait(scope))),
-  )
+export function closeOrWait(scope: Closeable) {
+  return (exit: AnyExit) => {
+    return pipe(
+      scope.close(exit),
+      flatMap((closed) => (closed ? success(exit) : wait(scope))),
+    )
+  }
 }

@@ -19,7 +19,6 @@ import {
   AddTrace,
   BothFx,
   EitherFx,
-  Ensuring,
   FlatMap,
   Fork,
   FromCause,
@@ -136,7 +135,25 @@ export const ask = <S>(s: Service<S>, __trace?: string): RIO<S, S> =>
 export const ensuring =
   <E, A, R2, E2, B>(ensure: (a: Exit<E, A>) => Fx<R2, E2, B>, __trace?: string) =>
   <R>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, A> =>
-    Ensuring.make(fx, ensure, __trace)
+    pipe(
+      fx,
+      matchCause(
+        (cause) =>
+          pipe(
+            ensure(Either.Left(cause)),
+            matchCause(
+              (cause2) => fromCause(Cause.sequential(cause, cause2)),
+              () => fromCause(cause),
+            ),
+          ),
+        (a) =>
+          pipe(
+            ensure(Either.Right(a)),
+            map(() => a),
+          ),
+        __trace,
+      ),
+    )
 
 export const fromCause = <E>(cause: Cause.Cause<E>, __trace?: string): IO<E, never> =>
   FromCause.make(cause, __trace)

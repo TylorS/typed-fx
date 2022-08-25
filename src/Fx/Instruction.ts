@@ -1,4 +1,4 @@
-import { Either, Right } from 'hkt-ts/Either'
+import { Either } from 'hkt-ts/Either'
 import { Lazy, flow } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
@@ -6,7 +6,6 @@ import type { Fx } from './Fx.js'
 
 import { Cause } from '@/Cause/Cause.js'
 import { Env } from '@/Env/Env.js'
-import { Exit } from '@/Exit/Exit.js'
 import type { Live } from '@/Fiber/Fiber.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { FiberRef } from '@/FiberRef/FiberRef.js'
@@ -18,7 +17,6 @@ export type Instruction<R, E, A> =
   | AddTrace<R, E, A>
   | BothFx<R, E, any, R, E, any>
   | EitherFx<R, E, any, R, E, any>
-  | Ensuring<R, E, A, R, E, any>
   | FiberRefLocally<any, any, any, R, E, A>
   | FlatMap<R, E, any, R, E, A>
   | Fork<R, any, A>
@@ -182,45 +180,6 @@ export class Match<R, E, A, R2, E2, B, R3, E3, C> extends Instr<R | R2 | R3, E2 
     }
 
     return new Match(fx, onLeft, onRight, __trace) as any
-  }
-}
-
-export class Ensuring<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, A> {
-  readonly tag = 'Ensuring'
-
-  constructor(
-    readonly fx: Fx<R, E, A>,
-    readonly ensure: (a: Exit<E, A>) => Fx<R2, E2, B>,
-    readonly __trace?: string,
-  ) {
-    super(__trace)
-  }
-
-  static make<R, E, A, R2, E2, B>(
-    fx: Fx<R, E, A>,
-    ensure: (a: Exit<E, A>) => Fx<R2, E2, B>,
-    __trace?: string,
-  ): Fx<R | R2, E | E2, A> {
-    const prev = fx.instr
-
-    if (prev.tag === 'Ensuring') {
-      return Ensuring.make(
-        prev.fx as Fx<any, any, any>,
-        (a) => BothFx.make(prev.ensure(a), ensure(a)),
-        __trace,
-      ) as Fx<R | R2, E | E2, A>
-    }
-
-    if (prev.tag === 'Now') {
-      return Match.make(
-        ensure(Right(prev.value)),
-        FromCause.make,
-        () => Now.make(prev.value),
-        __trace,
-      ) as Fx<R | R2, E | E2, A>
-    }
-
-    return new Ensuring(fx, ensure, __trace) as Fx<R | R2, E | E2, A>
   }
 }
 

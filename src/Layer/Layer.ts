@@ -49,6 +49,6 @@ export function fromFx<S, R, E, A extends S>(s: Service<S>, fx: Fx.Fx<R | Scope,
   )
 }
 
-export function fromProvideable<R>(p: Provideable<R>) {
+export function fromProvideable<R>(p: Provideable<R>): Layer<never, never, R> {
   return Layer(LayerId(Symbol(p.name)), () => Fx.fromLazy(() => Provideable.get(p)))
 }

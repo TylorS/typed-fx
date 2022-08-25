@@ -4,8 +4,11 @@ import * as Either from 'hkt-ts/Either'
 import * as Maybe from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Concat'
 
+import { ExitFrame, Frame, ValueFrame } from './Frame.js'
+
 import { AtomicCounter, decrement } from '@/Atomic/AtomicCounter.js'
 import * as Cause from '@/Cause/Cause.js'
+import { prettyPrint } from '@/Cause/Renderer.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import * as Exit from '@/Exit/Exit.js'
 import * as Fiber from '@/Fiber/Fiber.js'
@@ -16,10 +19,11 @@ import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
 import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
 import { Pending, addObserver, complete, wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/Fx.js'
-import { AnyInstruction, Match, Now } from '@/Fx/Instruction.js'
+import { AnyInstruction } from '@/Fx/Instruction.js'
 import { closeOrWait } from '@/Scope/Closeable.js'
 import { Semaphore } from '@/Semaphore/Semaphore.js'
 import { Stack } from '@/Stack/index.js'
+import { Supervisor, isNone } from '@/Supervisor/Supervisor.js'
 import { Delay, Time } from '@/Time/index.js'
 import * as Trace from '@/Trace/Trace.js'
 
@@ -28,45 +32,12 @@ const concatExitPar = Exit.makeParallelAssociative<readonly any[], any>(
   A.makeAssociative<any>(),
 ).concat
 
-export type Frame = ExitFrame | ValueFrame | FinalizerFrame
-
-export interface ExitFrame {
-  readonly tag: 'Exit'
-  readonly step: (exit: Exit.AnyExit) => Fx.AnyFx
+type Processors = {
+  readonly [K in AnyInstruction['tag']]: (
+    instr: Extract<AnyInstruction, { readonly tag: K }>,
+  ) => void
 }
 
-export function ExitFrame(step: (a: Exit.AnyExit) => Fx.AnyFx): ExitFrame {
-  return {
-    tag: 'Exit',
-    step,
-  }
-}
-
-export interface ValueFrame {
-  readonly tag: 'Value'
-  readonly step: (a: any) => Fx.AnyFx
-}
-
-export function ValueFrame(step: (a: any) => Fx.AnyFx): ValueFrame {
-  return {
-    tag: 'Value',
-    step,
-  }
-}
-
-export interface FinalizerFrame {
-  readonly tag: 'Finalizer'
-  readonly step: (exit: Exit.AnyExit) => Fx.AnyFx
-}
-
-export function FinalizerFrame(step: (a: Exit.AnyExit) => Fx.AnyFx): FinalizerFrame {
-  return {
-    tag: 'Finalizer',
-    step,
-  }
-}
-
-// TODO: Supervisors
 // TODO: Logging
 // TODO: Metrics?
 // TODO: Allow configuring
@@ -82,15 +53,39 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected _opCountRemaining = AtomicCounter(this.context.platform.maxOpCount)
   protected _interruptedBy: Set<FiberId.FiberId> = new Set()
   protected _disposable: Settable = settable()
+  protected _frames: Array<Frame> = []
 
-  protected readonly _frames: Array<Frame> = []
+  protected _processors: Processors = {
+    Access: this.processAccess.bind(this),
+    AddTrace: this.processAddTrace.bind(this),
+    Both: this.processBoth.bind(this),
+    Either: this.processEither.bind(this),
+    FiberRefLocally: this.processFiberRefLocally.bind(this),
+    FlatMap: this.processFlatMap.bind(this),
+    Fork: this.processFork.bind(this),
+    FromCause: this.processFromCause.bind(this),
+    FromLazy: this.processFromLazy.bind(this),
+    GetFiberContext: () => this.continueWith(this.context),
+    GetFiberRef: this.processGetFiberRef.bind(this),
+    GetInterruptStatus: this.processGetInterruptStatus.bind(this),
+    GetTrace: this.processGetTrace.bind(this),
+    Lazy: this.processLazy.bind(this),
+    Map: this.processMap.bind(this),
+    Match: this.processMatch.bind(this),
+    ModifyFiberRef: this.processModifyFiberRef.bind(this),
+    Now: this.processNow.bind(this),
+    Provide: this.processProvide.bind(this),
+    SetConcurrencyLevel: this.processSetConcurrencyLevel.bind(this),
+    SetInterruptStatus: this.processSetInterruptStatus.bind(this),
+    Wait: this.processWait.bind(this),
+  }
 
   constructor(readonly fx: F, readonly context: FiberContext = FiberContext()) {
     // All Fibers start Suspended
     this._status = Suspended(this.getInterruptStatus)
 
     // The last thing every Fiber should do is wait for its Scope to close
-    this._frames.push(FinalizerFrame((exit) => closeOrWait(context.scope, exit)))
+    this._frames.push(ExitFrame(flow(closeOrWait(context.scope), Fx.flatMap(Fx.fromExit))))
   }
 
   readonly tag = 'Live'
@@ -135,23 +130,21 @@ export class FiberRuntime<F extends Fx.AnyFx>
   readonly interruptAs = (id: FiberId.FiberId): Fx.Of<Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>> =>
     Fx.lazy(() => {
       if (this._status.tag === 'Done') {
-        return Now.make(this._status.exit)
+        return Fx.now(this._status.exit)
       }
 
       const future = Pending<never, never, Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>>()
-      this.addObserver((exit) => complete(future)(Now.make(exit)))
+      this.addObserver((exit) => complete(future)(Fx.now(exit)))
 
       if (this.getInterruptStatus()) {
         // Immediately interrupt the Fiber
-        this.unwindStack(Cause.interrupted(id))
         this._disposable.dispose()
         this._disposable = settable()
-
-        return wait(future)
+        this.unwindStack(Cause.interrupted(id))
+      } else {
+        // Record the interrupting FiberId for if/when the interrupt status becomes true again.
+        this._interruptedBy.add(id)
       }
-
-      // Record the interrupting FiberId for if/when the interrupt status becomes true again.
-      this._interruptedBy.add(id)
 
       return wait(future)
     })
@@ -164,6 +157,8 @@ export class FiberRuntime<F extends Fx.AnyFx>
     }
 
     this._started = true
+
+    this.withSupervisor((s) => s.onStart(this, this.fx))
 
     // Schedule to start the event loop
     if (async) {
@@ -190,10 +185,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected run(instr: AnyInstruction) {
-    if (instr.__trace) {
-      this.pushPopFiberRef(FiberRef.CurrentTrace, Trace.Trace.custom(instr.__trace))
-    }
-
     // Yield when too many synchronous operations have occurred
     if (decrement(this._opCountRemaining) === 0) {
       this._opCountRemaining.set(this._opCountRemaining.id)
@@ -205,54 +196,12 @@ export class FiberRuntime<F extends Fx.AnyFx>
       })
     }
 
-    switch (instr.tag) {
-      case 'Access':
-        return this.processAccess(instr)
-      case 'AddTrace':
-        return this.processAddTrace(instr)
-      case 'Both':
-        return this.processBoth(instr)
-      case 'Either':
-        return this.processEither(instr)
-      case 'Ensuring':
-        return this.processEnsuring(instr)
-      case 'FiberRefLocally':
-        return this.processFiberRefLocally(instr)
-      case 'FlatMap':
-        return this.processFlatMap(instr)
-      case 'Fork':
-        return this.processFork(instr)
-      case 'FromCause':
-        return this.processFromCause(instr)
-      case 'FromLazy':
-        return this.processFromLazy(instr)
-      case 'GetFiberContext':
-        return this.continueWith(this.context)
-      case 'GetFiberRef':
-        return this.processGetFiberRef(instr)
-      case 'GetInterruptStatus':
-        return this.processGetInterruptStatus(instr)
-      case 'GetTrace':
-        return this.processGetTrace(instr)
-      case 'Lazy':
-        return this.processLazy(instr)
-      case 'Map':
-        return this.processMap(instr)
-      case 'Match':
-        return this.processMatch(instr)
-      case 'ModifyFiberRef':
-        return this.processModifyFiberRef(instr)
-      case 'Now':
-        return this.processNow(instr)
-      case 'Provide':
-        return this.processProvide(instr)
-      case 'SetConcurrencyLevel':
-        return this.processSetConcurrencyLevel(instr)
-      case 'SetInterruptStatus':
-        return this.processSetInterruptStatus(instr)
-      case 'Wait':
-        return this.processWait(instr)
+    if (instr.__trace) {
+      this.pushPopFiberRef(FiberRef.CurrentTrace, Trace.Trace.custom(instr.__trace))
     }
+
+    this.withSupervisor((s) => s.onInstruction(this, instr))
+    ;(this._processors[instr.tag] as (i: typeof instr) => void)(instr)
   }
 
   protected processAccess(instr: Extract<AnyInstruction, { readonly tag: 'Access' }>) {
@@ -319,11 +268,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
     f.startSync()
     s.startSync()
-  }
-
-  protected processEnsuring(instr: Extract<AnyInstruction, { readonly tag: 'Ensuring' }>) {
-    this._frames.push(FinalizerFrame(instr.ensure as any))
-    this._current = instr.fx.instr
   }
 
   protected processFiberRefLocally(
@@ -404,7 +348,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processMap(instr: Extract<AnyInstruction, { readonly tag: 'Map' }>) {
-    this.pushFrame(ValueFrame((a) => Now.make(instr.f(a))))
+    this.pushFrame(ValueFrame((a) => Fx.now(instr.f(a))))
     this._current = instr.fx.instr
   }
 
@@ -441,7 +385,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
     this._current = pipe(
       FiberRefs.maybeGetFiberRefValue(ref)(this.context.fiberRefs),
-      Maybe.match(() => instr.fiberRef.initial, Now.make),
+      Maybe.match(() => instr.fiberRef.initial, Fx.now),
     ).instr
   }
 
@@ -549,13 +493,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       return (this._current = frame.step(value).instr)
     }
 
-    if (frame.tag === 'Exit') {
-      return (this._current = frame.step(exit).instr)
-    }
-
-    return (this._current = Match.make(frame.step(exit) as Fx.Fx<any, any, any>, Fx.fromCause, () =>
-      Now.make(value),
-    ) as any)
+    return (this._current = frame.step(exit).instr)
   }
 
   /**
@@ -571,14 +509,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
         return (this._current = frame.step(exit).instr)
       }
 
-      if (frame.tag === 'Finalizer') {
-        return (this._current = Match.make(
-          frame.step(exit) as Fx.Fx<any, any, any>,
-          (cause) => Fx.fromExit(concatExitSeq(exit, Either.Left(cause))),
-          () => Fx.fromExit(exit),
-        ) as any)
-      }
-
       // Skip any Value frames since they don't handle failures
       frame = this.popFrame()
     }
@@ -590,20 +520,36 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected running() {
     if (this._status.tag === 'Suspended') {
       this._status = Running(this.getInterruptStatus)
+      this.withSupervisor((s) => s.onRunning(this))
     }
   }
 
   protected suspended() {
     if (this._status.tag === 'Running') {
       this._status = Suspended(this.getInterruptStatus)
+      this.withSupervisor((s) => s.onSuspended(this))
     }
   }
 
   protected done(exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) {
     this._status = Done(exit)
-    this._observers.forEach((o) => o(exit))
-    this._observers = []
+    this.withSupervisor((s) => s.onEnd(this, exit))
     this._current = null
+    this.notifyObservers(exit)
+  }
+
+  protected notifyObservers(exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) {
+    // If there are no observers, and we've encountered a failure, report the failure.
+    if (this._observers.length === 0 && Either.isLeft(exit)) {
+      return this.context.platform.reportFailure(
+        [FiberId.debug(this.id), prettyPrint(exit.left, this.context.renderer)].join('\n'),
+      )
+    }
+
+    if (this._observers.length > 0) {
+      this._observers.forEach((o) => o(exit))
+      this._observers = []
+    }
   }
 
   protected setTimer = (f: (time: Time) => void): Disposable => {
@@ -663,6 +609,16 @@ export class FiberRuntime<F extends Fx.AnyFx>
     throw new Error(
       `There is a bug in @typed/Fx's FiberRuntime not having access to the StackTrace`,
     )
+  }
+
+  protected withSupervisor = <A>(f: (s: Supervisor<A>) => void) => {
+    const s = this.context.supervisor
+
+    if (isNone(s)) {
+      return
+    }
+
+    f(s)
   }
 }
 
