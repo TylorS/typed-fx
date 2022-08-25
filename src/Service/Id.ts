@@ -14,6 +14,8 @@ export type InstanceOf<T> = T extends new (...args: any) => infer R ? R : T
  * Extendable class for constructing a Service
  */
 export class Id {
+  readonly name: string = this.constructor.name
+
   /**
    * The ID of the Service.
    *
@@ -56,7 +58,7 @@ export class Id {
   /**
    * Add the instance of this service to the given Environment.
    */
-  public add<R>(env: Provideable<R>): Env<R | this> {
+  public join<R>(env: Provideable<R>): Env<R | this> {
     return env[PROVIDEABLE]().add(this.id, this)
   }
 
@@ -64,7 +66,7 @@ export class Id {
    * Implement the PROVIDEABLE interface for "this"
    */
   [PROVIDEABLE](): Env<this> {
-    return this.add(Env.empty)
+    return this.join(Env.empty)
   }
 }
 

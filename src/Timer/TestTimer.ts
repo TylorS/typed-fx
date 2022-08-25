@@ -6,7 +6,7 @@ import * as Clock from '@/Clock/Clock.js'
 import { TestClock } from '@/Clock/TestClock.js'
 import { None } from '@/Disposable/Disposable.js'
 import { Time } from '@/Time/index.js'
-import { make } from '@/Timeline/index.js'
+import { Timeline } from '@/Timeline/index.js'
 
 /**
  * A Timer which provides imperative access to progressing Time forward.
@@ -14,7 +14,7 @@ import { make } from '@/Timeline/index.js'
 export interface TestTimer extends Timer, TestClock {}
 
 export function TestTimer(clock: TestClock = TestClock(), autoRun = true): TestTimer {
-  const timeline = make<(t: Time) => void>()
+  const timeline = Timeline<(t: Time) => void>()
   const runReadyTimers = (t: Time) => (
     timeline.getReadyTasks(Clock.timeToUnixTime(t)(clock)).forEach((f) => f(t)), t
   )

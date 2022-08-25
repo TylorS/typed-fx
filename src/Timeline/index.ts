@@ -28,7 +28,7 @@ export interface Timeline<A> {
   readonly getReadyTasks: (t: UnixTime) => readonly A[]
 }
 
-export function make<A>(onUpdated?: () => void): Timeline<A> {
+export function Timeline<A>(onUpdated?: () => void): Timeline<A> {
   return new TimelineImpl(onUpdated)
 }
 

@@ -49,6 +49,7 @@ import type { FiberRef } from '@/FiberRef/FiberRef.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
+import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
@@ -114,12 +115,15 @@ export const access = <R = never, R2 = never, E = never, A = any>(
   __trace?: string,
 ): Fx<R | R2, E, A> => Access.make(f, __trace)
 
+export const asks = <R = never, A = any>(f: (r: Env<R>) => A, __trace?: string): Fx<R, never, A> =>
+  Access.make(flow(f, now), __trace)
+
 export const getEnv = <R>(__trace?: string): RIO<R, Env<R>> => access(now, __trace)
 
 export const provide =
-  <R>(env: Env<R>, __trace?: string) =>
+  <R>(env: Provideable<R>, __trace?: string) =>
   <E, A>(fx: Fx<R, E, A>): IO<E, A> =>
-    new Provide(fx, env, __trace)
+    new Provide(fx, env[PROVIDEABLE](), __trace)
 
 export const provideService =
   <S, I extends S>(s: Service<S>, impl: I) =>
@@ -147,6 +151,18 @@ export const map =
   <A, B>(f: Unary<A, B>, __trace?: string) =>
   <R, E>(fx: Fx<R, E, A>): Fx<R, E, B> =>
     MapFx.make(fx, f, __trace)
+
+export const tap =
+  <A, B>(f: Unary<A, B>, __trace?: string) =>
+  <R, E>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    MapFx.make(
+      fx,
+      (a) => {
+        f(a)
+        return a
+      },
+      __trace,
+    )
 
 export const mapTo =
   <B>(b: B, __trace?: string) =>
@@ -374,7 +390,45 @@ export const Flatten: AF.AssociativeFlatten3<FxHKT> = {
   flatten,
 }
 
-export const bind = AF.bind<FxHKT>({ ...Flatten, ...Covariant })
+export const bind = AF.bind<FxHKT>({ ...Flatten, ...Covariant }) as <
+  N extends string,
+  A extends Readonly<Record<string, any>>,
+  R,
+  E,
+  B,
+>(
+  name: Exclude<N, keyof A>,
+  f: (a: A) => Fx<R, E, B>,
+) => <R2, E2>(
+  kind: Fx<R2, E2, A>,
+) => Fx<
+  R | R2,
+  E | E2,
+  {
+    readonly [K in N | keyof A]: K extends N ? B : K extends keyof A ? A[K] : B
+  }
+>
+
+const let_ =
+  <N extends string, A extends Readonly<Record<string, any>>, B>(
+    name: Exclude<N, keyof A>,
+    f: (a: A) => B,
+  ) =>
+  <R, E>(
+    kind: Fx<R, E, A>,
+  ): Fx<
+    R,
+    E,
+    {
+      readonly [K in N | keyof A]: K extends N ? B : K extends keyof A ? A[K] : B
+    }
+  > =>
+    pipe(
+      kind,
+      map((a) => ({ ...a, [name]: f(a) })),
+    )
+
+export { let_ as let }
 
 export const AssociativeBoth = AF.makeAssociativeBoth<FxHKT>({ ...Flatten, ...Covariant })
 

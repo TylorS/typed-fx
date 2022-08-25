@@ -1,5 +1,6 @@
 import { Associative } from 'hkt-ts/Typeclass/Associative'
 
+// eslint-disable-next-line import/no-cycle
 import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import * as Service from '@/Service/Service.js'
 
@@ -20,12 +21,13 @@ export function Env<A, I extends A>(service: Service.Service<A>, implementation:
   return new Environment<A>(new Map<any, any>([[service, implementation]]))
 }
 
-export class Environment<R> implements Env<R> {
+export class Environment<R> extends Provideable<R> implements Env<R> {
   readonly [PROVIDEABLE]: Env<R>[PROVIDEABLE]
 
   readonly name = this.constructor.name
 
   constructor(readonly services: Map<Service.Service<any>, any> = new Map()) {
+    super()
     this[PROVIDEABLE] = () => this
   }
 

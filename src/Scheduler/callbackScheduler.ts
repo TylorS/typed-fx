@@ -7,7 +7,7 @@ import { Timer } from '@/Timer/Timer.js'
 export function callbackScheduler(
   timer: Timer,
 ): readonly [Disposable, (time: UnixTime, f: () => void) => Disposable] {
-  const timeline = Timeline.make<() => void>(scheduleNextRun)
+  const timeline = Timeline.Timeline<() => void>(scheduleNextRun)
   let disposable: Disposable = Disposable.None
   let nextArrival: UnixTime | null = null
 

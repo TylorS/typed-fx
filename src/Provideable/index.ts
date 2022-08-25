@@ -1,4 +1,5 @@
-import type { Env } from '@/Env/Env.js'
+// eslint-disable-next-line import/no-cycle
+import * as Env from '@/Env/Env.js'
 
 export const PROVIDEABLE = Symbol('PROVIDEABLE')
 export type PROVIDEABLE = typeof PROVIDEABLE
@@ -37,11 +38,13 @@ export type PROVIDEABLE = typeof PROVIDEABLE
  *   console.error(error)
  * })
  */
-export interface Provideable<R> {
-  readonly name: string
-  readonly [PROVIDEABLE]: () => Env<R>
-}
+export abstract class Provideable<R> {
+  static readonly get = <R>(p: Provideable<R>): Env.Env<R> => p[PROVIDEABLE]()
 
-export namespace Provideable {
-  export const get = <R>(p: Provideable<R>): Env<R> => p[PROVIDEABLE]()
+  readonly name: string = this.constructor.name;
+
+  abstract readonly [PROVIDEABLE]: () => Env.Env<R>
+
+  readonly join = <S>(second: Provideable<S>): Env.Env<R | S> =>
+    Env.concat(Provideable.get(second))(Provideable.get(this))
 }

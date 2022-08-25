@@ -347,6 +347,8 @@ export class FiberRuntime<F extends Fx.AnyFx>
       Fx.fromLazy(() => this._children.splice(this._children.indexOf(runtime), 1)),
     )
 
+    // All Child fibers should be start asynchronously to ensure they are capable of
+    // being interrupted *before* any work has been started and could steal the thread.
     runtime.startAsync()
 
     this.continueWith(runtime)

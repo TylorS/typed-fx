@@ -76,14 +76,14 @@ describe(new URL(import.meta.url).pathname, () => {
       )
     }
 
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 10; i++) {
       console.time('Fib25')
       deepStrictEqual(await runTest(fib(25)), 75025)
       console.timeEnd('Fib25')
     }
   })
 
-  it('runs Fib w/ generators', async () => {
+  it.skip('runs Fib w/ generators', async () => {
     const fib = (n: number): Of<number> =>
       Fx(function* () {
         if (n < 2) {
