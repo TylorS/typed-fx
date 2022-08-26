@@ -551,7 +551,10 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected uncaughtException(error: unknown) {
     const stackTrace = this.getInternalFiberRef(FiberRef.CurrentTrace)
     const trimmed = Trace.getTrimmedTrace(Cause.unexpected(error), stackTrace)
-    const current = Trace.getTraceUpTo(stackTrace, this.context.platform.maxTraceCount)
+    const current = Trace.getTraceUpTo(
+      stackTrace.push(trimmed),
+      this.context.platform.maxTraceCount,
+    )
     const cause = Cause.traced(Trace.concat(trimmed, current))(Cause.unexpected(error))
 
     this.unwindStack(cause)
