@@ -460,7 +460,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       layers.set(layer.service, [
         () => {
           const fiber = new FiberRuntime(provider, this.context.fork())
-          fiber.startAsync()
+          fiber.startSync()
           return fiber
         },
         Maybe.Nothing,
