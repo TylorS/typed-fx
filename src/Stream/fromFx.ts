@@ -7,10 +7,11 @@ import * as Fx from '@/Fx/Fx.js'
 
 export function fromFx<R, E, A>(fx: Fx.Fx<R, E, A>): Stream<R, E, A> {
   return Stream((sink, scheduler, context) =>
-    Fx.asks((env: Env<R>) =>
+    Fx.asksEnv((env: Env<R>) =>
       scheduler.asap(
         pipe(
           fx,
+          Fx.tap(console.log),
           Fx.matchCause(
             sink.error,
             flow(

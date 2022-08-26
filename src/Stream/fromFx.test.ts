@@ -8,9 +8,10 @@ import { fromFx } from './fromFx.js'
 import { runTest } from '@/Fx/Fx.test.js'
 import * as Fx from '@/Fx/index.js'
 import { RootScheduler } from '@/Scheduler/RootScheduler.js'
+import { Scheduler } from '@/Scheduler/Scheduler.js'
 
 describe(new URL(import.meta.url).pathname, () => {
-  describe(fromFx.name, () => {
+  describe.only(fromFx.name, () => {
     const value = Math.random()
 
     it('should create a Stream', () =>
@@ -19,7 +20,7 @@ describe(new URL(import.meta.url).pathname, () => {
         fromFx,
         observe((n) => Fx.fromLazy(() => deepStrictEqual(n, value))),
         Fx.flatMap(Fx.join),
-        Fx.provide(RootScheduler()),
+        Fx.provideService(Scheduler, RootScheduler()),
         runTest,
       ))
   })

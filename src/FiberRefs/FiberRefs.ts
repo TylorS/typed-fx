@@ -3,7 +3,8 @@ import * as Maybe from 'hkt-ts/Maybe'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Atomic } from '@/Atomic/Atomic.js'
-import { Env } from '@/Env/index.js'
+// eslint-disable-next-line import/no-cycle
+import { Env } from '@/Env/Env.js'
 import * as FiberRef from '@/FiberRef/FiberRef.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
 import { Semaphore } from '@/Semaphore/index.js'
@@ -15,17 +16,18 @@ export interface FiberRefs extends Iterable<readonly [FiberRef.AnyFiberRef, any]
   readonly fork: () => FiberRefs
 }
 
-const defaultFiberLocals = <R = never>(
-  env: Env<R> = Env.empty as Env<R>,
+const defaultFiberLocals = (
   concurrencyLevel: NonNegativeInteger = NonNegativeInteger(Infinity),
   interruptStatus = true,
   trace: Trace = EmptyTrace,
 ) =>
   new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>([
-    [FiberRef.CurrentEnv, new Stack.Stack(env)],
+    [FiberRef.CurrentEnv, new Stack.Stack(Env())],
     [FiberRef.CurrentConcurrencyLevel, new Stack.Stack(new Semaphore(concurrencyLevel))],
     [FiberRef.CurrentInterruptStatus, new Stack.Stack(interruptStatus)],
     [FiberRef.CurrentTrace, new Stack.Stack(trace)],
+    [FiberRef.Services, new Stack.Stack(ImmutableMap())],
+    [FiberRef.Layers, new Stack.Stack(ImmutableMap())],
   ])
 
 export function FiberRefs(
@@ -120,6 +122,15 @@ export function popLocalFiberRef<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>) 
     })
 }
 
+export function deleteFiberRef<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>) {
+  return (fiberRefs: FiberRefs): Maybe.Maybe<Stack.Stack<A>> =>
+    fiberRefs.locals.modify((locals) => {
+      const curr = maybeGetFiberRefStack(fiberRef)(fiberRefs)
+
+      return [curr, locals.remove(fiberRef)]
+    })
+}
+
 export function fork(fiberRefs: FiberRefs): FiberRefs {
   const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>()
 
@@ -138,16 +149,12 @@ export function fork(fiberRefs: FiberRefs): FiberRefs {
 }
 
 export function join(first: FiberRefs, second: FiberRefs): void {
-  const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>(second.locals.get())
+  const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>(first.locals.get())
 
-  for (const [key, stack] of first.locals.get()) {
-    if (updated.has(key)) {
-      updated.set(
-        key,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        stack.replace((a) => key.join(a, updated.get(key)!.value)),
-      )
-    }
+  for (const [key, stack] of second.locals.get()) {
+    const current = updated.get(key)
+
+    updated.set(key, current ? current.replace((a) => key.join(a, stack.value)) : stack)
   }
 
   first.locals.set(ImmutableMap(updated))

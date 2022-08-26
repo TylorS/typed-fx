@@ -1,5 +1,6 @@
 import { HKT3, Lazy, Params, Variance, constant, flow, identity, pipe } from 'hkt-ts'
 import * as Either from 'hkt-ts/Either'
+import { Maybe } from 'hkt-ts/Maybe'
 import { ReadonlyRecord } from 'hkt-ts/Record'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
 import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
@@ -18,6 +19,7 @@ import {
   Access,
   AddTrace,
   BothFx,
+  DeleteFiberRef,
   EitherFx,
   FlatMap,
   Fork,
@@ -33,6 +35,8 @@ import {
   ModifyFiberRef,
   Now,
   Provide,
+  ProvideLayer,
+  ProvideService,
   SetConcurrencyLevel,
   SetInterruptStatus,
 } from './Instruction.js'
@@ -40,15 +44,17 @@ import {
 import { getCauseError } from '@/Cause/CauseError.js'
 import * as Cause from '@/Cause/index.js'
 import { settable } from '@/Disposable/Disposable.js'
-import { Env } from '@/Env/Env.js'
+import type { Env } from '@/Env/Env.js'
 import { Exit } from '@/Exit/index.js'
 import type * as Fiber from '@/Fiber/Fiber.js'
+import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import type { FiberRef } from '@/FiberRef/FiberRef.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
-import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
+import type * as Layer from '@/Layer/Layer.js'
+import type { Scope } from '@/Scope/Scope.js'
 import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
@@ -114,23 +120,44 @@ export const access = <R = never, R2 = never, E = never, A = any>(
   __trace?: string,
 ): Fx<R | R2, E, A> => Access.make(f, __trace)
 
-export const asks = <R = never, A = any>(f: (r: Env<R>) => A, __trace?: string): Fx<R, never, A> =>
-  Access.make(flow(f, now), __trace)
-
 export const getEnv = <R>(__trace?: string): RIO<R, Env<R>> => access(now, __trace)
 
 export const provide =
-  <R>(env: Provideable<R>, __trace?: string) =>
+  <R>(env: Env<R>, __trace?: string) =>
   <E, A>(fx: Fx<R, E, A>): IO<E, A> =>
-    new Provide(fx, env[PROVIDEABLE](), __trace)
+    Provide.make(fx, env, __trace)
 
 export const provideService =
-  <S, I extends S>(s: Service<S>, impl: I) =>
-  <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
-    access((env) => pipe(fx, provide((env as Env<R>).add(s, impl))))
+  <S, I extends S>(s: Service<S>, impl: I, __trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R, S>, E, A> =>
+    ProvideService.make(fx, s, impl, __trace)
+
+export const provideLayer =
+  <R2, E2, S>(layer: Layer.Layer<R2, E2, S>, __trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R | R2, S>, E | E2, A> =>
+    ProvideLayer.make(fx, layer, __trace)
+
+export const provideLayers =
+  <Layers extends ReadonlyArray<Layer.AnyLayer>>(...layers: Layers) =>
+  <R, E, A>(
+    fx: Fx<R, E, A>,
+  ): Fx<
+    Exclude<R | Layer.ResourcesOf<Layers[number]>, Layer.OutputOf<Layers[number]>>,
+    E | Layer.ErrorsOf<Layers[number]>,
+    A
+  > =>
+    layers.reduce((fx, l) => pipe(fx, provideLayer(l)), fx) as any
 
 export const ask = <S>(s: Service<S>, __trace?: string): RIO<S, S> =>
-  access((e) => now(e.get(s)), __trace)
+  access((e) => e.get(s), __trace)
+
+export const asks =
+  <S>(s: Service<S>, __trace?: string) =>
+  <R, E, A>(f: (s: S) => Fx<R, E, A>): Fx<R | S, E, A> =>
+    access((e) => pipe(e.get(s), flatMap(f)), __trace)
+
+export const asksEnv = <R, A>(f: (env: Env<R>) => A, __trace?: string): Fx<R, never, A> =>
+  access((e) => now(f(e)), __trace)
 
 export const ensuring =
   <E, A, R2, E2, B>(ensure: (a: Exit<E, A>) => Fx<R2, E2, B>, __trace?: string) =>
@@ -239,7 +266,7 @@ export const bimap =
 export const addTrace =
   (trace: Trace) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
-    new AddTrace(fx, trace)
+    AddTrace.make(fx, trace)
 
 export const addCustomTrace =
   (trace?: string) =>
@@ -251,11 +278,11 @@ export const getTrace: Of<Trace> = GetTrace.make()
 export const withConcurrency =
   (level: NonNegativeInteger) =>
   <R, E, A>(fx: Fx<R, E, A>) =>
-    new SetConcurrencyLevel(fx, level)
+    SetConcurrencyLevel.make(fx, level)
 
-export const uninterruptable = <R, E, A>(fx: Fx<R, E, A>) => new SetInterruptStatus(fx, false)
+export const uninterruptable = <R, E, A>(fx: Fx<R, E, A>) => SetInterruptStatus.make(fx, false)
 
-export const interruptable = <R, E, A>(fx: Fx<R, E, A>) => new SetInterruptStatus(fx, true)
+export const interruptable = <R, E, A>(fx: Fx<R, E, A>) => SetInterruptStatus.make(fx, true)
 
 export const getFiberContext = GetFiberContext.make()
 
@@ -269,16 +296,38 @@ export const either =
   <R, E, A>(first: Fx<R2, E, A>): Fx<R | R2, E | E2, Either.Either<A, B>> =>
     EitherFx.make(first, second, __trace) as Fx<R | R2, E | E2, Either.Either<A, B>>
 
+export const forkInContext = <R, E, A>(
+  fx: Fx<R, E, A>,
+  context: FiberContext,
+  __trace?: string,
+): Fx<R, never, Fiber.Live<E, A>> => Fork.make(fx, context, __trace)
+
 export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
-  Fork.make(fx, __trace)
+  pipe(
+    getFiberContext,
+    flatMap((context) => forkInContext(fx, context.fork(), __trace)),
+  )
+
+export const forkIn =
+  (scope: Scope) =>
+  <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
+    pipe(
+      getFiberContext,
+      flatMap((context) => forkInContext(fx, context.fork({ scope: scope.fork() }), __trace)),
+    )
 
 export const getFiberRef = <R, E, A>(ref: FiberRef<R, E, A>, __trace?: string): Fx<R, E, A> =>
-  new GetFiberRef(ref, __trace)
+  GetFiberRef.make(ref, __trace)
 
 export const modifyFiberRef =
   <A, B>(f: (a: A) => readonly [B, A], __trace?: string) =>
   <R, E>(ref: FiberRef<R, E, A>): Fx<R, E, B> =>
-    new ModifyFiberRef(ref, f, __trace)
+    ModifyFiberRef.make(ref, f, __trace)
+
+export const deleteFiberRef = <R, E, A>(
+  ref: FiberRef<R, E, A>,
+  __trace?: string,
+): Fx<R, E, Maybe<A>> => DeleteFiberRef.make(ref, __trace)
 
 export function Fx<Y = never, R = any>(
   f: () => Generator<Y, R, any>,
@@ -299,7 +348,7 @@ export function Fx<Y = never, R = any>(
                   // Ensure the the most useful error is continued up the stack
                   DeepEquals.equals(getCauseError(inner), getCauseError(cause))
                     ? fromCause(cause)
-                    : fromCause(new Cause.Sequential(cause, inner)),
+                    : fromCause(Cause.sequential(cause, inner)),
                 ),
               )
             : fromCause(cause)) as Fx<ResourcesOf<Y>, ErrorsOf<Y>, R>,
@@ -561,7 +610,7 @@ export const AssociativeEither: AE.AssociativeEither3<FxHKT> = {
           return se
         }
 
-        return yield* fromCause(new Cause.Sequential(fe.left, se.left))
+        return yield* fromCause(Cause.sequential(fe.left, se.left))
       }),
 }
 

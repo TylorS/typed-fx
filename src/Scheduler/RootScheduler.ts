@@ -14,31 +14,22 @@ import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
 import { Fx } from '@/Fx/Fx.js'
-import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import { Schedule } from '@/Schedule/Schedule.js'
 import { Delay } from '@/Time/index.js'
 import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer.js'
 import { Timer } from '@/Timer/Timer.js'
 
-export function RootScheduler(
-  timer: Timer = SetTimeoutTimer(),
-): Scheduler & Provideable<Scheduler> {
+export function RootScheduler(timer: Timer = SetTimeoutTimer()): Scheduler {
   return new RootSchedulerImpl(timer)
 }
 
-class RootSchedulerImpl extends Provideable<Scheduler> implements Scheduler {
-  readonly [PROVIDEABLE]: Provideable<Scheduler>[PROVIDEABLE]
-
+class RootSchedulerImpl implements Scheduler {
   readonly dispose: Disposable['dispose']
 
   protected readonly runAt: <R, E, A>(fx: Fx<R, E, A>, delay: Delay) => Fx<R, E, A>
 
   constructor(readonly timer: Timer) {
-    super()
-
     const [disposable, addTask] = callbackScheduler(timer)
-
-    this[PROVIDEABLE] = () => Env(Scheduler, this)
 
     this.dispose = disposable.dispose
 

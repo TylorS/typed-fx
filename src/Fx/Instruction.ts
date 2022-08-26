@@ -1,21 +1,25 @@
 import { Either } from 'hkt-ts/Either'
+import { Maybe } from 'hkt-ts/Maybe'
 import { Lazy, flow } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import type { Fx } from './Fx.js'
 
 import { Cause } from '@/Cause/Cause.js'
-import { Env } from '@/Env/Env.js'
+import type { Env } from '@/Env/Env.js'
 import type { Live } from '@/Fiber/Fiber.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { FiberRef } from '@/FiberRef/FiberRef.js'
 import type { Future } from '@/Future/index.js'
+import type { Layer } from '@/Layer/Layer.js'
+import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
 export type Instruction<R, E, A> =
   | Access<R, R, E, A>
   | AddTrace<R, E, A>
   | BothFx<R, E, any, R, E, any>
+  | DeleteFiberRef<R, E, any, A>
   | EitherFx<R, E, any, R, E, any>
   | FiberRefLocally<any, any, any, R, E, A>
   | FlatMap<R, E, any, R, E, A>
@@ -32,6 +36,8 @@ export type Instruction<R, E, A> =
   | ModifyFiberRef<R, E, any, A>
   | Now<A>
   | Provide<any, E, A>
+  | ProvideService<R, E, A, any>
+  | ProvideLayer<R, E, A, R, E, any>
   | SetConcurrencyLevel<R, E, A>
   | SetInterruptStatus<R, E, A>
   | Wait<R, E, A>
@@ -203,7 +209,53 @@ export class Provide<R, E, A> extends Instr<never, E, A> {
   }
 
   static make<R, E, A>(fx: Fx<R, E, A>, env: Env<R>, __trace?: string): Fx<never, E, A> {
-    return new Provide(fx, env, __trace) as Fx<never, E, A>
+    return new Provide(fx, env, __trace)
+  }
+}
+
+export class ProvideService<R, E, A, S> extends Instr<Exclude<R, S>, E, A> {
+  readonly tag = 'ProvideService'
+
+  constructor(
+    readonly fx: Fx<R, E, A>,
+    readonly service: Service<S>,
+    readonly implementation: S,
+    readonly __trace?: string,
+  ) {
+    super(__trace)
+  }
+
+  static make<R, E, A, S>(
+    fx: Fx<R, E, A>,
+    service: Service<S>,
+    implementation: S,
+    __trace?: string,
+  ): Fx<Exclude<R, S>, E, A> {
+    return new ProvideService(fx, service, implementation, __trace) as any as Fx<
+      Exclude<R, S>,
+      E,
+      A
+    >
+  }
+}
+
+export class ProvideLayer<R, E, A, R2, E2, S> extends Instr<Exclude<R | R2, S>, E | E2, A> {
+  readonly tag = 'ProvideLayer'
+
+  constructor(
+    readonly fx: Fx<R, E, A>,
+    readonly layer: Layer<R2, E2, S>,
+    readonly __trace?: string,
+  ) {
+    super(__trace)
+  }
+
+  static make<R, E, A, R2, E2, S>(
+    fx: Fx<R, E, A>,
+    layer: Layer<R2, E2, S>,
+    __trace?: string,
+  ): Fx<Exclude<R, S>, E, A> {
+    return new ProvideLayer(fx, layer, __trace) as any
   }
 }
 
@@ -324,6 +376,19 @@ export class ModifyFiberRef<R, E, A, B> extends Instr<R, E, B> {
     return new ModifyFiberRef(fiberRef, modify, __trace)
   }
 }
+
+export class DeleteFiberRef<R, E, A, B> extends Instr<R, E, B> {
+  readonly tag = 'DeleteFiberRef'
+
+  constructor(readonly fiberRef: FiberRef<R, E, A>, __trace?: string) {
+    super(__trace)
+  }
+
+  static make<R, E, A>(fiberRef: FiberRef<R, E, A>, __trace?: string): Fx<R, E, Maybe<A>> {
+    return new DeleteFiberRef(fiberRef, __trace)
+  }
+}
+
 export class FiberRefLocally<R, E, A, R2, E2, B> extends Instr<R2, E2, B> {
   readonly tag = 'FiberRefLocally'
 
@@ -349,12 +414,16 @@ export class FiberRefLocally<R, E, A, R2, E2, B> extends Instr<R2, E2, B> {
 export class Fork<R, E, A> extends Instr<R, never, Live<E, A>> {
   readonly tag = 'Fork'
 
-  constructor(readonly fx: Fx<R, E, A>, readonly __trace?: string) {
+  constructor(readonly fx: Fx<R, E, A>, readonly context: FiberContext, readonly __trace?: string) {
     super(__trace)
   }
 
-  static make<R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Live<E, A>> {
-    return new Fork(fx, __trace) as any
+  static make<R, E, A>(
+    fx: Fx<R, E, A>,
+    context: FiberContext,
+    __trace?: string,
+  ): Fx<R, never, Live<E, A>> {
+    return new Fork(fx, context, __trace) as any
   }
 }
 

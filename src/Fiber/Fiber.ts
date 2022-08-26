@@ -1,6 +1,7 @@
 import type { Exit } from '@/Exit/Exit.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { FiberId } from '@/FiberId/FiberId.js'
+// eslint-disable-next-line import/no-cycle
 import { join } from '@/FiberRefs/FiberRefs.js'
 import type { FiberStatus } from '@/FiberStatus/index.js'
 import { Fx, Of, fromLazy, getFiberContext } from '@/Fx/Fx.js'

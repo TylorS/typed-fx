@@ -1,9 +1,7 @@
 import { Service } from './Service.js'
 
-import { Env } from '@/Env/Env.js'
 import { Fx, RIO, ask } from '@/Fx/Fx.js'
 import * as Layer from '@/Layer/Layer.js'
-import { PROVIDEABLE, Provideable } from '@/Provideable/index.js'
 import { Scope } from '@/Scope/Scope.js'
 
 const idCache = new WeakMap<object, Service<any>>()
@@ -53,20 +51,6 @@ export class Id {
     E,
   >(this: S, provider: Fx<R | Scope, E, InstanceOf<S>>): Layer.Layer<R, E, InstanceOf<S>> {
     return Layer.fromFx(this.id(), provider)
-  }
-
-  /**
-   * Add the instance of this service to the given Environment.
-   */
-  public join<R>(env: Provideable<R>): Env<R | this> {
-    return env[PROVIDEABLE]().add(this.id, this)
-  }
-
-  /**
-   * Implement the PROVIDEABLE interface for "this"
-   */
-  [PROVIDEABLE](): Env<this> {
-    return this.join(Env.empty)
   }
 }
 

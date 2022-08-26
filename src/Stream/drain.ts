@@ -23,7 +23,7 @@ export function fork<R, E, A, E2 = never>(
   sink: Sink<E | E2, A>,
   context: FiberContext,
 ): Fx.Fx<R | Scheduler, never, Fiber<E | E2, A>> {
-  return Fx.access((env) => stream.fork(sink, env.get(Scheduler), context))
+  return Fx.asks(Scheduler)((scheduler) => stream.fork(sink, scheduler, context))
 }
 
 export function observe<A, R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>) {
