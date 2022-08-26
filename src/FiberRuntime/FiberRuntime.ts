@@ -207,8 +207,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
     }
 
     this.withSupervisor((s) => s.onInstruction(this, instr))
-
-    console.log(instr.tag)
     ;(this._processors[instr.tag] as (i: typeof instr) => void)(instr)
   }
 
@@ -457,7 +455,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       return exit.right
     })
 
-    FiberRefs.setFiberRef(
+    FiberRefs.setFiberRefLocally(
       FiberRef.Layers,
       layers.set(layer.service, [
         () => {
@@ -469,16 +467,20 @@ export class FiberRuntime<F extends Fx.AnyFx>
       ]),
     )(context.fiberRefs)
 
+    this.popFiberRef(FiberRef.Layers)
+
     this._current = Maybe.Just(instr.fx.instr)
   }
 
   protected processProvideService(
     instr: Extract<AnyInstruction, { readonly tag: 'ProvideService' }>,
   ) {
-    FiberRefs.setFiberRef(
+    FiberRefs.setFiberRefLocally(
       FiberRef.Services,
       this.getInternalFiberRef(FiberRef.Services).value.set(instr.service, instr.implementation),
-    )
+    )(this.context.fiberRefs)
+
+    this.popFiberRef(FiberRef.Services)
 
     this._current = Maybe.Just(instr.fx.instr)
   }
@@ -655,6 +657,10 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected pushPopFiberRef = (ref: FiberRef.AnyFiberRef, value: any) => {
     FiberRefs.setFiberRefLocally(ref as any, value)(this.context.fiberRefs)
 
+    this.popFiberRef(ref)
+  }
+
+  protected popFiberRef = (ref: FiberRef.AnyFiberRef) => {
     this.pushFrame(
       ExitFrame((exit) =>
         Fx.lazy(() => {

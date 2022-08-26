@@ -11,7 +11,6 @@ export function fromFx<R, E, A>(fx: Fx.Fx<R, E, A>): Stream<R, E, A> {
       scheduler.asap(
         pipe(
           fx,
-          Fx.tap(console.log),
           Fx.matchCause(
             sink.error,
             flow(

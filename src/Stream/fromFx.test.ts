@@ -2,7 +2,7 @@ import { deepStrictEqual } from 'assert'
 
 import { pipe } from 'hkt-ts'
 
-import { observe } from './drain.js'
+import { collect, observe } from './drain.js'
 import { fromFx } from './fromFx.js'
 
 import { runTest } from '@/Fx/Fx.test.js'
@@ -11,17 +11,29 @@ import { RootScheduler } from '@/Scheduler/RootScheduler.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 
 describe(new URL(import.meta.url).pathname, () => {
-  describe.only(fromFx.name, () => {
+  describe(fromFx.name, () => {
     const value = Math.random()
+    const stream = fromFx(Fx.success(value))
 
     it('should create a Stream', () =>
       pipe(
-        Fx.success(value),
-        fromFx,
+        stream,
         observe((n) => Fx.fromLazy(() => deepStrictEqual(n, value))),
         Fx.flatMap(Fx.join),
         Fx.provideService(Scheduler, RootScheduler()),
         runTest,
       ))
+
+    it('should be collectable', async () => {
+      await pipe(
+        Fx.Fx(function* () {
+          const events = yield* collect(stream)
+
+          deepStrictEqual(events, [value])
+        }),
+        Fx.provideService(Scheduler, RootScheduler()),
+        runTest,
+      )
+    })
   })
 })
