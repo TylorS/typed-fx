@@ -39,8 +39,6 @@ type Processors = {
   ) => void
 }
 
-// TODO: Metrics?
-
 export class FiberRuntime<F extends Fx.AnyFx>
   implements Fiber.Live<Fx.ErrorsOf<F>, Fx.OutputOf<F>>
 {

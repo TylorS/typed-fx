@@ -2,7 +2,7 @@ import { Project } from 'ts-morph'
 import ts from 'typescript'
 import type { Plugin } from 'vite'
 
-import { makeTracingTransformer as ttypescriptPlugin } from './ttypescript.js'
+import { makeTracingTransformer } from './plugin.js'
 
 export interface TracingParams {
   // Where to find the tsconfig.json file.
@@ -38,7 +38,7 @@ export function tracingPlugin(params: TracingParams): Plugin {
     configResolved(config) {
       customTransformers = {
         before: [
-          ttypescriptPlugin(project.getProgram().compilerObject, {
+          makeTracingTransformer(project.getProgram().compilerObject, {
             root: config.root,
           }),
         ],

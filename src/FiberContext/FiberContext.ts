@@ -9,7 +9,7 @@ import { Logger } from '@/Logger/Logger.js'
 import { Platform } from '@/Platform/Platform.js'
 import { Closeable } from '@/Scope/Closeable.js'
 import { LocalScope } from '@/Scope/LocalScope.js'
-import { None, Supervisor, and } from '@/Supervisor/Supervisor.js'
+import { None, Supervisor } from '@/Supervisor/Supervisor.js'
 
 export interface FiberContext {
   readonly id: FiberId.Live
@@ -60,9 +60,7 @@ export function fork(
     platform: overrides?.platform ?? context.platform.fork(),
     fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
     scope: overrides?.scope ?? context.scope.fork(),
-    supervisor: overrides?.supervisor
-      ? and(overrides.supervisor)(context.supervisor)
-      : context.supervisor,
+    supervisor: overrides?.supervisor ?? None,
     logger: overrides?.logger ?? context.logger,
     parent: overrides?.parent ?? Just(context),
   })
