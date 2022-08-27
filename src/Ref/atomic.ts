@@ -1,12 +1,14 @@
-import { AnyRefConstructor, ErrorsOf, OutputOf, ResourcesOf } from './Ref.js'
+import { pipe } from 'hkt-ts'
+
+import { AnyRef, ErrorsOf, OutputOf, ResourcesOf } from './Ref.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
-import { Fx, fromLazy } from '@/Fx/Fx.js'
+import { Fx, fromLazy, lazy, map } from '@/Fx/Fx.js'
 import { Layer } from '@/Layer/Layer.js'
 import { Lock, acquire } from '@/Semaphore/Semaphore.js'
 import { InstanceOf } from '@/Service/index.js'
 
-export function atomic<REF extends AnyRefConstructor>(
+export function atomic<REF extends AnyRef>(
   ref: REF,
 ): Layer<ResourcesOf<REF>, ErrorsOf<REF>, InstanceOf<REF>> {
   const service = ref.id()
@@ -19,15 +21,13 @@ export function atomic<REF extends AnyRefConstructor>(
       const modify = <R2, E2, B>(
         f: (a: OutputOf<REF>) => Fx<R2, E2, readonly [B, OutputOf<REF>]>,
       ): Fx<R2, E2, B> =>
-        locked(
-          Fx(function* () {
-            const computed = yield* f(atomic.get())
-
-            return atomic.modify(() => computed)
-          }),
+        pipe(
+          lazy(() => f(atomic.get())),
+          map((computed) => atomic.modify(() => computed)),
+          locked,
         )
 
-      return new ref(get as InstanceOf<REF>['get'], modify)
+      return new ref(get as any, modify) as any
     }),
   )
 }

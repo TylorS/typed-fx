@@ -55,15 +55,15 @@ export function toUnit<U2 extends Unit>(unit: U2) {
 
     switch (unit) {
       case Unit.Week:
-        return Duration(ms.value * WEEK_MS, unit)
+        return Duration(ms.value / WEEK_MS, unit)
       case Unit.Day:
-        return Duration(ms.value * DAY_MS, unit)
+        return Duration(ms.value / DAY_MS, unit)
       case Unit.Hour:
-        return Duration(ms.value * HOUR_MS, unit)
+        return Duration(ms.value / HOUR_MS, unit)
       case Unit.Minute:
-        return Duration(ms.value * WEEK_MS, unit)
+        return Duration(ms.value / WEEK_MS, unit)
       case Unit.Second:
-        return Duration(ms.value * SECOND_MS, unit)
+        return Duration(ms.value / SECOND_MS, unit)
       case Unit.Milliseconds:
         return Duration(ms.value, unit)
       default:
@@ -86,4 +86,40 @@ export function toDelay<U extends Unit>(duration: Duration<U>): Delay {
 
 export function toUnixTime<U extends Unit>(duration: Duration<U>): UnixTime {
   return UnixTime(toMilliseconds(duration).value)
+}
+
+const formatOrder = [Unit.Week, Unit.Day, Unit.Hour, Unit.Minute, Unit.Second, Unit.Milliseconds]
+
+// Attempts to format using the largest unit possible
+export function format<U extends Unit>(duration: Duration<U>): string {
+  for (const unit of formatOrder) {
+    const d = toUnit(unit)(duration)
+
+    if (d.value >= 1) {
+      return formatDuration(d)
+    }
+  }
+
+  return formatDuration(duration)
+}
+
+export function formatDuration<U extends Unit>(duration: Duration<U>): string {
+  return `${duration.value}${formatUnit(duration.unit)}`
+}
+
+export function formatUnit(unit: Unit): string {
+  switch (unit) {
+    case Unit.Week:
+      return 'wk'
+    case Unit.Day:
+      return 'day'
+    case Unit.Hour:
+      return 'hr'
+    case Unit.Minute:
+      return 'min'
+    case Unit.Second:
+      return 'sec'
+    case Unit.Milliseconds:
+      return 'ms'
+  }
 }

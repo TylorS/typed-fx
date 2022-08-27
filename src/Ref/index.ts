@@ -1,2 +1,2 @@
-export * from './provideAtomic.js'
+export * from './atomic.js'
 export * from './Ref.js'

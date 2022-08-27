@@ -21,6 +21,7 @@ import {
   BothFx,
   DeleteFiberRef,
   EitherFx,
+  FiberRefLocally,
   FlatMap,
   Fork,
   FromCause,
@@ -28,6 +29,7 @@ import {
   GetFiberContext,
   GetFiberRef,
   GetTrace,
+  Instr,
   Instruction,
   LazyFx,
   MapFx,
@@ -60,28 +62,22 @@ import { Trace } from '@/Trace/Trace.js'
 
 export interface Fx<out R, out E, out A> {
   readonly instr: Instruction<R, E, A>
-  readonly [Symbol.iterator]: () => Generator<
-    AnyFxInstruction<R, E, any> | AnyFxInstruction<R, E, never>,
-    A,
-    any
-  >
+  readonly [Symbol.iterator]: () => Generator<Instruction<R, E, any>, A, any>
 }
-
-type AnyFxInstruction<R, E, A> =
-  | Instruction<R, E, A>
-  | Instruction<never, E, A>
-  | Instruction<R, never, A>
-  | Instruction<never, never, A>
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 export type ResourcesOf<T> = [T] extends [never]
   ? never
+  : [T] extends [Instr<infer _R, infer _E, infer _A>]
+  ? _R
   : [T] extends [Fx<infer _R, infer _E, infer _A>]
   ? _R
   : never
 
 export type ErrorsOf<T> = [T] extends [never]
   ? never
+  : [T] extends [Instr<infer _R, infer _E, infer _A>]
+  ? _E
   : [T] extends [Fx<infer _R, infer _E, infer _A>]
   ? _E
   : never
@@ -146,7 +142,7 @@ export const provideLayers =
     E | Layer.ErrorsOf<Layers[number]>,
     A
   > =>
-    layers.reduce((fx, l) => pipe(fx, provideLayer(l)), fx) as any
+    layers.reduceRight((fx, l) => pipe(fx, provideLayer(l)), fx) as any
 
 export const ask = <S>(s: Service<S>, __trace?: string): RIO<S, S> =>
   access((e) => e.get(s), __trace)
@@ -296,24 +292,23 @@ export const either =
   <R, E, A>(first: Fx<R2, E, A>): Fx<R | R2, E | E2, Either.Either<A, B>> =>
     EitherFx.make(first, second, __trace) as Fx<R | R2, E | E2, Either.Either<A, B>>
 
-export const forkInContext = <R, E, A>(
-  fx: Fx<R, E, A>,
-  context: FiberContext,
-  __trace?: string,
-): Fx<R, never, Fiber.Live<E, A>> => Fork.make(fx, context, __trace)
+export const forkInContext =
+  (context: FiberContext, __trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber.Live<E, A>> =>
+    Fork.make(fx, context, __trace)
 
 export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
   pipe(
     getFiberContext,
-    flatMap((context) => forkInContext(fx, context.fork(), __trace)),
+    flatMap((context) => forkInContext(context.fork())(fx), __trace),
   )
 
 export const forkIn =
-  (scope: Scope) =>
-  <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
+  (scope: Scope, __trace?: string) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber.Live<E, A>> =>
     pipe(
       getFiberContext,
-      flatMap((context) => forkInContext(fx, context.fork({ scope: scope.fork() }), __trace)),
+      flatMap((context) => forkInContext(context.fork({ scope: scope.fork() }))(fx), __trace),
     )
 
 export const getFiberRef = <R, E, A>(ref: FiberRef<R, E, A>, __trace?: string): Fx<R, E, A> =>
@@ -329,10 +324,26 @@ export const deleteFiberRef = <R, E, A>(
   __trace?: string,
 ): Fx<R, E, Maybe<A>> => DeleteFiberRef.make(ref, __trace)
 
-export function Fx<Y = never, R = any>(
-  f: () => Generator<Y, R, any>,
+export const fiberRefLocally =
+  <R2, E2, B>(ref: FiberRef<R2, E2, B>, value: B) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    FiberRefLocally.make(ref, value, fx)
+
+type AnyGenerator =
+  | Generator<any, any, any>
+  | Generator<never, never, any>
+  | Generator<never, any, any>
+  | Generator<any, never, any>
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type YieldOf<T> = [T] extends [Generator<infer _Y, infer _R, infer _N>] ? _Y : never
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type ReturnOf<T> = [T] extends [Generator<infer _Y, infer _R, infer _N>] ? _R : never
+
+export function Fx<G extends AnyGenerator>(
+  f: () => G,
   __trace?: string,
-): Fx<ResourcesOf<Y>, ErrorsOf<Y>, R> {
+): Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>> {
   return lazy(() => {
     const gen = f()
 
@@ -351,10 +362,10 @@ export function Fx<Y = never, R = any>(
                     : fromCause(Cause.sequential(cause, inner)),
                 ),
               )
-            : fromCause(cause)) as Fx<ResourcesOf<Y>, ErrorsOf<Y>, R>,
+            : fromCause(cause)) as Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>>,
       ),
     )
-  }, __trace)
+  }, __trace) as Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>>
 }
 
 function runFxGenerator<Y, R>(

@@ -10,6 +10,7 @@ import { AtomicCounter, decrement } from '@/Atomic/AtomicCounter.js'
 import * as Cause from '@/Cause/Cause.js'
 import { prettyPrint } from '@/Cause/Renderer.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
+import * as Env from '@/Env/Env.js'
 import * as Exit from '@/Exit/Exit.js'
 import * as Fiber from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
@@ -20,8 +21,7 @@ import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
 import { Pending, addObserver, complete, wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/Fx.js'
 import { AnyInstruction } from '@/Fx/Instruction.js'
-import { Layer } from '@/Layer/Layer.js'
-import { closeOrWait } from '@/Scope/Closeable.js'
+import { closeOrWait, wait as waitForScope } from '@/Scope/Closeable.js'
 import { Semaphore, acquireFiber } from '@/Semaphore/Semaphore.js'
 import { Stack } from '@/Stack/index.js'
 import { Supervisor, isNone } from '@/Supervisor/Supervisor.js'
@@ -98,13 +98,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   readonly id: FiberId.Live = this.context.id
   readonly status = Fx.fromLazy(() => this._status)
   readonly trace = Fx.fromLazy(() => this.getCurrentTrace())
-  readonly exit = Fx.lazy(() => {
-    const future = Pending<never, never, Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>>()
-
-    this.addObserver(flow(Fx.success, complete(future)))
-
-    return wait(future)
-  })
+  readonly exit = Fx.lazy(() => waitForScope(this.context.scope))
 
   /**
    * Start running this Fiber synchronously. It can potentially exit BEFORE being able to cancel it.
@@ -211,7 +205,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processAccess(instr: Extract<AnyInstruction, { readonly tag: 'Access' }>) {
-    this._current = Maybe.Just(instr.f(this.getInternalFiberRef(FiberRef.CurrentEnv).value).instr)
+    this._current = Maybe.Just(instr.f(this.getOrCreateCurrentEnv()).instr)
   }
 
   protected processAddTrace(instr: Extract<AnyInstruction, { readonly tag: 'AddTrace' }>) {
@@ -425,7 +419,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected processProvideLayer(instr: Extract<AnyInstruction, { readonly tag: 'ProvideLayer' }>) {
     const layers = this.getInternalFiberRef(FiberRef.Layers).value
-    const layer = instr.layer as Layer<any, any, any>
+    const layer = instr.layer
     const context = this.context
 
     const unwindStack = (cause: Cause.AnyCause) =>
@@ -438,21 +432,21 @@ export class FiberRuntime<F extends Fx.AnyFx>
     const provider = Fx.Fx(function* () {
       const exit = yield* Fx.attempt(Fx.uninterruptable(layer.build(context.scope)))
 
-      if (Either.isLeft(exit)) {
-        const cause = exit.left
-
-        // Expected errors are not likely to match the calling Fiber.
-        if (cause.tag === 'Expected') {
-          yield* unwindStack(cause)
-
-          return yield* Fx.never
-        }
-
-        // Unexpected errors should be fine to pass along
-        return yield* Fx.fromCause(cause)
+      if (Either.isRight(exit)) {
+        return exit.right
       }
 
-      return exit.right
+      const cause = exit.left
+
+      // Expected errors are not likely to match the calling Fiber.
+      if (cause.tag === 'Expected') {
+        yield* unwindStack(cause)
+
+        return yield* Fx.never
+      }
+
+      // Unexpected errors should be fine to pass along
+      return yield* Fx.fromCause(cause)
     })
 
     FiberRefs.setFiberRefLocally(
@@ -461,7 +455,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
         () => {
           const fiber = new FiberRuntime(provider, this.context.fork())
           fiber.startSync()
-          return fiber
+          return fiber as Fiber.Live<never, any>
         },
         Maybe.Nothing,
       ]),
@@ -673,6 +667,21 @@ export class FiberRuntime<F extends Fx.AnyFx>
         }),
       ),
     )
+  }
+
+  protected getOrCreateCurrentEnv(): Env.Env<any> {
+    const locals = this.context.fiberRefs.locals.get()
+    const maybe = locals.get(FiberRef.CurrentEnv)
+
+    if (maybe.tag === 'Just') {
+      return maybe.value.value
+    }
+
+    const env = Env.Env(this.context.fiberRefs)
+
+    locals.set(FiberRef.CurrentEnv, new Stack(env))
+
+    return env
   }
 
   protected getInternalFiberRef<R, E, A>(ref: FiberRef.FiberRef<R, E, A>): Stack<A> {

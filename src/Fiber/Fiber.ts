@@ -1,10 +1,12 @@
+import { flow, pipe } from 'hkt-ts/function'
+
 import type { Exit } from '@/Exit/Exit.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { FiberId } from '@/FiberId/FiberId.js'
 // eslint-disable-next-line import/no-cycle
 import { join } from '@/FiberRefs/FiberRefs.js'
 import type { FiberStatus } from '@/FiberStatus/index.js'
-import { Fx, Of, fromLazy, getFiberContext } from '@/Fx/Fx.js'
+import { Fx, Of, flatMap, fork, fromLazy, getFiberContext } from '@/Fx/Fx.js'
 import type { Trace } from '@/Trace/Trace.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
@@ -39,7 +41,7 @@ export interface Synthetic<E, A> {
   readonly id: FiberId.Synthetic
   readonly exit: Of<Exit<E, A>>
   readonly inheritFiberRefs: Of<void>
-  readonly interruptAs: (id: FiberId) => Of<boolean>
+  readonly interruptAs: (id: FiberId) => Of<Exit<E, A>>
 }
 
 export const Synthetic = <E, A>(params: Omit<Synthetic<E, A>, 'tag'>): Synthetic<E, A> => ({
@@ -62,3 +64,22 @@ export const inheritFiberRefs = <E, A>(fiber: Fiber<E, A>) =>
 
     yield* fromLazy(() => join(fiberRefs, fiber.context.fiberRefs))
   })
+
+export const interruptAs =
+  (id: FiberId) =>
+  <E, A>(fiber: Fiber<E, A>) =>
+    fiber.interruptAs(id)
+
+export const interruptAsFork = (id: FiberId) => flow(interruptAs(id), fork)
+
+export const interrupt = <E, A>(fiber: Fiber<E, A>) =>
+  pipe(
+    getFiberContext,
+    flatMap(({ id }) => interruptAs(id)(fiber)),
+  )
+
+export const interruptFork = <E, A>(fiber: Fiber<E, A>) =>
+  pipe(
+    getFiberContext,
+    flatMap(({ id }) => interruptAsFork(id)(fiber)),
+  )

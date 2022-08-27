@@ -5,9 +5,12 @@ import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
  * easier to deal wih immutable data.
  */
 export interface ImmutableMap<K, V> extends Iterable<readonly [K, V]> {
+  readonly has: (key: K) => boolean
   readonly get: (key: K) => Maybe<V>
   readonly set: (key: K, value: V) => ImmutableMap<K, V>
   readonly remove: (key: K) => ImmutableMap<K, V>
+  readonly keys: () => Iterable<K>
+  readonly values: () => Iterable<V>
 }
 
 export function ImmutableMap<K, V>(cache: ReadonlyMap<K, V> = new Map()): ImmutableMap<K, V> {
@@ -16,6 +19,8 @@ export function ImmutableMap<K, V>(cache: ReadonlyMap<K, V> = new Map()): Immuta
 
 class ImmutableMapImpl<K, V> implements ImmutableMap<K, V> {
   constructor(readonly cache: ReadonlyMap<K, V> = new Map()) {}
+
+  readonly has = (key: K) => this.cache.has(key)
 
   /**
    * Retrieves the current value of the key, if it exists.
@@ -44,4 +49,7 @@ class ImmutableMapImpl<K, V> implements ImmutableMap<K, V> {
   *[Symbol.iterator]() {
     return yield* this.cache
   }
+
+  readonly keys = () => this.cache.keys()
+  readonly values = () => this.cache.values()
 }

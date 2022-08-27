@@ -1,4 +1,4 @@
-import { identity } from 'hkt-ts'
+import { identity, pipe } from 'hkt-ts'
 import { Just, Maybe } from 'hkt-ts/Maybe'
 import { Second } from 'hkt-ts/Typeclass/Concat'
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
@@ -7,8 +7,10 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 // eslint-disable-next-line import/no-cycle
 import { Env } from '@/Env/Env.js'
 import type { Live } from '@/Fiber/Fiber.js'
-import { Fx, now } from '@/Fx/Fx.js'
+import { Fx, getFiberContext, map, now } from '@/Fx/Fx.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
+import { LogAnnotation } from '@/Logger/LogAnnotation.js'
+import { LogSpan } from '@/Logger/LogSpan.js'
 import { Semaphore } from '@/Semaphore/Semaphore.js'
 import { Service } from '@/Service/Service.js'
 import { EmptyTrace, Trace } from '@/Trace/Trace.js'
@@ -46,9 +48,15 @@ export type Params<A> = {
   readonly Eq?: Eq<A>
 }
 
-export const CurrentEnv = make(now(Env<any>()), {
-  join: identity, // Always keep the parent Fiber's concurrency level
-})
+export const CurrentEnv = make(
+  pipe(
+    getFiberContext,
+    map((c) => Env(c.fiberRefs)),
+  ),
+  {
+    join: identity, // Always keep the parent Fiber's concurrency level
+  },
+)
 
 export const CurrentConcurrencyLevel = make(
   now<Semaphore>(new Semaphore(NonNegativeInteger(Infinity))),
@@ -74,4 +82,12 @@ export const Layers = FiberRef.make(
 
 export const Services = FiberRef.make(now(ImmutableMap<Service<any>, any>()), {
   join: identity, // Always keep the parent Fiber's services
+})
+
+export const CurrentLogSpans = FiberRef.make(now(ImmutableMap<string, LogSpan>()), {
+  join: identity,
+})
+
+export const CurrentLogAnnotations = FiberRef.make(now(ImmutableMap<string, LogAnnotation>()), {
+  join: identity,
 })

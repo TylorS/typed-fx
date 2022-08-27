@@ -45,7 +45,7 @@ export function observe<A, R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>, __trace?: s
 export function collect<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, readonly A[]> {
+): Fx.Fx<R | Scheduler, E, readonly A[]> {
   return pipe(
     Fx.fromLazy(() => FiberRef.make(Fx.now<readonly A[]>([]))),
     Fx.bindTo('fiberRef'),

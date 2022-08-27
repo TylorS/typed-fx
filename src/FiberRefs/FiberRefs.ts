@@ -4,7 +4,6 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Atomic } from '@/Atomic/Atomic.js'
 // eslint-disable-next-line import/no-cycle
-import { Env } from '@/Env/Env.js'
 import * as FiberRef from '@/FiberRef/FiberRef.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
 import { Semaphore } from '@/Semaphore/index.js'
@@ -22,12 +21,13 @@ const defaultFiberLocals = (
   trace: Trace = EmptyTrace,
 ) =>
   new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>([
-    [FiberRef.CurrentEnv, new Stack.Stack(Env())],
     [FiberRef.CurrentConcurrencyLevel, new Stack.Stack(new Semaphore(concurrencyLevel))],
     [FiberRef.CurrentInterruptStatus, new Stack.Stack(interruptStatus)],
     [FiberRef.CurrentTrace, new Stack.Stack(trace)],
     [FiberRef.Services, new Stack.Stack(ImmutableMap())],
     [FiberRef.Layers, new Stack.Stack(ImmutableMap())],
+    [FiberRef.CurrentLogSpans, new Stack.Stack(ImmutableMap())],
+    [FiberRef.CurrentLogAnnotations, new Stack.Stack(ImmutableMap())],
   ])
 
 export function FiberRefs(
@@ -150,8 +150,9 @@ export function fork(fiberRefs: FiberRefs): FiberRefs {
 
 export function join(first: FiberRefs, second: FiberRefs): void {
   const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>(first.locals.get())
+  const incoming = second.locals.get()
 
-  for (const [key, stack] of second.locals.get()) {
+  for (const [key, stack] of incoming) {
     const current = updated.get(key)
 
     updated.set(key, current ? current.replace((a) => key.join(a, stack.value)) : stack)

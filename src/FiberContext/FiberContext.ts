@@ -4,6 +4,8 @@ import { Renderer, defaultRenderer } from '@/Cause/Renderer.js'
 import * as FiberId from '@/FiberId/FiberId.js'
 import { FiberRefs } from '@/FiberRefs/FiberRefs.js'
 import { SequentialStrategy } from '@/Finalizer/Finalizer.js'
+import { Console } from '@/Logger/Console.js'
+import { Logger } from '@/Logger/Logger.js'
 import { Platform } from '@/Platform/Platform.js'
 import { Closeable } from '@/Scope/Closeable.js'
 import { LocalScope } from '@/Scope/LocalScope.js'
@@ -15,6 +17,7 @@ export interface FiberContext {
   readonly fiberRefs: FiberRefs
   readonly scope: Closeable
   readonly supervisor: Supervisor<any>
+  readonly logger: Logger<string, any>
   readonly renderer: Renderer<any>
   readonly parent: Maybe<FiberContext>
 
@@ -28,6 +31,7 @@ export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): 
     fiberRefs = FiberRefs(),
     scope = new LocalScope(SequentialStrategy),
     supervisor = None,
+    logger = Console,
     renderer = defaultRenderer,
     parent = Nothing,
   } = params
@@ -38,6 +42,7 @@ export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): 
     fiberRefs,
     scope,
     supervisor,
+    logger,
     renderer,
     parent,
     fork: (overrides?: Partial<FiberContext>) => fork(context, overrides),
@@ -56,6 +61,7 @@ export function fork(
     fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
     scope: overrides?.scope ?? context.scope.fork(),
     supervisor: overrides?.supervisor ?? None,
+    logger: overrides?.logger ?? context.logger,
     parent: overrides?.parent ?? Just(context),
   })
 }

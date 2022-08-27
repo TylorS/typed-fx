@@ -3,7 +3,7 @@ import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 
 import { Env } from '@/Env/Env.js'
 import * as Fx from '@/Fx/index.js'
-import { Id, InstanceOf, Service } from '@/Service/index.js'
+import { Id, InstanceOf } from '@/Service/index.js'
 
 export interface RefApi<R, E, A> {
   readonly get: Fx.Fx<R, E, A>
@@ -18,7 +18,7 @@ export type AnyRefApi =
   | RefApi<never, any, any>
   | RefApi<any, never, any>
 
-export type Ref<R, E, A> = ReturnType<typeof Ref<R, E, A>>
+export type Ref<R, E, A> = ReturnType<typeof Ref<any, R, E, A>>
 
 export type AnyRef =
   | Ref<any, any, any>
@@ -32,8 +32,15 @@ export type ErrorsOf<T> = T extends Ref<infer _R, infer _E, infer _A> ? _E : nev
 export type OutputOf<T> = T extends Ref<infer _R, infer _E, infer _A> ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export function Ref<R, E, A>(initial: Fx.Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
+export function Ref<Tag extends string, R, E, A>(
+  tag: Tag,
+  initial: Fx.Fx<R, E, A>,
+  Eq: Eq<A> = DeepEquals,
+) {
   return class Reference extends Id implements RefApi<R, E, A> {
+    static tag: Tag = tag
+    readonly tag: Tag = tag
+
     static initial = initial
     static Eq = Eq
 
@@ -41,22 +48,25 @@ export function Ref<R, E, A>(initial: Fx.Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
       super()
     }
 
-    static make<S extends AnyRefConstructor>(
+    static make<S extends AnyRef>(
       this: S,
       get: RefApi<R, E, A>['get'],
       modify: RefApi<R, E, A>['modify'],
     ): InstanceOf<S> {
-      return new (this as RefConstructor<R, E, A>)(get, modify) as InstanceOf<S>
+      return new (this as Ref<R, E, A>)(get, modify) as InstanceOf<S>
     }
 
-    static get<S extends AnyRefConstructor>(this: S) {
+    static get<S extends typeof Reference>(this: S): Fx.Fx<R | InstanceOf<S>, E, A> {
       return pipe(
         Fx.access((env: Env<InstanceOf<S>>) => env.get(this.id())),
         Fx.flatMap((r) => r.get),
       )
     }
 
-    static modify<S extends AnyRefConstructor, B>(this: S, f: (a: A) => readonly [B, A]) {
+    static modify<S extends typeof Reference, B, R2, E2>(
+      this: S,
+      f: (a: A) => Fx.Fx<R2, E2, readonly [B, A]>,
+    ): Fx.Fx<R | R2 | InstanceOf<S>, E | E2, B> {
       return pipe(
         Fx.access((env: Env<InstanceOf<S>>) => env.get(this.id())),
         Fx.flatMap((r) => r.modify(f)),
@@ -64,29 +74,3 @@ export function Ref<R, E, A>(initial: Fx.Fx<R, E, A>, Eq: Eq<A> = DeepEquals) {
     }
   }
 }
-
-Ref.tagged = <Tag extends string, R, E, A>(
-  tag: Tag,
-  initial: Fx.Fx<R, E, A>,
-  Eq: Eq<A> = DeepEquals,
-) =>
-  class Reference extends Ref(initial, Eq) {
-    static tag: Tag = tag
-    readonly tag: Tag = tag
-  }
-
-export interface RefConstructor<R, E, A> {
-  readonly id: () => Service<any>
-  readonly initial: Fx.Fx<R, E, A>
-  readonly Eq: Eq<A>
-
-  new (get: RefApi<R, E, A>['get'], modify: RefApi<R, E, A>['modify']): RefApi<R, E, A>
-
-  readonly make: <S extends AnyRefConstructor>(
-    this: S,
-    get: RefApi<R, E, A>['get'],
-    modify: RefApi<R, E, A>['modify'],
-  ) => InstanceOf<S>
-}
-
-export type AnyRefConstructor = RefConstructor<any, any, any>
