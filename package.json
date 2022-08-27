@@ -8,8 +8,8 @@
   "typings": "esm/index.d.ts",
   "sideEffects": false,
   "scripts": {
-    "build:cjs": "rm -rf cjs && tsc -p ./tsconfig.build.cjs.json  && tsconfig-replace-paths -p ./tsconfig.build.cjs.json",
-    "build:esm": "rm -rf esm && tsc -p ./tsconfig.build.esm.json && tsconfig-replace-paths -p ./tsconfig.build.esm.json",
+    "build:cjs": "rm -rf cjs && tsc -p ./tsconfig.build.cjs.json",
+    "build:esm": "rm -rf esm && tsc -p ./tsconfig.build.esm.json",
     "build:package-exports": "node --loader @esbuild-kit/esm-loader ./tools/generatePackageExports.ts",
     "prebuild": "npx tsc -p ./tsconfig.build.tracing.json && mv ./.tracing-plugin/plugin.js ./.tracing-plugin/plugin.cjs",
     "build": "concurrently npm:build:esm npm:build:cjs && npm run build:package-exports",
@@ -41,11 +41,11 @@
     "typed-query-selector": "^2.6.1"
   },
   "peerDependencies": {
-    "tslib": "^2.4.0"
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4"
   },
   "optionalPeerDependencies": {
     "ts-morph": "^15.1.0",
-    "typescript": "^4.7.4",
     "vite": "^3.0.2"
   },
   "devDependencies": {
@@ -79,6 +79,7 @@
     "tslib": "^2.4.0",
     "tsx": "^3.8.2",
     "typescript": "^4.7.4",
+    "typescript-transform-paths": "^3.3.1",
     "vite": "^3.0.9",
     "vite-node": "^0.19.1",
     "vite-tsconfig-paths": "^3.5.0"

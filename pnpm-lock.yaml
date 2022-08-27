@@ -34,6 +34,7 @@ specifiers:
   tsx: ^3.8.2
   typed-query-selector: ^2.6.1
   typescript: ^4.7.4
+  typescript-transform-paths: ^3.3.1
   vite: ^3.0.9
   vite-node: ^0.19.1
   vite-tsconfig-paths: ^3.5.0
@@ -74,6 +75,7 @@ devDependencies:
   tslib: 2.4.0
   tsx: 3.8.2
   typescript: 4.7.4
+  typescript-transform-paths: 3.3.1_typescript@4.7.4
   vite: 3.0.9
   vite-node: 0.19.1
   vite-tsconfig-paths: 3.5.0_vite@3.0.9
@@ -3041,6 +3043,15 @@ packages:
   /typed-query-selector/2.6.1:
     resolution: {integrity: sha512-nzzcDrI0nncM5XTNyqeG7MrcXTx8lelUtNlTP+NvpnOfRzApyr+ZW4H/FoOaPfzmjn++Tf0ZxXpBN7Q3FN3ERw==}
     dev: false
+
+  /typescript-transform-paths/3.3.1_typescript@4.7.4:
+    resolution: {integrity: sha512-c+8Cqd2rsRtTU68rJI0NX/OtqgBDddNs1fIxm1nCNyhn0WpoyqtpUxc1w9Ke5c5kgE4/OT5xYbKf2cf694RYEg==}
+    peerDependencies:
+      typescript: '>=3.6.5'
+    dependencies:
+      minimatch: 3.1.2
+      typescript: 4.7.4
+    dev: true
 
   /typescript/4.7.4:
     resolution: {integrity: sha512-C0WQT0gezHuw6AdY1M2jxUO83Rjf0HP7Sk1DtXj6j1EwkQNZrHAg2XPWlq62oqEhYvONq5pkC2Y9oPljWToLmQ==}
