@@ -611,6 +611,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected done(exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) {
     this._status = Done(exit)
     this._current = Maybe.Nothing
+    this._disposable.dispose()
     this.withSupervisor((s) => s.onEnd(this, exit))
     this.notifyObservers(exit)
   }
