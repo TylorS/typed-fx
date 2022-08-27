@@ -6,7 +6,7 @@
     "outDir": "cjs",
     "plugins": [
       {
-        "transform": "./.tracing-plugin/ttypescript.cjs",
+        "transform": "./.tracing-plugin/plugin.cjs",
         "rewritePaths": [
           [
             "^src/",
