@@ -39,11 +39,7 @@ type Processors = {
   ) => void
 }
 
-// TODO: Logging
 // TODO: Metrics?
-// TODO: Allow configuring
-
-// TODO: tests for services + layers
 
 export class FiberRuntime<F extends Fx.AnyFx>
   implements Fiber.Live<Fx.ErrorsOf<F>, Fx.OutputOf<F>>
