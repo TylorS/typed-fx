@@ -45,6 +45,7 @@ import {
 
 import { getCauseError } from '@/Cause/CauseError.js'
 import * as Cause from '@/Cause/index.js'
+import { timeToDate, timeToUnixTime } from '@/Clock/index.js'
 import { settable } from '@/Disposable/Disposable.js'
 import type { Env } from '@/Env/Env.js'
 import { Exit } from '@/Exit/index.js'
@@ -281,6 +282,61 @@ export const uninterruptable = <R, E, A>(fx: Fx<R, E, A>) => SetInterruptStatus.
 export const interruptable = <R, E, A>(fx: Fx<R, E, A>) => SetInterruptStatus.make(fx, true)
 
 export const getFiberContext = GetFiberContext.make()
+
+export const getFiberId = pipe(
+  getFiberContext,
+  map((c) => c.id),
+)
+
+export const getFiberRefs = pipe(
+  getFiberContext,
+  map((c) => c.fiberRefs),
+)
+
+export const getPlatform = pipe(
+  getFiberContext,
+  map((c) => c.platform),
+)
+
+export const getTimer = pipe(
+  getPlatform,
+  map((p) => p.timer),
+)
+
+export const getCurrentTime = pipe(
+  getTimer,
+  flatMap((t) => fromLazy(() => t.getCurrentTime())),
+)
+
+export const getCurrentUnixTime = pipe(
+  getTimer,
+  flatMap((t) => fromLazy(() => timeToUnixTime(t.getCurrentTime())(t))),
+)
+
+export const getCurrentDate = pipe(
+  getTimer,
+  flatMap((t) => fromLazy(() => timeToDate(t.getCurrentTime())(t))),
+)
+
+export const getLogger = pipe(
+  getFiberContext,
+  map((c) => c.logger),
+)
+
+export const getParentContext = pipe(
+  getFiberContext,
+  map((c) => c.parent),
+)
+
+export const getFiberScope = pipe(
+  getFiberContext,
+  map((c) => c.scope),
+)
+
+export const getSupervisor = pipe(
+  getFiberContext,
+  map((c) => c.supervisor),
+)
 
 export const both =
   <R2, E2, B>(second: Fx<R2, E2, B>, __trace?: string) =>
