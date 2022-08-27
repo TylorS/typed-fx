@@ -23,7 +23,7 @@
     "test:ttypescript-plugin": "ts-node ./src/Tracing/test.ts",
     "test:ttypescript-plugin:build": "tsc ./src/Tracing/test.ts --outDir dist/test",
     "preversion": "npm test",
-    "postversion": "npm run build && npm publish",
+    "postversion": "npm run build && npm publish --access=public",
     "prepare": "ts-patch install -s"
   },
   "keywords": [
