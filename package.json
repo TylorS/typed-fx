@@ -1,6 +1,6 @@
 {
   "name": "@typed/fx",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "High-performance Asynchronous Effects",
   "type": "module",
   "main": "esm/index.js",
