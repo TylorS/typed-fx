@@ -1,5 +1,5 @@
-import { identity, pipe } from 'hkt-ts'
-import { Just, Maybe } from 'hkt-ts/Maybe'
+import { constant, identity, pipe } from 'hkt-ts'
+import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import { Second } from 'hkt-ts/Typeclass/Concat'
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 import { NonNegativeInteger } from 'hkt-ts/number'
@@ -51,10 +51,11 @@ export type Params<A> = {
 export const CurrentEnv = make(
   pipe(
     getFiberContext,
-    map((c) => Env(c.fiberRefs)),
+    map((c) => Env<any>(c.fiberRefs)),
   ),
   {
-    join: identity, // Always keep the parent Fiber's concurrency level
+    fork: constant(Nothing), // Always create a new Env for each Fiber.
+    join: identity, // Always keep the parent Fiber's Env
   },
 )
 

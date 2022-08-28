@@ -16,7 +16,7 @@ export interface Env<R> {
 
 export function Env<R>(fiberRefs: FiberRefs.FiberRefs): Env<R> {
   return {
-    get: get(fiberRefs.fork()), // Always use a snapshot of the FiberRefs to avoid mutability problems.
+    get: get(fiberRefs), // Always use a snapshot of the FiberRefs to avoid mutability problems.
   }
 }
 
