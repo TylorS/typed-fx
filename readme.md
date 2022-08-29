@@ -14,7 +14,6 @@ The Fiber runtime interprets these generators into running applications that pro
 - Streams - Push-based streams, modeled after [@most/core](https://github.com/mostjs/core), with full Fx integration.
 - Tracing - Use our TypeScript/Vite plugin to use the TypeScript compiler to augment your stack traces with more useful information.
 - Logging - Built-in Loggers w/ configurable backends
-- Metrics - Track metrics occurring throughout your application.
 - State Management - Manage and synchronize state effortlessly across all your running processes.
 
 ## Target 
