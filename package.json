@@ -14,7 +14,7 @@
     "prebuild": "npx tsc -p ./tsconfig.build.tracing.json && mv ./.tracing-plugin/plugin.js ./.tracing-plugin/plugin.cjs",
     "build": "concurrently npm:build:esm npm:build:cjs && npm run build:package-exports",
     "eslint": "NODE_OPTIONS=--max-old-space-size=4096 eslint --ext .ts,.js,.json,.yaml --fix --cache src",
-    "mocha": "mocha 'src/**/*.test.ts'",
+    "mocha": "mocha 'src/**/*.test.ts' 'src/Atomic/Atomic.test.ts'",
     "coverage": "c8 --include 'src/**/*' --all npm run mocha",
     "typecheck": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit -p ./tsconfig.build.esm.json",
     "test": "concurrently npm:eslint npm:mocha npm:typecheck",
@@ -575,6 +575,26 @@
         "types": "./esm/Fx/logging.d.ts"
       }
     },
+    "./Fx/run": {
+      "require": {
+        "default": "./cjs/Fx/run.js",
+        "types": "./cjs/Fx/run.d.ts"
+      },
+      "import": {
+        "default": "./esm/Fx/run.js",
+        "types": "./esm/Fx/run.d.ts"
+      }
+    },
+    "./Fx/scheduler": {
+      "require": {
+        "default": "./cjs/Fx/scheduler.js",
+        "types": "./cjs/Fx/scheduler.d.ts"
+      },
+      "import": {
+        "default": "./esm/Fx/scheduler.js",
+        "types": "./esm/Fx/scheduler.d.ts"
+      }
+    },
     "./Fx/scoped": {
       "require": {
         "default": "./cjs/Fx/scoped.js",
@@ -743,6 +763,26 @@
       "import": {
         "default": "./esm/Ref/atomic.js",
         "types": "./esm/Ref/atomic.d.ts"
+      }
+    },
+    "./Runtime": {
+      "require": {
+        "default": "./cjs/Runtime/index.js",
+        "types": "./cjs/Runtime/index.d.ts"
+      },
+      "import": {
+        "default": "./esm/Runtime/index.js",
+        "types": "./esm/Runtime/index.d.ts"
+      }
+    },
+    "./Runtime/Runtime": {
+      "require": {
+        "default": "./cjs/Runtime/Runtime.js",
+        "types": "./cjs/Runtime/Runtime.d.ts"
+      },
+      "import": {
+        "default": "./esm/Runtime/Runtime.js",
+        "types": "./esm/Runtime/Runtime.d.ts"
       }
     },
     "./Schedule": {
