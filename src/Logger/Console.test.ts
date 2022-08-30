@@ -1,9 +1,10 @@
 import { runTest } from '@/Fx/Fx.test.js'
-import { log, span } from '@/Fx/logging.js'
+import { annotate, log, span } from '@/Fx/logging.js'
+import { testSuite } from '@/_internal/suite.js'
 
-describe(new URL(import.meta.url).pathname, () => {
+testSuite(import.meta.url, () => {
   it('allows logging to the console', async () => {
-    const test = span('foo')(log('test'))
+    const test = span('foo')(annotate('bar', 'baz')(log('test')))
 
     await runTest(test)
   })

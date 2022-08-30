@@ -84,6 +84,50 @@ export const makeTracingTransformer = (program: ts.Program, config: TracingPlugi
           )
         }
 
+        if (ts.isNewExpression(node)) {
+          // Continue processing any arguments that might be CallExpressions
+          const processedArguments = ts.visitNodes(node.arguments, visitor)
+
+          // Resolve signature to get the declaration parameters.
+          const signature =
+            checker.getResolvedSignature(node) ?? getSignatureIfSole(checker, node.expression)
+          const signatureDeclaration = signature?.getDeclaration()
+          const declarationParameters = Array.from(signatureDeclaration?.parameters || [])
+
+          // Grab the last argument and last declaration parameter.
+          const lastParameter = processedArguments
+            ? processedArguments[processedArguments.length - 1]
+            : null
+          const lastDeclarationParameter = declarationParameters[declarationParameters.length - 1]
+
+          // Check if this function should append a trace, and how.
+          const isTraceLastParameter = lastDeclarationParameter?.name.getText() === '__trace'
+          const haveNotProvidedTrace =
+            processedArguments?.length === declarationParameters.length - 1
+          const traceIsMissingLocation =
+            processedArguments?.length === declarationParameters.length && lastParameter
+              ? lastParameter.getText(sourceFile) !== '__trace' &&
+                !isInstrumentedTrace(lastParameter.getText(sourceFile))
+              : false
+          const shouldAppendTrace =
+            isTraceLastParameter && (haveNotProvidedTrace || traceIsMissingLocation)
+
+          return ts.factory.updateNewExpression(
+            node,
+            ts.visitNode(node.expression, visitor),
+            node.typeArguments,
+            shouldAppendTrace
+              ? haveNotProvidedTrace
+                ? [...(node.arguments ?? []), getTrace(node.expression)] // Append new Trace
+                : [
+                    // Ammend existing custom Trace with line numbers
+                    ...(node.arguments ?? []).slice(0, -1),
+                    getTrace(node.expression, lastParameter!.getText(sourceFile)),
+                  ]
+              : node.arguments,
+          )
+        }
+
         // Ensure we traverse through variable declarations
         if (ts.isVariableDeclaration(node)) {
           return ts.factory.updateVariableDeclaration(

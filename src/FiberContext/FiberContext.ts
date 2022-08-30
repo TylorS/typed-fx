@@ -1,6 +1,5 @@
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 
-import { Renderer, defaultRenderer } from '@/Cause/Renderer.js'
 import * as FiberId from '@/FiberId/FiberId.js'
 import { FiberRefs } from '@/FiberRefs/FiberRefs.js'
 import { SequentialStrategy } from '@/Finalizer/Finalizer.js'
@@ -18,7 +17,6 @@ export interface FiberContext {
   readonly scope: Closeable
   readonly supervisor: Supervisor<any>
   readonly logger: Logger<string, any>
-  readonly renderer: Renderer<any>
   readonly parent: Maybe<FiberContext>
 
   readonly fork: (overrides?: Partial<FiberContext>) => FiberContext
@@ -32,7 +30,6 @@ export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): 
     scope = new LocalScope(SequentialStrategy),
     supervisor = None,
     logger = Console,
-    renderer = defaultRenderer,
     parent = Nothing,
   } = params
 
@@ -43,7 +40,6 @@ export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): 
     scope,
     supervisor,
     logger,
-    renderer,
     parent,
     fork: (overrides?: Partial<FiberContext>) => fork(context, overrides),
   }

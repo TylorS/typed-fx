@@ -1,3 +1,4 @@
+import { mapTo } from 'hkt-ts/Either'
 import * as Maybe from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Associative'
 import { pipe } from 'hkt-ts/function'
@@ -10,7 +11,7 @@ import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
 import { Exit, makeSequentialAssociative } from '@/Exit/Exit.js'
 import { FinalizationStrategy, Finalizer } from '@/Finalizer/Finalizer.js'
-import { Fx, Of, lazy, success, unit } from '@/Fx/Fx.js'
+import { Of, flatMap, fromExit, fromLazy, lazy, success, uninterruptable, unit } from '@/Fx/Fx.js'
 
 const { concat: concatExits } = makeSequentialAssociative<any, any>(First)
 
@@ -67,19 +68,19 @@ export class LocalScope implements Closeable {
       return success(false)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const that = this
     const exit = this._exit.value
 
-    return Fx(function* () {
-      that._state = Closing(exit)
-
-      yield* that._releaseMap.releaseAll(exit)
-
-      that._state = Closed(exit)
-
-      return true
-    })
+    return pipe(
+      fromLazy(() => (this._state = Closing(exit))),
+      flatMap(() => this._releaseMap.releaseAll(exit)),
+      flatMap((exit) =>
+        pipe(
+          fromLazy(() => (this._state = Closed(exit))),
+          flatMap(() => pipe(exit, mapTo(true), fromExit) as Of<boolean>),
+        ),
+      ),
+      uninterruptable,
+    )
   })
 
   protected get isClosed() {

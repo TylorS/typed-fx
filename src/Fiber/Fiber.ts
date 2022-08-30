@@ -6,7 +6,7 @@ import type { FiberId } from '@/FiberId/FiberId.js'
 // eslint-disable-next-line import/no-cycle
 import { join } from '@/FiberRefs/FiberRefs.js'
 import type { FiberStatus } from '@/FiberStatus/index.js'
-import { Fx, Of, flatMap, fork, fromLazy, getFiberContext } from '@/Fx/Fx.js'
+import { Of, flatMap, fork, getFiberContext, map } from '@/Fx/Fx.js'
 import type { Trace } from '@/Trace/Trace.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
@@ -54,16 +54,18 @@ export const match =
   (fiber: Fiber<E, A>) =>
     fiber.tag === 'Live' ? onLive(fiber) : onSynthetic(fiber)
 
-export const inheritFiberRefs = <E, A>(fiber: Fiber<E, A>) =>
-  Fx(function* () {
-    if (fiber.tag === 'Synthetic') {
-      return yield* fiber.inheritFiberRefs
-    }
-
-    const { fiberRefs } = yield* getFiberContext
-
-    yield* fromLazy(() => join(fiberRefs, fiber.context.fiberRefs))
-  })
+export const inheritFiberRefs = <E, A>(fiber: Fiber<E, A>): Of<void> =>
+  pipe(
+    fiber,
+    match(
+      (l) =>
+        pipe(
+          getFiberContext,
+          map((c) => join(c.fiberRefs, l.context.fiberRefs)),
+        ),
+      (s) => s.inheritFiberRefs,
+    ),
+  )
 
 export const interruptAs =
   (id: FiberId) =>

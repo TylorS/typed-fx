@@ -11,6 +11,7 @@ import { LogSpan } from './LogSpan.js'
 
 import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/Fx.js'
+import { Trace } from '@/Trace/Trace.js'
 
 // TODO: Console as a Logger
 // TODO: Build into Fx runtime
@@ -22,6 +23,7 @@ export interface Logger<A, B> {
     id: FiberId.Live,
     logSpans: ReadonlyArray<LogSpan>,
     logAnnotations: ReadonlyArray<LogAnnotation>,
+    trace: Trace,
   ) => Fx.Of<B>
 }
 
@@ -47,8 +49,8 @@ export const Divariant: D.Divariant2<LoggerHKT> = {
   dimap:
     <A, B, C, D>(f: Unary<A, B>, g: Unary<C, D>) =>
     (logger: Logger<B, C>) =>
-      Logger((i: A, level, id, logSpans, logAnnotations) =>
-        Fx.map(g)(logger.log(f(i), level, id, logSpans, logAnnotations)),
+      Logger((i: A, level, id, logSpans, logAnnotations, trace) =>
+        Fx.map(g)(logger.log(f(i), level, id, logSpans, logAnnotations, trace)),
       ),
 }
 

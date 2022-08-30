@@ -6,6 +6,7 @@ import { CurrentLogAnnotations, CurrentLogSpans } from '@/FiberRef/FiberRef.js'
 import { LogAnnotation } from '@/Logger/LogAnnotation.js'
 import { LogLevel } from '@/Logger/LogLevel.js'
 import { LogSpan } from '@/Logger/LogSpan.js'
+import { EmptyTrace, Trace } from '@/Trace/Trace.js'
 
 const makeLogWithLevel = (level: LogLevel) => (msg: string, __trace?: string) =>
   pipe(
@@ -13,14 +14,16 @@ const makeLogWithLevel = (level: LogLevel) => (msg: string, __trace?: string) =>
     Fx.bind('context', () => Fx.getFiberContext),
     Fx.bind('spans', () => Fx.getFiberRef(CurrentLogSpans)),
     Fx.bind('annotations', () => Fx.getFiberRef(CurrentLogAnnotations)),
+    Fx.bind('trace', () => (level >= LogLevel.Trace ? Fx.getTrace : Fx.now<Trace>(EmptyTrace))),
     Fx.flatMap(
-      ({ context, spans, annotations }) =>
+      ({ context, spans, annotations, trace }) =>
         context.logger.log(
           msg,
           level,
           context.id,
           Array.from(spans.values()),
           Array.from(annotations.values()),
+          trace,
         ),
       __trace,
     ),

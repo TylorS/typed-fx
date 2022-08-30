@@ -7,9 +7,10 @@ import { Clock, timeToUnixTime } from '@/Clock/index.js'
 import { format, fromTime } from '@/Duration/Duration.js'
 import { Fx, getFiberContext } from '@/Fx/Fx.js'
 import { Time } from '@/Time/index.js'
+import * as Trace from '@/Trace/index.js'
 
 export const Console: Logger<string, void> = {
-  log: (input, level, id, logSpans, logAnnotations) =>
+  log: (input, level, id, logSpans, logAnnotations, trace) =>
     Fx(function* () {
       if (level === LogLevel.None) {
         return
@@ -27,7 +28,10 @@ export const Console: Logger<string, void> = {
         `message=${input}`,
       ].join('; ')
 
-      logWithLevel(message, level)
+      logWithLevel(
+        trace.tag !== 'EmptyTrace' ? message + '\n' + Trace.debug(trace) : message,
+        level,
+      )
     }),
 }
 

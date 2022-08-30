@@ -1,19 +1,24 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
+import * as A from 'hkt-ts/Array'
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
+import { First } from 'hkt-ts/Typeclass/Associative'
 import { pipe } from 'hkt-ts/function'
 
-import { Exit } from '@/Exit/Exit.js'
+import * as Exit from '@/Exit/Exit.js'
 import {
   FinalizationStrategy,
   Finalizer,
   FinalizerKey,
   finalizationStrategyToConcurrency,
 } from '@/Finalizer/Finalizer.js'
-import { Fx, Of, lazy, mapTo, unit, withConcurrency, zipAll } from '@/Fx/Fx.js'
+import { Fx, Of, attempt, lazy, unit, withConcurrency, zipAll } from '@/Fx/Fx.js'
 
 let nextId = 0
+
+const concatExitSeq = Exit.makeSequentialAssociative<any, any>(First).concat
+const concatExitPar = Exit.makeParallelAssociative<any, any>(First).concat
 
 /**
  * ReleaseMap is an underlying class utilizing in the implementation of Managed. It allows
@@ -46,7 +51,7 @@ export class ReleaseMap {
     return Just(finalizer)
   }
 
-  readonly release = (key: FinalizerKey, exit: Exit<any, any>): Of<void> =>
+  readonly release = (key: FinalizerKey, exit: Exit.Exit<any, any>): Of<void> =>
     lazy(() =>
       this.finalizers.has(key)
         ? lazy(() => {
@@ -59,21 +64,29 @@ export class ReleaseMap {
         : unit,
     )
 
-  readonly releaseAll = (exit: Exit<any, any>): Of<void> => {
+  readonly releaseAll = (exit: Exit.AnyExit): Of<Exit.AnyExit> => {
     const toBeReleased = () =>
       Array.from(this.finalizers.keys())
         .reverse()
-        .map((key) => this.release(key, exit))
+        .map((key) => attempt(this.release(key, exit)))
 
     const isEmpty = () => this.isEmpty()
 
     if (this.strategy.strategy === 'Sequential') {
       return Fx(function* () {
+        const exits: Array<Exit.AnyExit> = []
+
         while (!isEmpty()) {
           for (const fx of toBeReleased()) {
-            yield* fx
+            exits.push(yield* fx)
           }
         }
+
+        if (A.isNonEmpty(exits)) {
+          return exits.reduce(concatExitSeq, exit)
+        }
+
+        return exit
       })
     }
 
@@ -81,15 +94,20 @@ export class ReleaseMap {
       pipe(
         zipAll(toBeReleased()),
         withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
-        mapTo(undefined),
       )
 
     return Fx(function* () {
-      yield* releaseAll_()
+      const exits: Array<Exit.AnyExit> = []
 
       while (!isEmpty()) {
-        yield* releaseAll_()
+        exits.push((yield* releaseAll_()).reduce(concatExitPar as any))
       }
+
+      if (A.isNonEmpty(exits)) {
+        return exits.reduce(concatExitSeq, exit)
+      }
+
+      return exit
     })
   }
 }

@@ -21,7 +21,7 @@ import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
 import { Pending, addObserver, complete, wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/Fx.js'
 import { AnyInstruction } from '@/Fx/Instruction.js'
-import { closeOrWait, wait as waitForScope } from '@/Scope/Closeable.js'
+import { closeOrWait } from '@/Scope/Closeable.js'
 import { Semaphore, acquireFiber } from '@/Semaphore/Semaphore.js'
 import { Stack } from '@/Stack/index.js'
 import { Supervisor, isNone } from '@/Supervisor/Supervisor.js'
@@ -92,7 +92,15 @@ export class FiberRuntime<F extends Fx.AnyFx>
   readonly id: FiberId.Live = this.context.id
   readonly status = Fx.fromLazy(() => this._status)
   readonly trace = Fx.fromLazy(() => this.getCurrentTrace())
-  readonly exit = Fx.lazy(() => waitForScope(this.context.scope))
+  readonly exit = Fx.lazy(() => {
+    if (this._status.tag === 'Done') {
+      return Fx.now(this._status.exit)
+    }
+
+    const future = Pending<never, never, Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>>()
+    this.addObserver(flow(Fx.now, complete(future)))
+    return wait(future)
+  })
 
   /**
    * Start running this Fiber synchronously. It can potentially exit BEFORE being able to cancel it.
@@ -416,32 +424,24 @@ export class FiberRuntime<F extends Fx.AnyFx>
     const layer = instr.layer
     const context = this.context
 
-    const unwindStack = (cause: Cause.AnyCause) =>
+    const unwindStack = (cause: Cause.AnyCause): Fx.Of<any> =>
       this._status.tag === 'Done'
         ? context.scope.state.tag === 'Open'
           ? context.scope.close(Either.Left(cause))
           : Fx.fromLazy(() => this.reportFailure(cause))
         : Fx.fromLazy(() => this.unwindStack(cause))
 
-    const provider = Fx.Fx(function* () {
-      const exit = yield* Fx.attempt(Fx.uninterruptable(layer.build(context.scope)))
-
-      if (Either.isRight(exit)) {
-        return exit.right
-      }
-
-      const cause = exit.left
-
-      // Expected errors are not likely to match the calling Fiber.
-      if (cause.tag === 'Expected') {
-        yield* unwindStack(cause)
-
-        return yield* Fx.never
-      }
-
-      // Unexpected errors should be fine to pass along
-      return yield* Fx.fromCause(cause)
-    })
+    const provider = pipe(
+      Fx.uninterruptable(layer.build(context.scope)),
+      Fx.orElseCause((cause) =>
+        cause.tag === 'Expected'
+          ? pipe(
+              unwindStack(cause),
+              Fx.flatMap(() => Fx.never),
+            )
+          : Fx.fromCause(cause),
+      ),
+    )
 
     FiberRefs.setFiberRefLocally(
       FiberRef.Layers,
@@ -624,7 +624,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected reportFailure(cause: Cause.AnyCause) {
     this.context.platform.reportFailure(
-      [FiberId.debug(this.id), prettyPrint(cause, this.context.renderer)].join('\n'),
+      [FiberId.debug(this.id), prettyPrint(cause, this.context.platform.renderer)].join('\n'),
     )
   }
 
@@ -701,9 +701,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       )
     }
 
-    throw new Error(
-      `There is a bug in @typed/Fx's FiberRuntime not having access to the StackTrace`,
-    )
+    return Trace.EmptyTrace
   }
 
   protected withSupervisor = <A>(f: (s: Supervisor<A>) => void) => {
