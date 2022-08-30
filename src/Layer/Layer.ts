@@ -4,11 +4,6 @@ import * as Fx from '@/Fx/Fx.js'
 import { Scope } from '@/Scope/Scope.js'
 import { Service } from '@/Service/Service.js'
 
-// TODO: Global Layers
-// TODO: Refreshing
-// TODO: Combinators for providing fallbacks
-// TODO: Combinators for composing layers
-
 export interface Layer<R, E, A> {
   readonly service: Service<A>
   readonly build: (scope: Scope) => Fx.Fx<R, E, A>
@@ -41,4 +36,15 @@ export function fromFx<S, R, E, A extends S>(
   fx: Fx.Fx<R | Scope, E, A>,
 ): Layer<R, E, S> {
   return Layer(s, (scope) => pipe(fx, Fx.provideService(Scope, scope)))
+}
+
+export function orElse<E, A, R2, E2, B extends A>(orElse: (e: E) => Layer<R2, E2, B>) {
+  return <R>(layer: Layer<R, E, A>): Layer<R | R2, E2, A> => {
+    return Layer(layer.service, (scope) =>
+      pipe(
+        layer.build(scope),
+        Fx.orElse((e) => orElse(e).build(scope)),
+      ),
+    )
+  }
 }

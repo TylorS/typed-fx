@@ -75,36 +75,41 @@ export function getFromFiberRefs(fiberRefs: FiberRefs.FiberRefs) {
         return service.value as S
       }
 
-      const layers = FiberRefs.maybeGetFiberRefValue(Layers)(fiberRefs)
-
-      // Add Layers if it is missing
-      if (Maybe.isNothing(layers)) {
-        throw new Error(`Unable to find Layer or Service for ${id.description}`)
-      }
-
-      const layer = layers.value.get(id)
-
-      if (Maybe.isNothing(layer)) {
-        throw new Error(`Unable to find Layer or Service for ${id.description}`)
-      }
-
-      const [makeFiber, currentFiber] = layer.value
-
-      if (Maybe.isJust(currentFiber)) {
-        const exit = yield* currentFiber.value.exit
-
-        if (isRight(exit)) {
-          return exit.right
-        }
-
-        return yield* FromCause.make(exit.left)
-      }
-
-      const fiber = makeFiber()
-
-      FiberRefs.setFiberRef(Layers, layers.value.set(id, [makeFiber, Maybe.Just(fiber)]))(fiberRefs)
-
-      return (yield* join(fiber)) as S
+      return yield* getLayer(id, fiberRefs)
     })
   }
 }
+
+const getLayer = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs) =>
+  Fx(function* () {
+    const layers = FiberRefs.maybeGetFiberRefValue(Layers)(fiberRefs)
+
+    // Add Layers if it is missing
+    if (Maybe.isNothing(layers)) {
+      throw new Error(`Unable to find Layer or Service for ${id.description}`)
+    }
+
+    const layer = layers.value.get(id)
+
+    if (Maybe.isNothing(layer)) {
+      throw new Error(`Unable to find Layer or Service for ${id.description}`)
+    }
+
+    const [makeFiber, currentFiber] = layer.value
+
+    if (Maybe.isJust(currentFiber)) {
+      const exit = yield* currentFiber.value.exit
+
+      if (isRight(exit)) {
+        return exit.right
+      }
+
+      return yield* FromCause.make(exit.left)
+    }
+
+    const fiber = makeFiber()
+
+    FiberRefs.setFiberRef(Layers, layers.value.set(id, [makeFiber, Maybe.Just(fiber)]))(fiberRefs)
+
+    return (yield* join(fiber)) as S
+  })

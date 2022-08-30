@@ -131,13 +131,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   readonly interruptAs = (id: FiberId.FiberId): Fx.Of<Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>> =>
     Fx.lazy(() => {
-      if (this._status.tag === 'Done') {
-        return Fx.now(this._status.exit)
-      }
-
-      const future = Pending<never, never, Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>>()
-      this.addObserver((exit) => complete(future)(Fx.now(exit)))
-
       if (this.getInterruptStatus()) {
         // Immediately interrupt the Fiber
         this._disposable.dispose()
@@ -148,7 +141,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
         this._interruptedBy.add(id)
       }
 
-      return wait(future)
+      return this.exit
     })
 
   // Start of Internals
@@ -189,21 +182,29 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected run(instr: AnyInstruction) {
     // Yield when too many synchronous operations have occurred
     if (decrement(this._opCountRemaining) === 0) {
-      this._opCountRemaining.set(this._opCountRemaining.id)
-      this._current = Maybe.Nothing
-
-      return this.setTimer(() => {
-        this._current = Maybe.Just(instr)
-        this.loop()
-      })
+      return this.yieldNow(instr)
     }
 
-    if (instr.__trace) {
-      this.pushPopFiberRef(Builtin.CurrentTrace, Trace.Trace.custom(instr.__trace))
-    }
+    this.addCustomTrace(instr.__trace)
 
     this.withSupervisor((s) => s.onInstruction(this, instr))
     ;(this._processors[instr.tag] as (i: typeof instr) => void)(instr)
+  }
+
+  protected yieldNow(instr: AnyInstruction) {
+    this._opCountRemaining.set(this._opCountRemaining.id)
+    this._current = Maybe.Nothing
+
+    return this.setTimer(() => {
+      this._current = Maybe.Just(instr)
+      this.loop()
+    })
+  }
+
+  protected addCustomTrace(trace?: string) {
+    if (trace) {
+      this.pushPopFiberRef(Builtin.CurrentTrace, Trace.Trace.custom(trace))
+    }
   }
 
   protected processAccess(instr: Extract<AnyInstruction, { readonly tag: 'Access' }>) {
@@ -280,8 +281,14 @@ export class FiberRuntime<F extends Fx.AnyFx>
       inner.dispose()
     }
 
-    inner.add(this._disposable.add(f.addObserver((exit) => onExit(exit, 0))))
-    inner.add(this._disposable.add(s.addObserver((exit) => onExit(exit, 1))))
+    inner.add(
+      this._disposable.add(f.addObserver((exit) => onExit(pipe(exit, Either.map(Either.Left)), 0))),
+    )
+    inner.add(
+      this._disposable.add(
+        s.addObserver((exit) => onExit(pipe(exit, Either.map(Either.Right)), 1)),
+      ),
+    )
 
     this._current = Maybe.Just(wait(future).instr)
 
@@ -401,12 +408,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       ),
     )
 
-    this._current = Maybe.Just(
-      pipe(
-        FiberRefs.maybeGetFiberRefValue(ref)(this.context.fiberRefs),
-        Maybe.match(() => instr.fiberRef.initial, Fx.now),
-      ).instr,
-    )
+    this._current = Maybe.Just(instr.fiberRef.initial.instr)
   }
 
   protected processNow(instr: Extract<AnyInstruction, { readonly tag: 'Now' }>) {

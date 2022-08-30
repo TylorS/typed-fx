@@ -81,7 +81,7 @@ describe(new URL(import.meta.url).pathname, () => {
     }
   })
 
-  it.skip('runs Fib w/ generators', async () => {
+  it('runs Fib w/ generators', async () => {
     const fib = (n: number): Of<number> =>
       Fx(function* () {
         if (n < 2) {
