@@ -14,6 +14,20 @@ export class Supervisor<A> {
     readonly onSuspended: (fiber: AnyLiveFiber) => void = constVoid,
     readonly onRunning: (fiber: AnyLiveFiber) => void = constVoid,
   ) {}
+
+  readonly extend = <B = A>(
+    overrides: Partial<{
+      readonly [K in keyof Supervisor<A>]: (parent: Supervisor<A>[K]) => Supervisor<B>[K]
+    }>,
+  ): Supervisor<B> =>
+    new Supervisor(
+      (overrides.value ? overrides.value(this.value) : this.value) as Of<B>,
+      overrides.onStart ? overrides.onStart(this.onStart) : this.onStart,
+      overrides.onEnd ? overrides.onEnd(this.onEnd) : this.onEnd,
+      overrides.onInstruction ? overrides.onInstruction(this.onInstruction) : this.onInstruction,
+      overrides.onSuspended ? overrides.onSuspended(this.onSuspended) : this.onSuspended,
+      overrides.onRunning ? overrides.onRunning(this.onRunning) : this.onRunning,
+    )
 }
 
 export const None = new (class None extends Supervisor<any> {})(unit)

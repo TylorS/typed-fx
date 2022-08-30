@@ -35,7 +35,9 @@ export function Runtime<R>(context: FiberContext): Runtime<R> {
       new Promise<A>((resolve, reject) => {
         const r = new FiberRuntime(fx, context.fork())
 
-        r.addObserver(match((cause) => reject(new CauseError(cause, context.renderer)), resolve))
+        r.addObserver(
+          match((cause) => reject(new CauseError(cause, context.platform.renderer)), resolve),
+        )
         r.startSync()
 
         return r
