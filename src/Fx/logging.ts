@@ -2,7 +2,7 @@ import { pipe } from 'hkt-ts'
 
 import * as Fx from './Fx.js'
 
-import { CurrentLogAnnotations, CurrentLogSpans } from '@/FiberRef/FiberRef.js'
+import { CurrentLogAnnotations, CurrentLogSpans } from '@/FiberRef/builtins.js'
 import { LogAnnotation } from '@/Logger/LogAnnotation.js'
 import { LogLevel } from '@/Logger/LogLevel.js'
 import { LogSpan } from '@/Logger/LogSpan.js'

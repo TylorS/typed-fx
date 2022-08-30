@@ -13,7 +13,7 @@ export interface Runtime<R> {
   readonly run: <E, A>(fx: Fx<R, E, A>) => Promise<A>
 }
 
-export function Runtime<R>(context: FiberContext): Runtime<R> {
+export function Runtime<R = never>(context: FiberContext): Runtime<R> {
   return {
     runFiber: <E, A>(fx: Fx<R, E, A>) => {
       const r = new FiberRuntime(fx, context.fork())

@@ -5,7 +5,6 @@ import { pipe } from 'hkt-ts'
 import { Ref } from './Ref.js'
 import { atomic } from './atomic.js'
 
-import { runTest } from '@/Fx/Fx.test.js'
 import * as Fx from '@/Fx/index.js'
 
 describe(new URL(import.meta.url).pathname, () => {
@@ -27,7 +26,7 @@ describe(new URL(import.meta.url).pathname, () => {
       it('allows providing for a Ref', async () => {
         const test = pipe(foobar, Fx.provideLayers(atomic(Foo), atomic(Bar)))
 
-        deepStrictEqual(await runTest(test), 3)
+        deepStrictEqual(await Fx.runMain(test), 3)
       })
     })
   })

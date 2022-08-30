@@ -10,7 +10,7 @@ import * as S from 'hkt-ts/string'
 
 import { increment } from '@/Atomic/AtomicCounter.js'
 import { Clock, timeToDate } from '@/Clock/Clock.js'
-import { Platform } from '@/Platform/Platform.js'
+import type { Platform } from '@/Platform/Platform.js'
 import { Time } from '@/Time/index.js'
 
 export type FiberId = FiberId.None | FiberId.Live | FiberId.Synthetic

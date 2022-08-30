@@ -1,7 +1,6 @@
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { AtomicCounter } from '@/Atomic/AtomicCounter.js'
-// eslint-disable-next-line import/no-cycle
 import { Renderer, defaultRenderer } from '@/Cause/Renderer.js'
 import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer.js'
 import * as Timer from '@/Timer/Timer.js'

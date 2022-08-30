@@ -5,7 +5,6 @@ import { pipe } from 'hkt-ts'
 import { collect, observe } from './drain.js'
 import { fromFx } from './fromFx.js'
 
-import { runTest } from '@/Fx/Fx.test.js'
 import * as Fx from '@/Fx/index.js'
 import { RootScheduler } from '@/Scheduler/RootScheduler.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
@@ -21,7 +20,7 @@ describe(new URL(import.meta.url).pathname, () => {
         observe((n) => Fx.fromLazy(() => deepStrictEqual(n, value))),
         Fx.flatMap(Fx.join),
         Fx.provideService(Scheduler, RootScheduler()),
-        runTest,
+        Fx.runMain,
       ))
 
     it('should be collectable', async () => {
@@ -32,7 +31,7 @@ describe(new URL(import.meta.url).pathname, () => {
           deepStrictEqual(events, [value])
         }),
         Fx.provideService(Scheduler, RootScheduler()),
-        runTest,
+        Fx.runMain,
       )
     })
   })

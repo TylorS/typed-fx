@@ -4,7 +4,6 @@ import { pipe } from 'hkt-ts/function'
 import type { Cause, Expected, Interrupted, Unexpected } from './Cause.js'
 import { prettyStringify } from './prettyStringify.js'
 
-// eslint-disable-next-line import/no-cycle
 import { Debug as FiberIdDebug } from '@/FiberId/index.js'
 import { Trace, Debug as TraceDebug } from '@/Trace/index.js'
 

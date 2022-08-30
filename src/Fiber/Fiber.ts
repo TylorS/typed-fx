@@ -3,10 +3,9 @@ import { flow, pipe } from 'hkt-ts/function'
 import type { Exit } from '@/Exit/Exit.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { FiberId } from '@/FiberId/FiberId.js'
-// eslint-disable-next-line import/no-cycle
 import { join } from '@/FiberRefs/FiberRefs.js'
 import type { FiberStatus } from '@/FiberStatus/index.js'
-import { Of, flatMap, fork, getFiberContext, map } from '@/Fx/Fx.js'
+import { Of, flatMap, fork, fromExit, getFiberContext, map } from '@/Fx/Fx.js'
 import type { Trace } from '@/Trace/Trace.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
@@ -72,7 +71,7 @@ export const interruptAs =
   <E, A>(fiber: Fiber<E, A>) =>
     fiber.interruptAs(id)
 
-export const interruptAsFork = (id: FiberId) => flow(interruptAs(id), fork)
+export const interruptAsFork = (id: FiberId) => flow(interruptAs(id), flatMap(fromExit), fork)
 
 export const interrupt = <E, A>(fiber: Fiber<E, A>) =>
   pipe(

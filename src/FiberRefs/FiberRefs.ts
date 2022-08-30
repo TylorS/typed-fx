@@ -1,37 +1,18 @@
 import { flow, pipe } from 'hkt-ts'
 import * as Maybe from 'hkt-ts/Maybe'
-import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Atomic } from '@/Atomic/Atomic.js'
-// eslint-disable-next-line import/no-cycle
 import * as FiberRef from '@/FiberRef/FiberRef.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
-import { Semaphore } from '@/Semaphore/index.js'
 import * as Stack from '@/Stack/index.js'
-import { EmptyTrace, Trace } from '@/Trace/Trace.js'
 
 export interface FiberRefs extends Iterable<readonly [FiberRef.AnyFiberRef, any]> {
   readonly locals: Atomic<ImmutableMap<FiberRef.AnyFiberRef, Stack.Stack<any>>>
   readonly fork: () => FiberRefs
 }
 
-const defaultFiberLocals = (
-  concurrencyLevel: NonNegativeInteger = NonNegativeInteger(Infinity),
-  interruptStatus = true,
-  trace: Trace = EmptyTrace,
-) =>
-  new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>([
-    [FiberRef.CurrentConcurrencyLevel, new Stack.Stack(new Semaphore(concurrencyLevel))],
-    [FiberRef.CurrentInterruptStatus, new Stack.Stack(interruptStatus)],
-    [FiberRef.CurrentTrace, new Stack.Stack(trace)],
-    [FiberRef.Services, new Stack.Stack(ImmutableMap())],
-    [FiberRef.Layers, new Stack.Stack(ImmutableMap())],
-    [FiberRef.CurrentLogSpans, new Stack.Stack(ImmutableMap())],
-    [FiberRef.CurrentLogAnnotations, new Stack.Stack(ImmutableMap())],
-  ])
-
 export function FiberRefs(
-  locals: ImmutableMap<FiberRef.AnyFiberRef, Stack.Stack<any>> = ImmutableMap(defaultFiberLocals()),
+  locals: ImmutableMap<FiberRef.AnyFiberRef, Stack.Stack<any>> = ImmutableMap(),
 ): FiberRefs {
   const atomic = Atomic(locals)
   const fiberRefs: FiberRefs = {

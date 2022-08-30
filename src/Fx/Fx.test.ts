@@ -2,10 +2,8 @@ import { deepStrictEqual } from 'assert'
 
 import { pipe } from 'hkt-ts/function'
 
-import { Fx, IO, Of, access, flatMap, map, now } from './Fx.js'
-
-import { CauseError } from '@/Cause/CauseError.js'
-import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
+import { Fx, Of, access, flatMap, map, now } from './Fx.js'
+import { runMain } from './run.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(Fx.name, () => {
@@ -14,7 +12,7 @@ describe(new URL(import.meta.url).pathname, () => {
         const value = Math.random()
         const test = now(value)
 
-        deepStrictEqual(await runTest(test), value)
+        deepStrictEqual(await runMain(test), value)
       })
 
       it('allows using try/catch locally', async () => {
@@ -33,7 +31,7 @@ describe(new URL(import.meta.url).pathname, () => {
           }),
         )
 
-        deepStrictEqual(await runTest(test), value)
+        deepStrictEqual(await runMain(test), value)
       })
 
       it('allows using try/catch within nested Fx', async () => {
@@ -54,7 +52,7 @@ describe(new URL(import.meta.url).pathname, () => {
           }
         })
 
-        deepStrictEqual(await runTest(test), value)
+        deepStrictEqual(await runMain(test), value)
       })
     })
   })
@@ -78,7 +76,7 @@ describe(new URL(import.meta.url).pathname, () => {
 
     for (let i = 0; i < 10; i++) {
       console.time('Fib25')
-      deepStrictEqual(await runTest(fib(25)), 75025)
+      deepStrictEqual(await runMain(fib(25)), 75025)
       console.timeEnd('Fib25')
     }
   })
@@ -94,17 +92,7 @@ describe(new URL(import.meta.url).pathname, () => {
       })
 
     console.time('Fib25')
-    deepStrictEqual(await runTest(fib(25)), 75025)
+    deepStrictEqual(await runMain(fib(25)), 75025)
     console.timeEnd('Fib25')
   })
 })
-
-export function runTest<E, A>(io: IO<E, A>): Promise<A> {
-  return new Promise((resolve, reject) => {
-    const runtime = new FiberRuntime(io)
-    runtime.addObserver((exit) =>
-      exit.tag === 'Right' ? resolve(exit.right) : reject(new CauseError(exit.left)),
-    )
-    runtime.startSync()
-  })
-}
