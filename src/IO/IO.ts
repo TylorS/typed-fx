@@ -1,11 +1,11 @@
 import * as Either from 'hkt-ts/Either'
 import { Lazy, flow } from 'hkt-ts/function'
 
-import { IOFuture } from './IOFuture.js'
+import type { IOFuture } from './IOFuture.js'
 import type { IORefs } from './IORefs.js'
 
 import type { Cause } from '@/Cause/Cause.js'
-import { Exit } from '@/Exit/Exit.js'
+import type { Exit } from '@/Exit/Exit.js'
 
 export type IO<E, A> =
   | Now<A>
@@ -25,7 +25,7 @@ export abstract class Instr<I, E, A> {
     readonly _A: () => A
   }
 
-  constructor(readonly input: I) {}
+  constructor(readonly input: I, readonly __trace?: string) {}
 
   *[Symbol.iterator](): Generator<this, A, A> {
     return yield this
@@ -59,8 +59,8 @@ export class GetIORefs extends instr('GetIORefs')<void, never, IORefs> {
  * Synchronously return a value.
  */
 export class Now<out A> extends instr('Now')<A, never, A> {
-  static make<A>(a: A): IO<never, A> {
-    return new Now(a)
+  static make<A>(a: A, __trace?: string): IO<never, A> {
+    return new Now(a, __trace)
   }
 }
 
@@ -68,8 +68,8 @@ export class Now<out A> extends instr('Now')<A, never, A> {
  * Synchronously compute a value.
  */
 export class FromLazy<out A> extends instr('FromLazy')<Lazy<A>, never, A> {
-  static make<A>(lazy: Lazy<A>): IO<never, A> {
-    return new FromLazy(lazy)
+  static make<A>(lazy: Lazy<A>, __trace?: string): IO<never, A> {
+    return new FromLazy(lazy, __trace)
   }
 }
 
@@ -77,8 +77,8 @@ export class FromLazy<out A> extends instr('FromLazy')<Lazy<A>, never, A> {
  * Fail with a specific Cause
  */
 export class FromCause<out E> extends instr('FromCause')<Cause<E>, E, never> {
-  static make<E>(cause: Cause<E>): IO<E, never> {
-    return new FromCause(cause)
+  static make<E>(cause: Cause<E>, __trace?: string): IO<E, never> {
+    return new FromCause(cause, __trace)
   }
 }
 
@@ -86,8 +86,8 @@ export class FromCause<out E> extends instr('FromCause')<Cause<E>, E, never> {
  * Lazily construct an IO. Useful for wrapping around "this" contexts
  */
 export class LazyIO<out E, out A> extends instr('LazyIO')<Lazy<IO<E, A>>, E, A> {
-  static make<E, A>(lazy: Lazy<IO<E, A>>): IO<E, A> {
-    return new LazyIO(lazy)
+  static make<E, A>(lazy: Lazy<IO<E, A>>, __trace?: string): IO<E, A> {
+    return new LazyIO(lazy, __trace)
   }
 }
 
@@ -103,20 +103,26 @@ export class MapIO<out E, in out A, out B> extends instr('MapIO')<
   E,
   B
 > {
-  static make<E, A, B>(io: IO<E, A>, f: (a: A) => B): IO<E, B> {
+  static make<E, A, B>(io: IO<E, A>, f: (a: A) => B, __trace?: string): IO<E, B> {
+    // Immediately reduce the mapped value
     if (io.tag === Now.tag) {
       return Now.make(f(io.input))
     }
 
+    /**
+     * Compose 2 mapped IO's together
+     */
     if (io.tag === MapIO.tag) {
-      return MapIO.make(io.input[0], flow(io.input[1], f))
+      return MapIO.make(io.input[0], flow(io.input[1], f), __trace)
     }
 
+    // Removes 1 IOFrame from the immediate stack, attempting to perform
+    // IOFrame optimizations on the resulting IO.
     if (io.tag === FlatMapIO.tag) {
-      return FlatMapIO.make(io.input[0], (a) => MapIO.make(io.input[1](a), f))
+      return FlatMapIO.make(io.input[0], (a) => MapIO.make(io.input[1](a), f, __trace), io.__trace)
     }
 
-    return new MapIO([io, f])
+    return new MapIO([io, f], __trace)
   }
 }
 
@@ -128,24 +134,33 @@ export class FlatMapIO<out E, in out A, out E2, out B> extends instr('FlatMapIO'
   E | E2,
   B
 > {
-  static make<E, A, E2, B>(io: IO<E, A>, f: (a: A) => IO<E2, B>): IO<E | E2, B> {
+  static make<E, A, E2, B>(io: IO<E, A>, f: (a: A) => IO<E2, B>, __trace?: string): IO<E | E2, B> {
     // Immediately reduce to the next instruction.
     if (io.tag === Now.tag) {
       return f(io.input)
     }
 
+    // FlatMap cannot handle FromCause instructions
+    if (io.tag === FromCause.tag) {
+      return io
+    }
+
     // Removes 1 IOFrame from the stack
     if (io.tag === MapIO.tag) {
-      return FlatMapIO.make(io.input[0], flow(io.input[1], f))
+      return FlatMapIO.make(io.input[0], flow(io.input[1], f), __trace)
     }
 
     // Removes 1 IOFrame from the immediate stack, attempting to perform
     // IOFrame optimizations on the resulting IO.
     if (io.tag === FlatMapIO.tag) {
-      return FlatMapIO.make(io.input[0], (a) => FlatMapIO.make(io.input[1](a), f))
+      return FlatMapIO.make(
+        io.input[0],
+        (a) => FlatMapIO.make(io.input[1](a), f, __trace),
+        io.__trace,
+      )
     }
 
-    return new FlatMapIO([io, f])
+    return new FlatMapIO([io, f], __trace)
   }
 }
 
@@ -157,7 +172,11 @@ export class OrElseIO<in out E, out A, out E2, out B> extends instr('OrElseIO')<
   E,
   A | B
 > {
-  static make<E, A, E2, B>(io: IO<E, A>, f: (cause: Cause<E>) => IO<E2, B>): IO<E2, A | B> {
+  static make<E, A, E2, B>(
+    io: IO<E, A>,
+    f: (cause: Cause<E>) => IO<E2, B>,
+    __trace?: string,
+  ): IO<E2, A | B> {
     // Continue immediately to the next instruction.
     if (io.tag === FromCause.tag) {
       return f(io.input)
@@ -168,12 +187,12 @@ export class OrElseIO<in out E, out A, out E2, out B> extends instr('OrElseIO')<
       return io
     }
 
-    // Removes 1 IOFrame from the stack.
+    // Removes 1 IOFrame from the stack in favor of pattern matching over the exit value.
     if (io.tag === FlatMapIO.tag) {
-      return AttemptIO.make(io.input[0], Either.match(f, io.input[1] as any))
+      return AttemptIO.make(io.input[0], Either.match(f, io.input[1] as any), __trace)
     }
 
-    return new OrElseIO([io, f])
+    return new OrElseIO([io, f], __trace)
   }
 }
 
@@ -185,7 +204,11 @@ export class AttemptIO<in out E, in out A, out E2, out B> extends instr('Attempt
   E2 | E2,
   B
 > {
-  static make<E, A, E2, B>(io: IO<E, A>, f: (exit: Exit<E, A>) => IO<E2, B>): IO<E2, B> {
+  static make<E, A, E2, B>(
+    io: IO<E, A>,
+    f: (exit: Exit<E, A>) => IO<E2, B>,
+    __trace?: string,
+  ): IO<E2, B> {
     // Continue immediately to the next instruction since it cannot fail
     if (io.tag === Now.tag) {
       return f(Either.Right(io.input))
@@ -195,7 +218,7 @@ export class AttemptIO<in out E, in out A, out E2, out B> extends instr('Attempt
       return f(Either.Left(io.input))
     }
 
-    return new AttemptIO([io, f])
+    return new AttemptIO([io, f], __trace)
   }
 }
 
@@ -211,6 +234,14 @@ export class WaitIO<E, A> extends instr('WaitIO')<
   E,
   A
 > {
-  static make = <E, A>(future: IOFuture<E, A>): IO<E, A> => new WaitIO<E, A>(future)
+  static make = <E, A>(future: IOFuture<E, A>, __trace?: string): IO<E, A> => {
+    const state = future.state.get()
+
+    if (state.tag === 'Resolved') {
+      return state.io
+    }
+
+    return new WaitIO<E, A>(future, __trace)
+  }
 }
 // #endregion

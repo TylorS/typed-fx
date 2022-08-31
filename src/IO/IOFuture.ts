@@ -1,8 +1,6 @@
 import { Atomic } from '@/Atomic/Atomic.js'
 import { Disposable } from '@/Disposable/Disposable.js'
 import type { IO } from '@/IO/IO.js'
-import { Delay } from '@/Time/index.js'
-import { Timer } from '@/Timer/Timer.js'
 
 export interface IOFuture<E, A> {
   readonly state: Atomic<IOFutureState<E, A>>
@@ -21,14 +19,12 @@ export function PendingIO<E, A>(): IOFuture<E, A> {
   }
 }
 
-export function addObserver<E, A>(
-  future: IOFuture<E, A>,
-  observer: Observer<E, A>,
-  timer: Timer,
-): Disposable {
+export function addObserver<E, A>(future: IOFuture<E, A>, observer: Observer<E, A>): Disposable {
   return future.state.modify((state): readonly [Disposable, IOFutureState<E, A>] => {
     if (state.tag === 'Resolved') {
-      return [timer.setTimer(() => observer(state.io), Delay(0)), state]
+      observer(state.io)
+
+      return [Disposable.None, state]
     }
 
     const updated: IOFutureState<E, A> = {

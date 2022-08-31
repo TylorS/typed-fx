@@ -9,7 +9,6 @@ import { IORefs } from './IORefs.js'
 import * as Cause from '@/Cause/Cause.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Exit } from '@/Exit/Exit.js'
-import { Timer } from '@/Timer/Timer.js'
 
 export class IORuntime<E, A> {
   protected _instr: Maybe.Maybe<IO<any, any>> = Maybe.Just(this.io)
@@ -17,7 +16,7 @@ export class IORuntime<E, A> {
   protected _stackFrames: Array<IOFrame> = []
   protected _disposable: Maybe.Maybe<Settable> = Maybe.Nothing
 
-  constructor(readonly io: IO<E, A>, readonly ioRefs: IORefs, readonly timer: Timer) {}
+  constructor(readonly io: IO<E, A>, readonly ioRefs: IORefs) {}
 
   readonly addObserver = (observer: (exit: Exit<E, A>) => void): Disposable => {
     this._observers.push(observer)
@@ -84,6 +83,10 @@ export class IORuntime<E, A> {
     this._observers.forEach((o) => o(exit))
     this._observers.length = 0
     this._instr = Maybe.Nothing
+
+    if (this._disposable.tag === 'Just') {
+      this._disposable.value.dispose()
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -141,15 +144,11 @@ export class IORuntime<E, A> {
       this._instr = Maybe.Nothing
       const inner = settable()
       inner.add(
-        addObserver(
-          future,
-          (io) => {
-            inner.dispose()
-            this._instr = Maybe.Just(io)
-            this.run()
-          },
-          this.timer,
-        ),
+        addObserver(future, (io) => {
+          inner.dispose()
+          this._instr = Maybe.Just(io)
+          this.run()
+        }),
       )
       inner.add(this.addDisposable(inner))
     }
