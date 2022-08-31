@@ -74,9 +74,12 @@ describe(new URL(import.meta.url).pathname, () => {
       )
     }
 
+    console.time('Fx: Fib25 Construction')
+    const program = fib(25)
+    console.timeEnd('Fx: Fib25 Construction')
     for (let i = 0; i < 10; i++) {
       console.time('Fib25')
-      deepStrictEqual(await runMain(fib(25)), 75025)
+      deepStrictEqual(await runMain(program), 75025)
       console.timeEnd('Fib25')
     }
   })

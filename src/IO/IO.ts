@@ -1,4 +1,5 @@
-import type { Lazy } from 'hkt-ts/function'
+import * as Either from 'hkt-ts/Either'
+import { Lazy, flow } from 'hkt-ts/function'
 
 import { IOFuture } from './IOFuture.js'
 import type { IORefs } from './IORefs.js'
@@ -15,11 +16,11 @@ export type IO<E, A> =
   | FlatMapIO<E, any, E, A>
   | OrElseIO<any, A, E, A>
   | AttemptIO<any, any, E, A>
-  | (A extends IORefs ? GetIORefs : never)
+  | GetIORefs
   | WaitIO<E, A>
 
 export abstract class Instr<I, E, A> {
-  readonly __NOT_AVAILABLE_AT_RUNTIME__!: {
+  readonly __IO__!: {
     readonly _E: () => E
     readonly _A: () => A
   }
@@ -103,6 +104,18 @@ export class MapIO<out E, in out A, out B> extends instr('MapIO')<
   B
 > {
   static make<E, A, B>(io: IO<E, A>, f: (a: A) => B): IO<E, B> {
+    if (io.tag === Now.tag) {
+      return Now.make(f(io.input))
+    }
+
+    if (io.tag === MapIO.tag) {
+      return MapIO.make(io.input[0], flow(io.input[1], f))
+    }
+
+    if (io.tag === FlatMapIO.tag) {
+      return FlatMapIO.make(io.input[0], (a) => MapIO.make(io.input[1](a), f))
+    }
+
     return new MapIO([io, f])
   }
 }
@@ -116,6 +129,22 @@ export class FlatMapIO<out E, in out A, out E2, out B> extends instr('FlatMapIO'
   B
 > {
   static make<E, A, E2, B>(io: IO<E, A>, f: (a: A) => IO<E2, B>): IO<E | E2, B> {
+    // Immediately reduce to the next instruction.
+    if (io.tag === Now.tag) {
+      return f(io.input)
+    }
+
+    // Removes 1 IOFrame from the stack
+    if (io.tag === MapIO.tag) {
+      return FlatMapIO.make(io.input[0], flow(io.input[1], f))
+    }
+
+    // Removes 1 IOFrame from the immediate stack, attempting to perform
+    // IOFrame optimizations on the resulting IO.
+    if (io.tag === FlatMapIO.tag) {
+      return FlatMapIO.make(io.input[0], (a) => FlatMapIO.make(io.input[1](a), f))
+    }
+
     return new FlatMapIO([io, f])
   }
 }
@@ -128,8 +157,23 @@ export class OrElseIO<in out E, out A, out E2, out B> extends instr('OrElseIO')<
   E,
   A | B
 > {
-  static make<E, A, E2, B>(io: IO<E, A>, f: (cause: Cause<E>) => IO<E2, B>): IO<E, A | B> {
-    return new OrElseIO<any, any, any, any>([io, f])
+  static make<E, A, E2, B>(io: IO<E, A>, f: (cause: Cause<E>) => IO<E2, B>): IO<E2, A | B> {
+    // Continue immediately to the next instruction.
+    if (io.tag === FromCause.tag) {
+      return f(io.input)
+    }
+
+    // Removes 1 IOFrame from the stack since it cannot fail
+    if (io.tag === Now.tag) {
+      return io
+    }
+
+    // Removes 1 IOFrame from the stack.
+    if (io.tag === FlatMapIO.tag) {
+      return AttemptIO.make(io.input[0], Either.match(f, io.input[1] as any))
+    }
+
+    return new OrElseIO([io, f])
   }
 }
 
@@ -142,6 +186,15 @@ export class AttemptIO<in out E, in out A, out E2, out B> extends instr('Attempt
   B
 > {
   static make<E, A, E2, B>(io: IO<E, A>, f: (exit: Exit<E, A>) => IO<E2, B>): IO<E2, B> {
+    // Continue immediately to the next instruction since it cannot fail
+    if (io.tag === Now.tag) {
+      return f(Either.Right(io.input))
+    }
+
+    if (io.tag === FromCause.tag) {
+      return f(Either.Left(io.input))
+    }
+
     return new AttemptIO([io, f])
   }
 }

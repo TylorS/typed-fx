@@ -108,11 +108,19 @@ export class MapFx<R, E, A, B> extends Instr<R, E, B> {
     const prev = fx.instr
 
     if (prev.tag === 'Now') {
-      return new Now(f(prev.value), __trace) as Fx<R, E, B>
+      return Now.make(f(prev.value), __trace) as Fx<R, E, B>
     }
 
     if (prev.tag === 'Map') {
-      return new MapFx(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace)
+      return MapFx.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace)
+    }
+
+    if (prev.tag === 'FlatMap') {
+      return FlatMap.make(
+        prev.fx as Fx<any, any, any>,
+        (a) => MapFx.make(prev.f(a), f, __trace),
+        prev.__trace,
+      )
     }
 
     return new MapFx(fx, f, __trace)
@@ -142,11 +150,19 @@ export class FlatMap<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
     }
 
     if (prev.tag === 'Map') {
-      return new FlatMap(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace) as Fx<
+      return FlatMap.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace) as Fx<
         R | R2,
         E | E2,
         B
       >
+    }
+
+    if (prev.tag === 'FlatMap') {
+      return FlatMap.make(
+        prev.fx as Fx<any, any, any>,
+        (a) => FlatMap.make(prev.f(a), f, __trace),
+        prev.__trace,
+      )
     }
 
     return new FlatMap(fx, f, __trace) as Fx<R | R2, E | E2, B>

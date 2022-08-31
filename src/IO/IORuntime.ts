@@ -38,52 +38,45 @@ export class IORuntime<E, A> {
   }
 
   protected continueWith(a: any): void {
-    const frame = this._stackFrames.pop()
+    let frame = this._stackFrames.pop()
 
-    if (!frame) {
-      return this.done(Right(a))
+    while (frame) {
+      const tag = frame.tag
+      if (tag === 'Value') {
+        this._instr = Maybe.Just(frame.f(a))
+        return
+      } else if (tag === 'Exit') {
+        this._instr = Maybe.Just(frame.f(Right(a)))
+        return
+      } else if (tag === 'Map') {
+        return (a = frame.f(a))
+      }
+
+      frame = this._stackFrames.pop()
     }
 
-    const tag = frame.tag
-
-    if (tag === 'Value') {
-      this._instr = Maybe.Just(frame.f(a))
-
-      return
-    }
-
-    if (tag === 'Map') {
-      return this.continueWith(frame.f(a))
-    }
-
-    if (tag === 'Exit') {
-      this._instr = Maybe.Just(frame.f(Right(a)))
-      return
-    }
-
-    this.continueWith(a)
+    return this.done(Right(a))
   }
 
-  protected continueWithCause(a: Cause.Cause<any>) {
-    const frame = this._stackFrames.pop()
+  protected continueWithCause(a: Cause.Cause<any>): void {
+    let frame = this._stackFrames.pop()
 
-    if (!frame) {
-      return this.done(Left(a))
+    while (frame) {
+      const tag = frame.tag
+
+      if (tag === 'Cause') {
+        this._instr = Maybe.Just(frame.f(a))
+        return
+      }
+
+      if (tag === 'Exit') {
+        this._instr = Maybe.Just(frame.f(Left(a)))
+        return
+      }
+      frame = this._stackFrames.pop()
     }
 
-    const tag = frame.tag
-
-    if (tag === 'Cause') {
-      this._instr = Maybe.Just((frame.f as any)(a))
-      return
-    }
-
-    if (tag === 'Exit') {
-      this._instr = Maybe.Just((frame.f as any)(Left(a)))
-      return
-    }
-
-    this.continueWithCause(a)
+    this.done(Left(a))
   }
 
   protected done(exit: Exit<any, any>) {

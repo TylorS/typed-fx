@@ -160,9 +160,15 @@ testSuite(import.meta.url, () => {
       return IO.FlatMapIO.make(fib(n - 2), (a) => IO.MapIO.make(fib(n - 1), (b) => a + b))
     }
 
-    for (let i = 0; i < 25; ++i) {
-      await runBench(fib(25), 'Fib25')
+    const total = 25
+    let values = 0
+    console.time('Construct Fib25')
+    const program = fib(25)
+    console.timeEnd('Construct Fib25')
+    for (let i = 0; i < total; ++i) {
+      values += await runBench(program, 'Fib25')
     }
+    console.log(`(${total} runs) avg: ${values / total}ms`)
   })
 })
 
@@ -184,13 +190,14 @@ function runTest<E, A>(
 }
 
 function runBench<E, A>(io: IO.IO<E, A>, label: string) {
-  return new Promise((resolve) => {
+  return new Promise<number>((resolve) => {
     const runtime = new IORuntime(io, new IORefs(), SetTimeoutTimer())
-    runtime.addObserver((exit) => {
-      console.timeEnd(label)
-      resolve(exit)
+    runtime.addObserver(() => {
+      const elapsed = performance.now() - start
+      resolve(elapsed)
+      console.log(`${label}: ${elapsed}ms`)
     })
-    console.time(label)
+    const start = performance.now()
     runtime.run()
   })
 }
