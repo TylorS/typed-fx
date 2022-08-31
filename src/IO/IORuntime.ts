@@ -73,6 +73,7 @@ export class IORuntime<E, A> {
         this._instr = Maybe.Just(frame.f(Left(a)))
         return
       }
+
       frame = this._stackFrames.pop()
     }
 
