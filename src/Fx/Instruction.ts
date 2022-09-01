@@ -9,6 +9,7 @@ import { Cause } from '@/Cause/Cause.js'
 import type { Env } from '@/Env/Env.js'
 import type { Live } from '@/Fiber/Fiber.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
+import { FiberId } from '@/FiberId/FiberId.js'
 import type { FiberRef } from '@/FiberRef/FiberRef.js'
 import type { Future } from '@/Future/index.js'
 import type { Layer } from '@/Layer/Layer.js'
@@ -145,24 +146,12 @@ export class FlatMap<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
   ): Fx<R | R2, E | E2, B> {
     const prev = fx.instr
 
-    if (prev.tag === 'Now') {
-      return f(prev.value) as Fx<R | R2, E | E2, B>
-    }
-
     if (prev.tag === 'Map') {
       return FlatMap.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace) as Fx<
         R | R2,
         E | E2,
         B
       >
-    }
-
-    if (prev.tag === 'FlatMap') {
-      return FlatMap.make(
-        prev.fx as Fx<any, any, any>,
-        (a) => FlatMap.make(prev.f(a), f, __trace),
-        prev.__trace,
-      )
     }
 
     return new FlatMap(fx, f, __trace) as Fx<R | R2, E | E2, B>
@@ -189,16 +178,8 @@ export class Match<R, E, A, R2, E2, B, R3, E3, C> extends Instr<R | R2 | R3, E2 
   ): Fx<R | R2 | R3, E2 | E3, B | C> {
     const prev = fx.instr
 
-    if (prev.tag === 'Now') {
-      return onRight(prev.value) as Fx<R | R2 | R3, E2 | E3, B | C>
-    }
-
-    if (prev.tag === 'FromCause') {
-      return onLeft(prev.cause) as Fx<R | R2 | R3, E2 | E3, B | C>
-    }
-
     if (prev.tag === 'Map') {
-      return new Match(prev.fx as Fx<any, any, any>, onLeft, flow(prev.f, onRight), __trace) as any
+      return Match.make(prev.fx as Fx<any, any, any>, onLeft, flow(prev.f, onRight), __trace) as any
     }
 
     return new Match(fx, onLeft, onRight, __trace) as any
@@ -329,10 +310,11 @@ export class SetInterruptStatus<R, E, A> extends Instr<R, E, A> {
   }
 }
 
-export class GetFiberContext extends Instr<never, never, FiberContext> {
+export class GetFiberContext extends Instr<never, never, FiberContext<FiberId.Live>> {
   readonly tag = 'GetFiberContext'
 
-  static make = (__trace?: string): Fx<never, never, FiberContext> => new GetFiberContext(__trace)
+  static make = (__trace?: string): Fx<never, never, FiberContext<FiberId.Live>> =>
+    new GetFiberContext(__trace)
 }
 
 export class GetInterruptStatus extends Instr<never, never, boolean> {
@@ -430,13 +412,17 @@ export class FiberRefLocally<R, E, A, R2, E2, B> extends Instr<R2, E2, B> {
 export class Fork<R, E, A> extends Instr<R, never, Live<E, A>> {
   readonly tag = 'Fork'
 
-  constructor(readonly fx: Fx<R, E, A>, readonly context: FiberContext, readonly __trace?: string) {
+  constructor(
+    readonly fx: Fx<R, E, A>,
+    readonly context: FiberContext<FiberId.Live>,
+    readonly __trace?: string,
+  ) {
     super(__trace)
   }
 
   static make<R, E, A>(
     fx: Fx<R, E, A>,
-    context: FiberContext,
+    context: FiberContext<FiberId.Live>,
     __trace?: string,
   ): Fx<R, never, Live<E, A>> {
     return new Fork(fx, context, __trace) as any

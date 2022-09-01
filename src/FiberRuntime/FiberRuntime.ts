@@ -80,7 +80,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
     Wait: this.processWait.bind(this),
   }
 
-  constructor(readonly fx: F, readonly context: FiberContext = FiberContext()) {
+  constructor(readonly fx: F, readonly context: FiberContext<FiberId.Live> = FiberContext()) {
     // All Fibers start Suspended
     this._status = Suspended(this.getInterruptStatus)
 

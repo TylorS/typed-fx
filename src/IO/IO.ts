@@ -19,7 +19,7 @@ export type IO<E, A> =
   | GetIORefs
   | WaitIO<E, A>
 
-export abstract class Instr<I, E, A> {
+export abstract class Instr<out I, out E, out A> {
   readonly __IO__!: {
     readonly _E: () => E
     readonly _A: () => A
@@ -104,11 +104,6 @@ export class MapIO<out E, in out A, out B> extends instr('MapIO')<
   B
 > {
   static make<E, A, B>(io: IO<E, A>, f: (a: A) => B, __trace?: string): IO<E, B> {
-    // Immediately reduce the mapped value
-    if (io.tag === Now.tag) {
-      return Now.make(f(io.input))
-    }
-
     /**
      * Compose 2 mapped IO's together
      */
@@ -135,11 +130,6 @@ export class FlatMapIO<out E, in out A, out E2, out B> extends instr('FlatMapIO'
   B
 > {
   static make<E, A, E2, B>(io: IO<E, A>, f: (a: A) => IO<E2, B>, __trace?: string): IO<E | E2, B> {
-    // Immediately reduce to the next instruction.
-    if (io.tag === Now.tag) {
-      return f(io.input)
-    }
-
     // FlatMap cannot handle FromCause instructions
     if (io.tag === FromCause.tag) {
       return io
@@ -148,16 +138,6 @@ export class FlatMapIO<out E, in out A, out E2, out B> extends instr('FlatMapIO'
     // Removes 1 IOFrame from the stack
     if (io.tag === MapIO.tag) {
       return FlatMapIO.make(io.input[0], flow(io.input[1], f), __trace)
-    }
-
-    // Removes 1 IOFrame from the immediate stack, attempting to perform
-    // IOFrame optimizations on the resulting IO.
-    if (io.tag === FlatMapIO.tag) {
-      return FlatMapIO.make(
-        io.input[0],
-        (a) => FlatMapIO.make(io.input[1](a), f, __trace),
-        io.__trace,
-      )
     }
 
     return new FlatMapIO([io, f], __trace)
@@ -177,11 +157,6 @@ export class OrElseIO<in out E, out A, out E2, out B> extends instr('OrElseIO')<
     f: (cause: Cause<E>) => IO<E2, B>,
     __trace?: string,
   ): IO<E2, A | B> {
-    // Continue immediately to the next instruction.
-    if (io.tag === FromCause.tag) {
-      return f(io.input)
-    }
-
     // Removes 1 IOFrame from the stack since it cannot fail
     if (io.tag === Now.tag) {
       return io
@@ -209,15 +184,6 @@ export class AttemptIO<in out E, in out A, out E2, out B> extends instr('Attempt
     f: (exit: Exit<E, A>) => IO<E2, B>,
     __trace?: string,
   ): IO<E2, B> {
-    // Continue immediately to the next instruction since it cannot fail
-    if (io.tag === Now.tag) {
-      return f(Either.Right(io.input))
-    }
-
-    if (io.tag === FromCause.tag) {
-      return f(Either.Left(io.input))
-    }
-
     return new AttemptIO([io, f], __trace)
   }
 }

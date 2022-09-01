@@ -30,11 +30,14 @@ export function gracefulShutdown(
       parent(fiber, fx)
 
       if (!id) {
+        // Force the process to stay alive, even when fibers are idle.
         id = setTimeout(() => {
           id = undefined
         }, DELAY)
 
-        process.addListener('SIGTERM', gracefulExit)
+        // Add a listener to the process to gracefully exit when the process is killed.
+        process.addListener('SIGTERM', () => gracefulExit())
+        process.addListener('SIGINT', () => gracefulExit())
       }
     },
     onEnd: (parent) => (fiber, exit) => {
@@ -44,6 +47,7 @@ export function gracefulShutdown(
         clearTimeout(id)
         id = undefined
         process.removeListener('SIGTERM', gracefulExit)
+        process.removeListener('SIGINT', gracefulExit)
       }
     },
   })

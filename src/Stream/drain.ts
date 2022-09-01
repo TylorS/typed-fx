@@ -4,6 +4,7 @@ import { Stream } from './Stream.js'
 
 import { Fiber } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
+import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberRef } from '@/FiberRef/FiberRef.js'
 import { update } from '@/FiberRef/operations.js'
 import * as Fx from '@/Fx/index.js'
@@ -26,7 +27,7 @@ export function drain<R, E, A>(
 export function fork<R, E, A, E2 = never>(
   stream: Stream<R, E, A>,
   sink: Sink<E | E2, A>,
-  context: FiberContext,
+  context: FiberContext<FiberId.Live>,
 ): Fx.Fx<R | Scheduler, never, Fiber<E | E2, A>> {
   return Fx.asks(Scheduler)((scheduler) => stream.fork(sink, scheduler, context))
 }

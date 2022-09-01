@@ -1,5 +1,4 @@
 import { Lazy, Variance, flow, pipe } from 'hkt-ts'
-import { Branded } from 'hkt-ts/Branded'
 import { First } from 'hkt-ts/Typeclass/Associative'
 
 import type { Future } from './Future.js'
@@ -7,8 +6,9 @@ import type { Future } from './Future.js'
 import type { Cause } from '@/Cause/index.js'
 import { Exit, makeSequentialAssociative } from '@/Exit/Exit.js'
 import * as IO_ from '@/IO/IO.js'
+import { Tagged } from '@/Tagged/index.js'
 
-export type Fx<R, E, A> = FxBranded<R, IO_.IO<E, A>>
+export type Fx<R, E, A> = FxTagged<R, IO_.IO<E, A>>
 
 export type IO<E, A> = Fx<never, E, A>
 export type RIO<R, A> = Fx<R, never, A>
@@ -20,8 +20,8 @@ export type ErrorsOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _E : neve
 export type OutputOf<T> = T extends Fx<infer _R, infer _E, infer _A> ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export type FxBranded<R, T> = Branded<FxBrand<R>, T>
-export type FxBrand<R> = { readonly Fx: Variance.Covariant<R> }
+export type FxTagged<R, T> = Tagged<FxTag<R>, T>
+export type FxTag<R> = { readonly Fx: Variance.Covariant<R> }
 
 const concatExitSeq = makeSequentialAssociative<any, any>(First).concat
 

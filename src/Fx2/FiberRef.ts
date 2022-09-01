@@ -1,14 +1,14 @@
 import { Maybe, pipe } from 'hkt-ts'
-import { BRAND } from 'hkt-ts/Branded'
 import { Just } from 'hkt-ts/Maybe'
 import { Second } from 'hkt-ts/Typeclass/Associative'
 
 import * as Fx from './Fx.js'
 
 import { IORef, IORefs } from '@/IO/IORefs.js'
+import { TAG } from '@/Tagged/index.js'
 
-export class FiberRef<R, E, A> extends IORef<E, A> implements Fx.FxBranded<R, IORef<E, A>> {
-  readonly [BRAND]!: (_: Fx.FxBrand<R>) => void
+export class FiberRef<R, E, A> extends IORef<E, A> implements Fx.FxTagged<R, IORef<E, A>> {
+  readonly [TAG]!: () => Fx.FxTag<R>
 
   constructor(
     readonly initial: Fx.Fx<R, E, A>,
@@ -56,7 +56,7 @@ export function getFiberRef<R, E, A>(fiberRef: FiberRef<R, E, A>): Fx.Fx<R, E, A
               fiberRef.initial,
               Fx.tapFx((a) => Fx.fromLazy(() => IORefs.set(ioRefs, fiberRef, a))),
             ),
-          (stack) => Fx.now(stack.value as A) as Fx.Fx<R, E, A>,
+          (stack) => Fx.now(stack.value as A),
         ),
       ),
     ),

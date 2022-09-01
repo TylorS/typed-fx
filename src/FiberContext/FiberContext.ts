@@ -10,8 +10,8 @@ import { Closeable } from '@/Scope/Closeable.js'
 import { LocalScope } from '@/Scope/LocalScope.js'
 import { None, Supervisor } from '@/Supervisor/Supervisor.js'
 
-export interface FiberContext {
-  readonly id: FiberId.Live
+export interface FiberContext<Id extends FiberId.FiberId = FiberId.FiberId> {
+  readonly id: Id
   readonly platform: Platform
   readonly fiberRefs: FiberRefs
   readonly scope: Closeable
@@ -19,13 +19,17 @@ export interface FiberContext {
   readonly logger: Logger<string, any>
   readonly parent: Maybe<FiberContext>
 
-  readonly fork: (overrides?: Partial<FiberContext>) => FiberContext
+  readonly fork: <Id2 extends FiberId.FiberId = FiberId.Live>(
+    overrides?: Partial<FiberContext<Id2>>,
+  ) => FiberContext<Id2>
 }
 
-export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): FiberContext {
+export function FiberContext<Id extends FiberId.FiberId = FiberId.Live>(
+  params: Partial<Omit<FiberContext<Id>, 'fork'>> = {},
+): FiberContext<Id> {
   const {
     platform = Platform(),
-    id = FiberId.Live(platform),
+    id = FiberId.Live(platform) as Id,
     fiberRefs = FiberRefs(),
     scope = new LocalScope(SequentialStrategy),
     supervisor = None,
@@ -33,7 +37,7 @@ export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): 
     parent = Nothing,
   } = params
 
-  const context: FiberContext = {
+  const context: FiberContext<Id> = {
     id,
     platform,
     fiberRefs,
@@ -41,18 +45,19 @@ export function FiberContext(params: Partial<Omit<FiberContext, 'fork'>> = {}): 
     supervisor,
     logger,
     parent,
-    fork: (overrides?: Partial<FiberContext>) => fork(context, overrides),
+    fork: ((overrides?: Partial<FiberContext>) =>
+      fork(context, overrides)) as FiberContext<Id>['fork'],
   }
 
   return context
 }
 
-export function fork(
-  context: FiberContext,
-  overrides?: Partial<Omit<FiberContext, 'fork'>>,
-): FiberContext {
+export function fork<Id extends FiberId.FiberId = FiberId.Live, Id2 extends FiberId.FiberId = Id>(
+  context: FiberContext<Id>,
+  overrides?: Partial<Omit<FiberContext<Id2>, 'fork'>>,
+): FiberContext<Id2> {
   return FiberContext({
-    id: overrides?.id ?? FiberId.Live(context.platform),
+    id: (overrides?.id ?? FiberId.Live(context.platform)) as Id2,
     platform: overrides?.platform ?? context.platform.fork(),
     fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
     scope: overrides?.scope ?? context.scope.fork(),

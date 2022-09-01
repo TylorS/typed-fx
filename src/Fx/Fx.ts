@@ -349,7 +349,7 @@ export const either =
     EitherFx.make(first, second, __trace) as Fx<R | R2, E | E2, Either.Either<A, B>>
 
 export const forkInContext =
-  (context: FiberContext, __trace?: string) =>
+  (context: FiberContext<FiberId.Live>, __trace?: string) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber.Live<E, A>> =>
     Fork.make(fx, context, __trace)
 

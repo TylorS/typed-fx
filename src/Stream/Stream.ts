@@ -1,5 +1,6 @@
 import { Live } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
+import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/Fx.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
@@ -8,7 +9,7 @@ export interface Stream<R, E, A> {
   readonly fork: <E2>(
     sink: Sink<E | E2, A>,
     scheduler: Scheduler,
-    context: FiberContext,
+    context: FiberContext<FiberId.Live>,
   ) => Fx.RIO<R, Live<E | E2, any>>
 }
 

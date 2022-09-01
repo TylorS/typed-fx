@@ -27,12 +27,16 @@ export class IORuntime<E, A> {
   }
 
   public run() {
+    try {
+      this.loop()
+    } catch (e) {
+      this.continueWithCause(Cause.unexpected(e))
+    }
+  }
+
+  protected loop() {
     while (Maybe.isJust(this._instr)) {
-      try {
-        ;(this[this._instr.value.tag] as (i: any) => void)(this._instr.value)
-      } catch (e) {
-        this.continueWithCause(Cause.unexpected(e))
-      }
+      ;(this[this._instr.value.tag] as (i: IO<any, any>) => void)(this._instr.value)
     }
   }
 
@@ -48,7 +52,7 @@ export class IORuntime<E, A> {
         this._instr = Maybe.Just(frame.f(Right(a)))
         return
       } else if (tag === 'Map') {
-        return (a = frame.f(a))
+        a = frame.f(a)
       }
 
       frame = this._stackFrames.pop()

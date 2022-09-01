@@ -8,12 +8,12 @@ import { MainPlatform } from '@/Fx/run.js'
 import { Runtime } from '@/Runtime/Runtime.js'
 import { GlobalScope } from '@/Scope/GlobalScope.js'
 
-export const RootFibers = Atomic<ReadonlyMap<FiberId.Live, AnyLiveFiber>>(new Map())
-export const NodeSupervisor = gracefulShutdown(RootFibers)
+export const NodeFibers = Atomic<ReadonlyMap<FiberId.Live, AnyLiveFiber>>(new Map())
+export const NodeSupervisor = gracefulShutdown(NodeFibers)
 export const NodeRuntime = Runtime(
   FiberContext({
     platform: MainPlatform,
-    id: FiberId.None as any,
+    id: FiberId.None,
     scope: GlobalScope,
     supervisor: NodeSupervisor,
   }),

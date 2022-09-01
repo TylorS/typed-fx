@@ -9,7 +9,6 @@ import { IORuntime } from './IORuntime.js'
 
 import * as Cause from '@/Cause/Cause.js'
 import * as Exit from '@/Exit/Exit.js'
-import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer.js'
 import { testSuite } from '@/_internal/suite.js'
 
 testSuite(import.meta.url, () => {
@@ -177,7 +176,7 @@ function runTest<E, A>(
   f: (exit: Exit.Exit<E, A>) => void,
   done: (error?: unknown) => void,
 ) {
-  const runtime = new IORuntime(io, new IORefs(), SetTimeoutTimer())
+  const runtime = new IORuntime(io, new IORefs())
   runtime.addObserver((exit) => {
     try {
       f(exit)
@@ -191,7 +190,7 @@ function runTest<E, A>(
 
 function runBench<E, A>(io: IO.IO<E, A>, label: string) {
   return new Promise<number>((resolve) => {
-    const runtime = new IORuntime(io, new IORefs(), SetTimeoutTimer())
+    const runtime = new IORuntime(io, new IORefs())
     runtime.addObserver(() => {
       const elapsed = performance.now() - start
       resolve(elapsed)

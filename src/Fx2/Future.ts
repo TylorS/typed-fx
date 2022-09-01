@@ -1,12 +1,9 @@
-import { Branded } from 'hkt-ts/Branded'
-
-import type { Fx } from './Fx.js'
+import type { Fx, FxTagged } from './Fx.js'
 
 import { Disposable } from '@/Disposable/Disposable.js'
 import * as IOFuture from '@/IO/IOFuture.js'
 
-export interface Future<R, E, A>
-  extends Branded<{ readonly Resources: R }, IOFuture.IOFuture<E, A>> {}
+export interface Future<R, E, A> extends FxTagged<R, IOFuture.IOFuture<E, A>> {}
 
 export function addObserver<R, E, A>(
   future: Future<R, E, A>,

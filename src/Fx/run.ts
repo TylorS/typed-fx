@@ -17,7 +17,7 @@ export const MainPlatform = Platform()
 export const MainRuntime = Runtime(
   FiberContext({
     platform: MainPlatform,
-    id: FiberId.None as any,
+    id: FiberId.None,
     scope: GlobalScope,
     supervisor: MainSupervisor,
   }),

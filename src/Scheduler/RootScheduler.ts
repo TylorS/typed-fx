@@ -7,6 +7,7 @@ import { Disposable } from '@/Disposable/Disposable.js'
 import { Env } from '@/Env/Env.js'
 import { Live } from '@/Fiber/index.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
+import { FiberId } from '@/FiberId/FiberId.js'
 import { CurrentEnv } from '@/FiberRef/builtins.js'
 import { setFiberRef } from '@/FiberRefs/FiberRefs.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
@@ -45,7 +46,7 @@ class RootSchedulerImpl implements Scheduler {
   readonly asap: Scheduler['asap'] = <R, E, A>(
     fx: Fx<R, E, A>,
     env: Env<R>,
-    context: FiberContext,
+    context: FiberContext<FiberId.Live>,
   ): Live<E, A> => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
@@ -61,7 +62,7 @@ class RootSchedulerImpl implements Scheduler {
     fx: Fx<R, E, A>,
     schedule: Schedule,
     env: Env<R>,
-    context: FiberContext,
+    context: FiberContext<FiberId.Live>,
   ) => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 

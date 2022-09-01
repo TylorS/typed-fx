@@ -8,6 +8,7 @@ import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 
 import { CauseError } from '@/Cause/CauseError.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
+import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
 import { Fx, IO, fork, fromLazy } from '@/Fx/Fx.js'
@@ -87,7 +88,10 @@ const stateCloseable = (_state: ScopeState): Closeable => {
   return scope
 }
 
-function runTest<E, A>(io: IO<E, A>, context: FiberContext = FiberContext()): Promise<A> {
+function runTest<E, A>(
+  io: IO<E, A>,
+  context: FiberContext<FiberId.Live> = FiberContext(),
+): Promise<A> {
   return new Promise((resolve, reject) => {
     const runtime = new FiberRuntime(io, context)
     runtime.addObserver((exit) =>
