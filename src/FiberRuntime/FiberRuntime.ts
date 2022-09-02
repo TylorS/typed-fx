@@ -186,7 +186,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
     }
 
     this.addCustomTrace(instr.__trace)
-
     this.withSupervisor((s) => s.onInstruction(this, instr))
     ;(this._processors[instr.tag] as (i: typeof instr) => void)(instr)
   }
