@@ -29,7 +29,9 @@ export const Console: Logger<string, void> = {
       ].join('; ')
 
       logWithLevel(
-        trace.tag !== 'EmptyTrace' ? message + '\n' + Trace.debug(trace) : message,
+        trace.tag !== 'EmptyTrace'
+          ? message + '\n    ' + Trace.debug(trace).replaceAll('\n', '\n    ')
+          : message,
         level,
       )
     }),
@@ -66,9 +68,8 @@ function logWithLevel(message: string, level: LogLevel) {
     case LogLevel.Info:
       return console.info(message)
     case LogLevel.Log:
-      return console.log(message)
     case LogLevel.Trace:
-      return console.trace(message)
+      return console.log(message)
     case LogLevel.Debug:
       return console.debug(message)
   }

@@ -8,7 +8,7 @@ import { FiberRef, make } from './FiberRef.js'
 import type { Env } from '@/Env/Env.js'
 import { Live } from '@/Fiber/Fiber.js'
 import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
-import { Fx, Of, getFiberContext, map, now } from '@/Fx/Fx.js'
+import { Fx, Of, fromLazy, getFiberContext, map, now } from '@/Fx/Fx.js'
 import { FromCause } from '@/Fx/Instruction.js'
 import { join } from '@/Fx/join.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
@@ -16,7 +16,7 @@ import { LogAnnotation } from '@/Logger/LogAnnotation.js'
 import { LogSpan } from '@/Logger/LogSpan.js'
 import { Semaphore } from '@/Semaphore/Semaphore.js'
 import { Service } from '@/Service/Service.js'
-import { EmptyTrace, Trace } from '@/Trace/Trace.js'
+import { Trace } from '@/Trace/Trace.js'
 
 export const CurrentEnv = make(
   pipe(
@@ -38,9 +38,12 @@ export const CurrentInterruptStatus = make(now(true), {
   join: identity, // Always keep the parent Fiber's interrupt status
 })
 
-export const CurrentTrace = make(now<Trace>(EmptyTrace), {
-  join: identity, // Always keep the parent Fiber's trace
-})
+export const CurrentTrace = make(
+  fromLazy<Trace>(() => Trace.runtime(new Error())),
+  {
+    join: identity, // Always keep the parent Fiber's trace
+  },
+)
 
 export const Layers = FiberRef.make(
   now(

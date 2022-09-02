@@ -680,8 +680,12 @@ export class FiberRuntime<F extends Fx.AnyFx>
     return pipe(
       this.context.fiberRefs,
       FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
-      Maybe.map((stack) => Trace.getTraceUpTo(stack, this.context.platform.maxTraceCount)),
-      Maybe.getOrElse(() => Trace.EmptyTrace),
+      Maybe.map((stackTrace) => {
+        const trimmed = Trace.getTrimmedTrace(Cause.Empty, stackTrace)
+
+        return Trace.getTraceUpTo(stackTrace.push(trimmed), this.context.platform.maxTraceCount)
+      }),
+      Maybe.getOrElse(() => Trace.Trace.runtime(new Error(), this.getCurrentTrace)),
     )
   }
 

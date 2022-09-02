@@ -1,10 +1,10 @@
-import { annotate, log, span } from '@/Fx/logging.js'
+import { annotate, logTrace, span } from '@/Fx/logging.js'
 import { runMain } from '@/Fx/run.js'
 import { testSuite } from '@/_internal/suite.js'
 
 testSuite(import.meta.url, () => {
   it('allows logging to the console', async () => {
-    const test = span('foo')(annotate('bar', 'baz')(log('test')))
+    const test = span('foo')(annotate('bar', 'baz')(logTrace('test')))
 
     await runMain(test)
   })
