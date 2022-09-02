@@ -2,7 +2,7 @@ import { flow, pipe } from 'hkt-ts'
 import { Left, Right } from 'hkt-ts/Either'
 
 import { Cause } from '@/Cause/Cause.js'
-import { Fx, IO, getEnv, provide, unit } from '@/Fx/Fx.js'
+import { Fx, IO, flatMap, getEnv, provide, unit } from '@/Fx/Fx.js'
 import { Closeable } from '@/Scope/Closeable.js'
 
 export interface Sink<E, A> {
@@ -49,15 +49,29 @@ export function makeDrain<
 ): Fx<R2 | R3 | R4, never, Sink<E | E2 | E3 | E4, A>> {
   return Fx(function* () {
     const env = yield* getEnv<R2 | R3 | R4>()
-    const drain = new Drain<E, A>(scope)
+    const drain = new Drain<E | E2 | E3 | E4, A>(scope)
 
     type O = Sink<E | E2 | E3 | E4, A>
 
     // TODO: Should drain always be called for error + end?
     const sink: O = {
       event: (fx.event ? flow(fx.event, provide(env)) : drain.event) as O['event'],
-      error: (fx.error ? flow(fx.error, provide(env)) : drain.error) as O['error'],
-      end: (fx.end ? pipe(fx.end, provide(env)) : drain.end) as O['end'],
+      error: (fx.error
+        ? (a) =>
+            pipe(
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              fx.error!(a as any),
+              provide(env),
+              flatMap(() => drain.error(a)),
+            )
+        : drain.error) as O['error'],
+      end: (fx.end
+        ? pipe(
+            fx.end,
+            provide(env),
+            flatMap(() => drain.end),
+          )
+        : drain.end) as O['end'],
     }
 
     return sink
