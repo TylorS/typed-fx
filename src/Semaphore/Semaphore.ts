@@ -1,6 +1,7 @@
 import { constant } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
+import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
 import { MutableFutureQueue } from '@/Future/MutableFutureQueue.js'
 import { wait } from '@/Future/wait.js'
 import { Fx, Of, fromLazy, unit } from '@/Fx/Fx.js'
@@ -8,24 +9,24 @@ import { fiberScoped, managed, scoped } from '@/Fx/scoped.js'
 
 export class Semaphore {
   protected waiting = MutableFutureQueue<never, never, void>()
-  protected running = 0
+  protected running = AtomicCounter()
 
   constructor(readonly maxPermits: NonNegativeInteger) {}
 
   // Retrieve the number of permits still available
   get available(): NonNegativeInteger {
-    return NonNegativeInteger(Math.max(0, this.maxPermits - this.running))
+    return NonNegativeInteger(Math.max(0, this.maxPermits - this.running.get()))
   }
 
   get acquired(): NonNegativeInteger {
-    return NonNegativeInteger(this.running)
+    return this.running.get()
   }
 
   readonly prepare = fromLazy(() => {
     if (this.available > 0) {
       return new Acquisition(
         fromLazy(() => {
-          this.running++
+          increment(this.running)
         }),
         this.release,
       )
@@ -39,7 +40,7 @@ export class Semaphore {
       Fx(function* () {
         yield* wait(future)
 
-        that.running++
+        increment(that.running)
       }),
       this.release,
     )
@@ -48,7 +49,7 @@ export class Semaphore {
   })
 
   protected release = fromLazy(() => {
-    this.running = Math.max(0, this.running - 1)
+    decrement(this.running)
 
     if (this.waiting.size() > 0) {
       this.waiting.next(unit)
