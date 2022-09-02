@@ -1,4 +1,4 @@
-import { Either } from 'hkt-ts/Either'
+import { Either, Left, Right } from 'hkt-ts/Either'
 import { Maybe } from 'hkt-ts/Maybe'
 import { Lazy, flow } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
@@ -108,20 +108,19 @@ export class MapFx<R, E, A, B> extends Instr<R, E, B> {
   static make<R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B, __trace?: string): Fx<R, E, B> {
     const prev = fx.instr
 
+    // Eagerly evaluate the function to runtime cost. Stack unsafe.
     if (prev.tag === 'Now') {
-      return Now.make(f(prev.value), __trace) as Fx<R, E, B>
+      return Now.make(f(prev.value), __trace)
     }
 
+    // Map cannot process failures
+    if (prev.tag === 'FromCause') {
+      return prev
+    }
+
+    // Fuse together multiple maps.
     if (prev.tag === 'Map') {
       return MapFx.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace)
-    }
-
-    if (prev.tag === 'FlatMap') {
-      return FlatMap.make(
-        prev.fx as Fx<any, any, any>,
-        (a) => MapFx.make(prev.f(a), f, __trace),
-        prev.__trace,
-      )
     }
 
     return new MapFx(fx, f, __trace)
@@ -146,15 +145,22 @@ export class FlatMap<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
   ): Fx<R | R2, E | E2, B> {
     const prev = fx.instr
 
-    if (prev.tag === 'Map') {
-      return FlatMap.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace) as Fx<
-        R | R2,
-        E | E2,
-        B
-      >
+    // Eearly evaluate the chain. Stack unsafe.
+    if (prev.tag === 'Now') {
+      return f(prev.value)
     }
 
-    return new FlatMap(fx, f, __trace) as Fx<R | R2, E | E2, B>
+    // Flatmap cannot process failures
+    if (prev.tag === 'FromCause') {
+      return prev
+    }
+
+    // Fuse together Map + FlatMap into a single FlatMap.
+    if (prev.tag === 'Map') {
+      return FlatMap.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace)
+    }
+
+    return new FlatMap(fx, f, __trace)
   }
 }
 
@@ -178,8 +184,19 @@ export class Match<R, E, A, R2, E2, B, R3, E3, C> extends Instr<R | R2 | R3, E2 
   ): Fx<R | R2 | R3, E2 | E3, B | C> {
     const prev = fx.instr
 
+    // Eagerly evaluate the onRight chain. Stack unsafe.
+    if (prev.tag === 'Now') {
+      return onRight(prev.value)
+    }
+
+    // Eagerly evaluate the onLeft chain. Stack unsafe.
+    if (prev.tag === 'FromCause') {
+      return onLeft(prev.cause)
+    }
+
+    // Fuse together Map + Match
     if (prev.tag === 'Map') {
-      return Match.make(prev.fx as Fx<any, any, any>, onLeft, flow(prev.f, onRight), __trace) as any
+      return Match.make(prev.fx as Fx<any, any, any>, onLeft, flow(prev.f, onRight), __trace)
     }
 
     return new Match(fx, onLeft, onRight, __trace) as any
@@ -445,6 +462,14 @@ export class BothFx<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, readonly [
     second: Fx<R2, E2, B>,
     __trace?: string,
   ): Fx<R | R2, E | E2, readonly [A, B]> {
+    // Any Failures cannot be combined into a tuple of success values
+    if (first.instr.tag === 'FromCause') {
+      return first.instr
+    }
+    if (second.instr.tag === 'FromCause') {
+      return second.instr
+    }
+
     return new BothFx(first, second, __trace) as Fx<R | R2, E | E2, readonly [A, B]>
   }
 }
@@ -465,6 +490,26 @@ export class EitherFx<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, Either<A
     second: Fx<R2, E2, B>,
     __trace?: string,
   ): Fx<R | R2, E | E2, Either<A, B>> {
+    const fi = first.instr
+
+    if (fi.tag === 'Now') {
+      return Now.make(Left(fi.value), __trace)
+    }
+
+    const si = second.instr
+
+    if (si.tag === 'Now') {
+      return Now.make(Right(si.value), __trace)
+    }
+
+    if (fi.tag === 'FromCause') {
+      return fi
+    }
+
+    if (si.tag === 'FromCause') {
+      return si
+    }
+
     return new EitherFx(first, second, __trace) as any
   }
 }

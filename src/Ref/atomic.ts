@@ -6,12 +6,12 @@ import { Atomic } from '@/Atomic/Atomic.js'
 import { Fx, fromLazy, lazy, map } from '@/Fx/Fx.js'
 import { Layer } from '@/Layer/Layer.js'
 import { Lock, acquire } from '@/Semaphore/Semaphore.js'
-import { InstanceOf } from '@/Service/index.js'
+import { InstanceOf, Service } from '@/Service/index.js'
 
 export function atomic<REF extends AnyRef>(
   ref: REF,
 ): Layer<ResourcesOf<REF>, ErrorsOf<REF>, InstanceOf<REF>> {
-  const service = ref.id()
+  const service = ref.id() as Service<InstanceOf<REF>>
 
   return Layer(service, () =>
     Fx(function* () {
@@ -27,7 +27,7 @@ export function atomic<REF extends AnyRef>(
           locked,
         )
 
-      return new ref(get as any, modify) as any
+      return new ref(get, modify) as InstanceOf<REF>
     }),
   )
 }

@@ -406,20 +406,23 @@ export function Fx<G extends AnyGenerator>(
     return pipe(
       runFxGenerator(gen, gen.next()),
       // Allow running Gen.throw to attempt to use try/catch to handle any errors
-      orElseCause(
-        (cause) =>
-          (Cause.shouldRethrow(cause)
+      orElseCause((cause) => {
+        const error = getCauseError(cause)
+
+        return (
+          Cause.shouldRethrow(cause)
             ? pipe(
-                lazy(() => runFxGenerator(gen, gen.throw(getCauseError(cause)))),
+                lazy(() => runFxGenerator(gen, gen.throw(error))),
                 orElseCause((inner) =>
                   // Ensure the the most useful error is continued up the stack
-                  DeepEquals.equals(getCauseError(inner), getCauseError(cause))
+                  DeepEquals.equals(getCauseError(inner), error)
                     ? fromCause(cause)
                     : fromCause(Cause.sequential(cause, inner)),
                 ),
               )
-            : fromCause(cause)) as Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>>,
-      ),
+            : fromCause(cause)
+        ) as Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>>
+      }),
     )
   }, __trace) as Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>>
 }

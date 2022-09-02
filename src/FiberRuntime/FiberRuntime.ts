@@ -170,7 +170,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
     while (Maybe.isJust(this._current)) {
       try {
-        this.run(this._current.value)
+        this.step(this._current.value)
       } catch (e) {
         this.uncaughtException(e)
       }
@@ -179,7 +179,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
     this.suspended()
   }
 
-  protected run(instr: AnyInstruction) {
+  protected step(instr: AnyInstruction) {
     // Yield when too many synchronous operations have occurred
     if (decrement(this._opCountRemaining) === 0) {
       return this.yieldNow(instr)
