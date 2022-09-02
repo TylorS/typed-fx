@@ -21,6 +21,7 @@ import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
 import { Pending, addObserver, complete, wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/Fx.js'
 import { AnyInstruction } from '@/Fx/Instruction.js'
+import { join } from '@/Fx/join.js'
 import { closeOrWait } from '@/Scope/Closeable.js'
 import { Semaphore, acquireFiber } from '@/Semaphore/Semaphore.js'
 import { Stack } from '@/Stack/index.js'
@@ -331,28 +332,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processGetFiberRef(instr: Extract<AnyInstruction, { readonly tag: 'GetFiberRef' }>) {
-    const current = FiberRefs.maybeGetFiberRefValue(
-      instr.fiberRef as FiberRef.FiberRef<any, any, any>,
-    )(this.context.fiberRefs)
-
-    if (Maybe.isJust(current)) {
-      return this.continueWith(current.value)
-    }
-
-    this.pushFrame(
-      ValueFrame((a) =>
-        Fx.fromLazy(() => {
-          FiberRefs.setFiberRef(
-            instr.fiberRef as FiberRef.FiberRef<any, any, any>,
-            a,
-          )(this.context.fiberRefs)
-
-          return a
-        }),
-      ),
-    )
-
-    this._current = Maybe.Just(instr.fiberRef.initial.instr)
+    this.withFiberRef(instr.fiberRef, (s) => Fx.now(s.value))
   }
 
   protected processGetInterruptStatus(
@@ -384,30 +364,13 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected processModifyFiberRef(
     instr: Extract<AnyInstruction, { readonly tag: 'ModifyFiberRef' }>,
   ) {
-    const ref = instr.fiberRef as FiberRef.FiberRef<any, any, any>
-    const current = FiberRefs.maybeGetFiberRefValue(ref)(this.context.fiberRefs)
+    this.withFiberRef(instr.fiberRef, (stack) => {
+      const [b, a] = instr.modify(stack.value)
 
-    if (Maybe.isJust(current)) {
-      const [b, a] = instr.modify(current.value)
+      FiberRefs.setFiberRef(instr.fiberRef, a)(this.context.fiberRefs)
 
-      FiberRefs.setFiberRef(ref, a)(this.context.fiberRefs)
-
-      return this.continueWith(b)
-    }
-
-    this.pushFrame(
-      ValueFrame((i) =>
-        Fx.fromLazy(() => {
-          const [b, a] = instr.modify(i)
-
-          FiberRefs.setFiberRef(ref, a)(this.context.fiberRefs)
-
-          return b
-        }),
-      ),
-    )
-
-    this._current = Maybe.Just(instr.fiberRef.initial.instr)
+      return Fx.now(b)
+    })
   }
 
   protected processNow(instr: Extract<AnyInstruction, { readonly tag: 'Now' }>) {
@@ -670,22 +633,46 @@ export class FiberRuntime<F extends Fx.AnyFx>
     ref: FiberRef.FiberRef<R, E, A>,
     f: (a: Stack<A>) => Fx.Fx<R2, E2, B>,
   ): void {
-    this._current = pipe(
-      this.context.fiberRefs.locals.get().get(ref),
-      Maybe.map(Fx.now),
-      Maybe.orElse(() =>
+    const fiberRefs = this.context.fiberRefs
+    const currentValue = fiberRefs.locals.get().get(ref)
+
+    if (Maybe.isJust(currentValue)) {
+      this._current = Maybe.Just(f(currentValue.value).instr)
+      return
+    }
+
+    const initializing = fiberRefs.initializing.get()
+    const initializingFiber = initializing.get(ref)
+
+    if (Maybe.isJust(initializingFiber)) {
+      this._current = Maybe.Just(
         pipe(
-          ref.initial,
-          Fx.flatMap((a) =>
-            pipe(
-              ref,
-              Fx.modifyFiberRef(() => [new Stack(a), a]),
-            ),
-          ),
-          Maybe.Just,
+          (initializingFiber.value as Fiber.Live<E, A>).exit,
+          Fx.flatMap(Fx.fromExit),
+          Fx.flatMap((a) => f(new Stack(a))),
+        ).instr,
+      )
+      return
+    }
+
+    this._current = Maybe.Just(
+      pipe(
+        Fx.forkInContext(this.context.fork({ fiberRefs: this.context.fiberRefs }))(ref.initial),
+        Fx.tap((fiber) =>
+          Fx.fromLazy(() => fiberRefs.initializing.modify((a) => [null, a.set(ref, fiber)])),
         ),
-      ),
-      Maybe.map((fx) => pipe(fx as Fx.AnyFx, Fx.flatMap(f)).instr),
+        Fx.flatMap(join),
+        Fx.ensuring((exit) =>
+          Fx.fromLazy(() => {
+            fiberRefs.initializing.modify((a) => [null, a.remove(ref)])
+
+            if (Either.isRight(exit)) {
+              FiberRefs.setFiberRef(ref, exit.right)(this.context.fiberRefs)
+            }
+          }),
+        ),
+        Fx.flatMap((a) => f(new Stack(a))),
+      ).instr,
     )
   }
 

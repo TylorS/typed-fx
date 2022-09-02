@@ -2,21 +2,25 @@ import { flow, pipe } from 'hkt-ts'
 import * as Maybe from 'hkt-ts/Maybe'
 
 import { Atomic } from '@/Atomic/Atomic.js'
+import type { AnyLiveFiber } from '@/Fiber/Fiber.js'
 import * as FiberRef from '@/FiberRef/FiberRef.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
 import * as Stack from '@/Stack/index.js'
 
 export interface FiberRefs extends Iterable<readonly [FiberRef.AnyFiberRef, any]> {
   readonly locals: Atomic<ImmutableMap<FiberRef.AnyFiberRef, Stack.Stack<any>>>
+  readonly initializing: Atomic<ImmutableMap<FiberRef.AnyFiberRef, AnyLiveFiber>>
   readonly fork: () => FiberRefs
 }
 
 export function FiberRefs(
   locals: ImmutableMap<FiberRef.AnyFiberRef, Stack.Stack<any>> = ImmutableMap(),
+  initializing: ImmutableMap<FiberRef.AnyFiberRef, AnyLiveFiber> = ImmutableMap(),
 ): FiberRefs {
   const atomic = Atomic(locals)
   const fiberRefs: FiberRefs = {
     locals: atomic,
+    initializing: Atomic(initializing),
     fork: () => fork(fiberRefs),
     *[Symbol.iterator]() {
       for (const [key, stack] of atomic.get()) {
@@ -126,7 +130,7 @@ export function fork(fiberRefs: FiberRefs): FiberRefs {
     }
   }
 
-  return FiberRefs(ImmutableMap(updated))
+  return FiberRefs(ImmutableMap(updated), fiberRefs.initializing.get())
 }
 
 export function join(first: FiberRefs, second: FiberRefs): void {

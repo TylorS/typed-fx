@@ -6,7 +6,7 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 import { FiberRef, make } from './FiberRef.js'
 
 import type { Env } from '@/Env/Env.js'
-import type { Live } from '@/Fiber/Fiber.js'
+import { Live } from '@/Fiber/Fiber.js'
 import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
 import { Fx, Of, getFiberContext, map, now } from '@/Fx/Fx.js'
 import { FromCause } from '@/Fx/Instruction.js'
@@ -21,7 +21,8 @@ import { EmptyTrace, Trace } from '@/Trace/Trace.js'
 export const CurrentEnv = make(
   pipe(
     getFiberContext,
-    map((c): Env<any> => ({ get: getFromFiberRefs(c.fiberRefs) })),
+    // Always use a snapshot of the FiberRefs to avoid mutability problems.
+    map((c): Env<any> => ({ get: getServiceFromFiberRefs(c.fiberRefs) })),
   ),
   {
     fork: constant(Nothing), // Always create a new Env for each Fiber.
@@ -62,7 +63,7 @@ export const CurrentLogAnnotations = FiberRef.make(now(ImmutableMap<string, LogA
   join: identity,
 })
 
-export function getFromFiberRefs(fiberRefs: FiberRefs.FiberRefs) {
+export function getServiceFromFiberRefs(fiberRefs: FiberRefs.FiberRefs) {
   return <S>(id: Service<S>): Of<S> => {
     return Fx(function* () {
       const service = pipe(
@@ -75,12 +76,12 @@ export function getFromFiberRefs(fiberRefs: FiberRefs.FiberRefs) {
         return service.value as S
       }
 
-      return yield* getLayer(id, fiberRefs)
+      return yield* getLayerFromFiberRefs(id, fiberRefs)
     })
   }
 }
 
-const getLayer = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs) =>
+const getLayerFromFiberRefs = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs) =>
   Fx(function* () {
     const layers = FiberRefs.maybeGetFiberRefValue(Layers)(fiberRefs)
 
@@ -111,5 +112,5 @@ const getLayer = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs) =>
 
     FiberRefs.setFiberRef(Layers, layers.value.set(id, [makeFiber, Maybe.Just(fiber)]))(fiberRefs)
 
-    return (yield* join(fiber)) as S
+    return yield* join(fiber)
   })

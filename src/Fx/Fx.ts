@@ -143,7 +143,7 @@ export const provideLayers =
     E | Layer.ErrorsOf<Layers[number]>,
     A
   > =>
-    layers.reduceRight((fx, l) => pipe(fx, provideLayer(l)), fx) as any
+    layers.reduce((fx, l) => pipe(fx, provideLayer(l)), fx) as any
 
 export const ask = <S>(s: Service<S>, __trace?: string): RIO<S, S> =>
   access((e) => e.get(s), __trace)
@@ -194,14 +194,16 @@ export const map =
     MapFx.make(fx, f, __trace)
 
 export const tap =
-  <A, B>(f: Unary<A, B>, __trace?: string) =>
-  <R, E>(fx: Fx<R, E, A>): Fx<R, E, A> =>
-    MapFx.make(
+  <A, R2, E2, B>(f: Unary<A, Fx<R2, E2, B>>, __trace?: string) =>
+  <R, E>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, A> =>
+    FlatMap.make(
       fx,
-      (a) => {
-        f(a)
-        return a
-      },
+      (a) =>
+        pipe(
+          a,
+          f,
+          map(() => a),
+        ),
       __trace,
     )
 
