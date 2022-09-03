@@ -72,5 +72,12 @@ export function Ref<Tag extends string, R, E, A>(
         Fx.flatMap((r) => r.modify(f)),
       )
     }
+
+    static set<S extends typeof Reference>(this: S, value: A): Fx.Fx<R | InstanceOf<S>, E, A> {
+      return pipe(
+        Fx.access((env: Env<InstanceOf<S>>) => env.get(this.id())),
+        Fx.flatMap((r) => r.modify(() => Fx.now([value, value] as const))),
+      )
+    }
   }
 }

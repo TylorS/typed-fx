@@ -344,6 +344,8 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected processGetTrace(_: Extract<AnyInstruction, { readonly tag: 'GetTrace' }>) {
+    this.pushPopFiberRef(Builtin.CurrentTrace, this.getRuntimeTrace())
+
     this.continueWith(this.getCurrentTrace())
   }
 
@@ -482,6 +484,9 @@ export class FiberRuntime<F extends Fx.AnyFx>
     if (state.tag === 'Resolved') {
       return (this._current = Maybe.Just(state.fx.instr))
     }
+
+    // Add Stack trace before asynchrony occurs
+    this.pushPopFiberRef(Builtin.CurrentTrace, this.getRuntimeTrace())
 
     const inner = settable()
 
@@ -680,12 +685,21 @@ export class FiberRuntime<F extends Fx.AnyFx>
     return pipe(
       this.context.fiberRefs,
       FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
-      Maybe.map((stackTrace) => {
-        const trimmed = Trace.getTrimmedTrace(Cause.Empty, stackTrace)
+      Maybe.match(
+        () => Trace.Trace.runtime(new Error()),
+        (stackTrace) => Trace.getTraceUpTo(stackTrace, this.context.platform.maxTraceCount),
+      ),
+    )
+  }
 
-        return Trace.getTraceUpTo(stackTrace.push(trimmed), this.context.platform.maxTraceCount)
-      }),
-      Maybe.getOrElse(() => Trace.Trace.runtime(new Error(), this.getCurrentTrace)),
+  protected getRuntimeTrace(): Trace.Trace {
+    return pipe(
+      this.context.fiberRefs,
+      FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
+      Maybe.match(
+        () => Trace.Trace.runtime(new Error()),
+        (stackTrace) => Trace.getTrimmedTrace(Cause.Empty, stackTrace),
+      ),
     )
   }
 

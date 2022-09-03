@@ -198,12 +198,17 @@ export function getTraceUpTo(trace: StackTrace, amount: number): Trace {
   return frames.length > 0 ? new StackFrameTrace(frames) : EmptyTrace
 }
 
-export function getTrimmedTrace<E>(cause: Cause<E>, stackTrace: StackTrace) {
+export function getTrimmedTrace<E>(
+  cause: Cause<E>,
+  stackTrace: StackTrace,
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  targetObject?: Function,
+) {
   const error =
     (cause.tag === 'Unexpected' || cause.tag === 'Expected') && cause.error instanceof Error
       ? cause.error
       : new Error()
-  const trace = Trace.runtime(error, getTrimmedTrace)
+  const trace = Trace.runtime(error, targetObject ?? getTrimmedTrace)
   const toCompare = getTraceUpTo(stackTrace, trace.frames.length)
 
   return trimOverlappingTraces(toCompare, trace)

@@ -1,6 +1,8 @@
+import { pipe } from 'hkt-ts/function'
+
 import { Service } from './Service.js'
 
-import { Fx, RIO, ask } from '@/Fx/Fx.js'
+import { Fx, RIO, ask, flatMap } from '@/Fx/Fx.js'
 import * as Layer from '@/Layer/Layer.js'
 import { Scope } from '@/Scope/Scope.js'
 
@@ -40,6 +42,21 @@ export class Id {
   }
 
   /**
+   * Retrieve this service at Runtime, requiring it from the given Environment.
+   */
+  static with<
+    S extends {
+      readonly id: () => Service<any>
+      new (...args: any): any
+    },
+    R2,
+    E2,
+    B,
+  >(this: S, f: (s: InstanceOf<S>) => Fx<R2, E2, B>): Fx<R2 | InstanceOf<S>, E2, B> {
+    return pipe(ask(this.id()), flatMap(f))
+  }
+
+  /**
    * Construct a Layer that provides this service.
    */
   static layer<
@@ -49,7 +66,10 @@ export class Id {
     },
     R,
     E,
-  >(this: S, provider: Fx<R | Scope, E, InstanceOf<S>>): Layer.Layer<R, E, InstanceOf<S>> {
+  >(
+    this: S,
+    provider: Fx<R, E, InstanceOf<S>> | Fx<R | Scope, E, InstanceOf<S>>,
+  ): Layer.Layer<R, E, InstanceOf<S>> {
     return Layer.fromFx(this.id(), provider)
   }
 }

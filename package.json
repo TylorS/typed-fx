@@ -24,7 +24,8 @@
     "test:ttypescript-plugin:build": "tsc ./src/Tracing/test.ts --outDir dist/test",
     "preversion": "npm test",
     "postversion": "npm run build && npm publish --access=public",
-    "prepare": "ts-patch install -s"
+    "prepare": "ts-patch install -s",
+    "example": "node --loader @esbuild-kit/esm-loader --experimental-specifier-resolution=node ./src/example.ts"
   },
   "keywords": [
     "Fx",
