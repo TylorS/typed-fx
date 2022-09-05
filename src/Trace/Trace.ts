@@ -181,6 +181,10 @@ function trimOverlappingFrames(
 
 export interface StackTrace extends Stack<Trace> {}
 
+export function StackTrace(): StackTrace {
+  return new Stack<Trace>(EmptyTrace)
+}
+
 // Traverse up the Stack<Trace> for a set amount of StackFrames.
 export function getTraceUpTo(trace: StackTrace, amount: number): Trace {
   const frames: Array<StackFrame.StackFrame> = []

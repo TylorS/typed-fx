@@ -7,9 +7,17 @@ import { Identity } from 'hkt-ts/Typeclass/Identity'
 export class Stack<A> {
   constructor(readonly value: A, readonly previous: Stack<A> | null = null) {}
 
-  readonly push = (value: A): Stack<A> => new Stack(value, this)
-  readonly pop = (): Stack<A> | null => this.previous
-  readonly replace = (f: (value: A) => A): Stack<A> => new Stack(f(this.value), this.previous);
+  public push(value: A): Stack<A> {
+    return new Stack(value, this)
+  }
+
+  public pop(): Stack<A> | null {
+    return this.previous
+  }
+
+  public replace(f: (value: A) => A): Stack<A> {
+    return new Stack(f(this.value), this.previous)
+  }
 
   *[Symbol.iterator]() {
     yield this.value

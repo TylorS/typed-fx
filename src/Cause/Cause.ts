@@ -17,7 +17,7 @@ import * as ORD from 'hkt-ts/Typeclass/Ord'
 import * as T from 'hkt-ts/Typeclass/Top'
 import * as N from 'hkt-ts/number'
 
-import { Renderer, defaultRenderer, prettyPrint } from './Renderer.js'
+import { Renderer, prettyPrint } from './Renderer.js'
 
 import * as FiberId from '@/FiberId/index.js'
 import * as Trace from '@/Trace/Trace.js'
@@ -419,7 +419,5 @@ export const Compact: Compact1<CauseHKT> = {
 
 export const compacted = FE.compacted<CauseHKT>({ ...ForEach, ...Compact })
 
-export const makeDebug = <E>(renderer: Renderer<E> = defaultRenderer): D.Debug<Cause<E>> =>
+export const makeDebug = <E>(renderer: Renderer<E>): D.Debug<Cause<E>> =>
   D.Debug((cause) => prettyPrint(cause, renderer))
-
-export const Debug = makeDebug()
