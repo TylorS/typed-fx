@@ -9,6 +9,7 @@ import {
   MapFrame,
   MatchFrame,
   OrElseFrame,
+  PopFrame,
 } from './EffectStack.js'
 import { Done, EffectStatus, Running, Suspended } from './EffectStatus.js'
 import { Future } from './Future.js'
@@ -26,7 +27,8 @@ import { Stack } from '@/Stack/index.js'
 import { Delay } from '@/Time/index.js'
 import * as Trace from '@/Trace/Trace.js'
 
-// TODO: InterruptStatus?
+// TODO: InterruptStatus
+// TODO: Allow Running Arbitrary Effects within the Runtime instead of Interrupt
 
 export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
   protected _started = false
@@ -151,7 +153,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     }
 
     if (effect.__trace) {
-      this.addTrace(effect.__trace)
+      this.addTrace(Trace.Trace.custom(effect.__trace))
     }
 
     ;(this[effect.tag] as (e: typeof effect) => void)(effect)
@@ -166,9 +168,9 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     })
   }
 
-  protected addTrace(trace: string) {
+  protected addTrace(trace: Trace.Trace) {
     const trimmed = Trace.getTrimmedTrace(Cause.Empty, this._stackTrace.get())
-    const custom = Trace.concat(Trace.Trace.custom(trace), trimmed)
+    const custom = Trace.concat(trace, trimmed)
 
     this._stackTrace.modify((prev) => [null, prev.push(custom)])
 
@@ -237,7 +239,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     const state = effect.future.state.get()
 
     if (future.__trace) {
-      this.addTrace(`Future ${future.__trace}`)
+      this.addTrace(Trace.Trace.custom(`Future ${future.__trace}`))
     }
 
     if (state.tag === 'Done') {
@@ -266,7 +268,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     }
 
     if (effect.__trace) {
-      this.addTrace(effect.__trace)
+      this.addTrace(Trace.Trace.custom(effect.__trace))
     }
 
     this._current = Maybe.Just(handler.value.value.f(effect))
@@ -309,6 +311,11 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     this.continueWith(this._handlers.get())
   }
 
+  protected AddTrace(effect: Effect.Effect.AddTrace<any, any, any>) {
+    this.addTrace(effect.trace)
+    this._current = Maybe.Just(effect.effect)
+  }
+
   protected continueWith(a: any) {
     let frame = this.popFrame()
 
@@ -321,6 +328,8 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
         return
       } else if (frame.tag === 'Map') {
         a = frame.f(a)
+      } else if (frame.tag === 'Pop') {
+        frame.pop()
       }
 
       frame = this.popFrame()
@@ -339,6 +348,8 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
       } else if (frame.tag === 'Match') {
         this._current = Maybe.Just(frame.f(Left(cause)))
         return
+      } else if (frame.tag === 'Pop') {
+        frame.pop()
       }
 
       frame = this.popFrame()
@@ -393,13 +404,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
   }
 
   protected onPop(f: () => void) {
-    this.pushFrame(
-      MatchFrame((exit) => {
-        f()
-
-        return Effect.fromExit(exit)
-      }),
-    )
+    this.pushFrame(PopFrame(f))
   }
 
   protected resetOpCount() {

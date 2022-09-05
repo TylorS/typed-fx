@@ -1,17 +1,19 @@
 import * as Either from 'hkt-ts/Either'
+import { DeepEquals } from 'hkt-ts/Typeclass/Eq'
 import * as F from 'hkt-ts/function'
 
 import type { Future } from './Future.js'
 
-import { Cause } from '@/Cause/index.js'
-import { Exit } from '@/Exit/Exit.js'
+import { getCauseError } from '@/Cause/CauseError.js'
+import * as Cause from '@/Cause/index.js'
+import * as Exit from '@/Exit/Exit.js'
+import { FiberId } from '@/FiberId/FiberId.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
 import { Platform } from '@/Platform/Platform.js'
 import { Stack } from '@/Stack/index.js'
-import { StackTrace } from '@/Trace/Trace.js'
-import { FiberId } from '@/index.js'
+import { StackTrace, Trace } from '@/Trace/Trace.js'
 
-export type Effect<Fx extends Effect.IO<any, any, any>, E, A> =
+export type Effect<Fx extends Effect.AnyIO, E, A> =
   // Constructors
   | Effect.Now<A>
   | Effect.FromLazy<A>
@@ -26,16 +28,63 @@ export type Effect<Fx extends Effect.IO<any, any, any>, E, A> =
   // Effects
   | Effect.Yield<Fx>
   | Effect.Handle<Fx, any, any, any, Fx, E, A>
+  // Intrinstics
   | Effect.GetHandlers<Fx>
   | Effect.GetTrace
   | Effect.GetPlatform
   | Effect.GetFiberId
+  | Effect.AddTrace<Fx, E, A>
+
+export function Effect<Fx extends Effect.AnyIO, E, A>(
+  f: (_: typeof liftEffect) => Generator<Effect<Fx, E, any>, A>,
+  __trace?: string,
+) {
+  return Effect.Lazy(() => {
+    const gen = f(liftEffect)
+
+    return F.pipe(
+      runEffectGenerator(gen, gen.next()),
+      orElse((cause) => {
+        const error = getCauseError(cause)
+
+        return Cause.shouldRethrow(cause)
+          ? F.pipe(
+              lazy(() => runEffectGenerator(gen, gen.throw(error))),
+              orElse((inner) =>
+                // Ensure the the most useful error is continued up the stack
+                DeepEquals.equals(getCauseError(inner), error)
+                  ? fromCause(cause)
+                  : fromCause(Cause.sequential(cause, inner)),
+              ),
+            )
+          : fromCause(cause)
+      }),
+    )
+  }, __trace)
+}
+
+function* liftEffect<Fx extends Effect.AnyIO, E, A>(
+  eff: Effect<Fx, E, A>,
+): Generator<Effect<Fx, E, A>, A, A> {
+  return yield eff
+}
+
+function runEffectGenerator<Fx extends Effect.AnyIO, E, A>(
+  gen: Generator<Effect<Fx, E, any>, A>,
+  result: IteratorResult<Effect<Fx, E, any>, A>,
+): Effect<Fx, E, A> {
+  if (result.done) {
+    return Effect.Now(result.value)
+  }
+
+  return Effect.FlatMap(result.value, (a) => runEffectGenerator(gen, gen.next(a)))
+}
 
 export const now = <A>(a: A, __trace?: string) => Effect.Now(a, __trace)
 
 export const fromLazy = <A>(a: () => A, __trace?: string) => Effect.FromLazy(a, __trace)
 
-export const fromCause = <E>(e: Cause<E>, __trace?: string) => Effect.FromCause(e, __trace)
+export const fromCause = <E>(e: Cause.Cause<E>, __trace?: string) => Effect.FromCause(e, __trace)
 
 export const lazy = <Fx extends Effect.AnyIO, E, A>(f: () => Effect<Fx, E, A>, __trace?: string) =>
   Effect.Lazy(f, __trace)
@@ -51,13 +100,16 @@ export const flatMap =
     Effect.FlatMap(effect, f, __trace)
 
 export const orElse =
-  <E, Fx2 extends Effect.AnyIO, E2, B>(f: (e: Cause<E>) => Effect<Fx2, E2, B>, __trace?: string) =>
+  <E, Fx2 extends Effect.AnyIO, E2, B>(
+    f: (e: Cause.Cause<E>) => Effect<Fx2, E2, B>,
+    __trace?: string,
+  ) =>
   <Fx extends Effect.AnyIO, A>(effect: Effect<Fx, E, A>) =>
     Effect.OrElse(effect, f, __trace)
 
 export const match =
   <E, Fx2 extends Effect.AnyIO, E2, B, A, Fx3 extends Effect.AnyIO, E3, C>(
-    onLeft: (e: Cause<E>) => Effect<Fx2, E2, B>,
+    onLeft: (e: Cause.Cause<E>) => Effect<Fx2, E2, B>,
     onRight: (a: A) => Effect<Fx3, E3, C>,
     __trace?: string,
   ) =>
@@ -75,31 +127,64 @@ export const effect = <Tag extends string, E, A>(io: Effect.IO<Tag, E, A>, __tra
 export { effect as yield }
 
 export const handle =
-  <Tag extends string, Fx2 extends Effect.AnyIO, E2, B>(
-    handler: Effect.Handler<Tag, any, any, Fx2, E2, B>,
+  <Tag extends string, E_, A_, Fx2 extends Effect.AnyIO, E2, B>(
+    handler: Effect.Handler<Tag, E_, A_, Fx2, E2, B>,
     __trace?: string,
   ) =>
   <Fx extends Effect.AnyIO, E, A>(
     effect: Effect<Fx, E, A>,
-  ): Effect<Exclude<Fx | Fx2, { readonly tag: Tag }>, E, A> =>
-    Effect.Handle(effect, handler, __trace)
+  ): Effect<Exclude<Fx | Fx2, { readonly tag: Tag }>, E | E2, A> =>
+    Effect.Handle(effect, handler, __trace) as Effect<
+      Exclude<Fx | Fx2, { readonly tag: Tag }>,
+      E | E2,
+      A
+    >
 
-export const handler = <Tag extends string, Fx2 extends Effect.AnyIO, E2, B>(
-  tag: Tag,
-  f: <E, A>(io: Effect.IO<Tag, E, A>) => Effect<Fx2, E2, B>,
-): Effect.Handler<Tag, any, any, Fx2, E2, B> => new Effect.Handler(tag, f)
+export const handler = <
+  Instr extends {
+    readonly tag: string
+    new (...args: any): Effect.AnyIO
+  },
+  Fx2 extends Effect.AnyIO,
+  E2,
+  B,
+>(
+  instr: Instr,
+  f: (io: InstanceType<Instr>) => Effect<Fx2, E2, B>,
+): Effect.Handler<
+  Instr['tag'],
+  Effect.IO.ErrorsOf<InstanceType<Instr>>,
+  Effect.IO.OutputOf<InstanceType<Instr>>,
+  Fx2,
+  E2,
+  B
+> => new Effect.Handler(instr.tag, f as any)
 
 export const getHandlers = <Fx extends Effect.AnyIO>(__trace?: string) =>
   Effect.GetHandlers<Fx>(__trace)
 
 export const getTrace = (__trace?: string) => Effect.GetTrace(__trace)
 
-export const fromExit = <E, A>(exit: Exit<E, A>, __trace?: string): Effect<never, E, A> =>
+export const addTrace =
+  (trace: Trace) =>
+  <Fx extends Effect.AnyIO, E, A>(effect: Effect<Fx, E, A>) =>
+    Effect.AddTrace<Fx, E, A>(effect, trace)
+
+export const addCustomTrace =
+  (trace?: string) =>
+  <Fx extends Effect.AnyIO, E, A>(effect: Effect<Fx, E, A>): Effect<Fx, E, A> =>
+    trace ? addTrace(Trace.custom(trace))(effect) : effect
+
+export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): Effect<never, E, A> =>
   Either.isLeft(exit) ? fromCause(exit.left, __trace) : now(exit.right, __trace)
+
+export const fromEither = <E, A>(
+  either: Either.Either<E, A>,
+  __trace?: string,
+): Effect<never, E, A> => fromExit(Exit.fromEither(either), __trace)
 
 export namespace Effect {
   // #region Constructors
-
   export interface Now<A> {
     readonly tag: 'Now'
     readonly value: A
@@ -122,11 +207,11 @@ export namespace Effect {
 
   export interface FromCause<E> {
     readonly tag: 'FromCause'
-    readonly cause: Cause<E>
+    readonly cause: Cause.Cause<E>
     readonly __trace?: string
   }
 
-  export function FromCause<E>(cause: Cause<E>, __trace?: string): Effect<never, E, never> {
+  export function FromCause<E>(cause: Cause.Cause<E>, __trace?: string): Effect<never, E, never> {
     return { tag: 'FromCause', cause, __trace }
   }
 
@@ -198,29 +283,29 @@ export namespace Effect {
       return FlatMap(effect.effect, F.flow(effect.f, f), __trace)
     }
 
-    if (tag === 'OrElse') {
-      return Match(effect.effect, effect.f, f, __trace) as Effect<Fx | Fx2, E | E2, B>
-    }
-
     return { tag: 'FlatMap', effect, f, __trace }
   }
 
   export interface OrElse<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, A2> {
     readonly tag: 'OrElse'
     readonly effect: Effect<Fx, E, A>
-    readonly f: (e: Cause<E>) => Effect<Fx2, E2, A2>
+    readonly f: (e: Cause.Cause<E>) => Effect<Fx2, E2, A2>
     readonly __trace?: string
   }
 
   export function OrElse<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, A2>(
     effect: Effect<Fx, E, A>,
-    f: (e: Cause<E>) => Effect<Fx2, E2, A2>,
+    f: (e: Cause.Cause<E>) => Effect<Fx2, E2, A2>,
     __trace?: string,
   ): Effect<Fx | Fx2, E2, A | A2> {
     const tag = effect.tag
 
     if (tag === 'Now') {
       return effect
+    }
+
+    if (tag === 'FlatMap') {
+      return Match(effect.effect, f, effect.f, __trace) as Effect<Fx | Fx2, E2, A | A2>
     }
 
     return { tag: 'OrElse', effect, f, __trace }
@@ -240,13 +325,13 @@ export namespace Effect {
     readonly tag: 'Match'
     readonly effect: Effect<Fx, E, A>
     readonly onRight: (a: A) => Effect<Fx2, E2, B>
-    readonly onLeft: (e: Cause<E>) => Effect<Fx3, E3, C>
+    readonly onLeft: (e: Cause.Cause<E>) => Effect<Fx3, E3, C>
     readonly __trace?: string
   }
 
   export function Match<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, B, Fx3 extends AnyIO, E3, C>(
     effect: Effect<Fx, E, A>,
-    onLeft: (e: Cause<E>) => Effect<Fx3, E3, C>,
+    onLeft: (e: Cause.Cause<E>) => Effect<Fx3, E3, C>,
     onRight: (a: A) => Effect<Fx2, E2, B>,
     __trace?: string,
   ): Effect<Fx | Fx2 | Fx3, E2 | E3, B | C> {
@@ -342,11 +427,21 @@ export namespace Effect {
     constructor(readonly tag: Tag, readonly f: (i: IO<Tag, E, A>) => Effect<Fx, E2, B>) {}
   }
 
-  export function Handle<Fx extends AnyIO, E, A, Tag extends string, Fx2 extends AnyIO, E2, B>(
+  export function Handle<
+    Fx extends AnyIO,
+    E,
+    A,
+    Tag extends string,
+    E_,
+    A_,
+    Fx2 extends AnyIO,
+    E2,
+    B,
+  >(
     effect: Effect<Fx, E, A>,
-    handler: Handler<Tag, E, A, Fx2, E2, B>,
+    handler: Handler<Tag, E_, A_, Fx2, E2, B>,
     __trace?: string,
-  ): Effect<Exclude<Fx | Fx2, { readonly tag: Tag }>, E, A> {
+  ): Effect<Exclude<Fx | Fx2, { readonly tag: Tag }>, E | E2, A> {
     return { tag: 'Handle', effect, handler, __trace } as any
   }
 
@@ -391,5 +486,21 @@ export namespace Effect {
   export function GetFiberId(__trace?: string): Effect<never, never, FiberId.Live> {
     return { tag: 'GetFiberId', __trace }
   }
+
+  export interface AddTrace<Fx extends AnyIO, E, A> {
+    readonly tag: 'AddTrace'
+    readonly effect: Effect<Fx, E, A>
+    readonly trace: Trace
+    readonly __trace?: string
+  }
+
+  export function AddTrace<Fx extends AnyIO, E, A>(
+    effect: Effect<Fx, E, A>,
+    trace: Trace,
+  ): Effect<Fx, E, A> {
+    return { tag: 'AddTrace', effect, trace }
+  }
   // #endregion
 }
+
+export const instr = Effect.instr

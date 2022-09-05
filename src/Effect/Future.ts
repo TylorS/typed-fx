@@ -8,7 +8,6 @@ export interface Future<Fx extends Effect.AnyIO, E, A> {
   readonly __trace?: string
 }
 
-// TODO: Should Futures have a Trace?
 export namespace Future {
   export function Pending<Fx extends Effect.AnyIO, E, A>(__trace?: string): Future<Fx, E, A> {
     return { state: Atomic<FutureState<Fx, E, A>>(FutureState.Pending()), __trace }
@@ -45,7 +44,7 @@ export namespace Future {
         return false
       }
 
-      state.observers.forEach((observer) => observer(result))
+      state.observers.slice().forEach((observer) => observer(result))
 
       future.state.set(FutureState.Done(result))
 

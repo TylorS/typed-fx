@@ -7,7 +7,7 @@ import { Cause } from '@/Cause/index.js'
 import { Exit } from '@/Exit/index.js'
 import { Stack } from '@/Stack/index.js'
 
-export type EffectFrame = MapFrame | FlatMapFrame | OrElseFrame | MatchFrame
+export type EffectFrame = MapFrame | FlatMapFrame | OrElseFrame | MatchFrame | PopFrame
 
 export interface MapFrame {
   readonly tag: 'Map'
@@ -45,6 +45,15 @@ export function MatchFrame(f: (exit: Exit<any, any>) => Effect<any, any, any>): 
   return { tag: 'Match', f }
 }
 
+export interface PopFrame {
+  readonly tag: 'Pop'
+  readonly pop: () => void
+}
+
+export function PopFrame(pop: () => void): PopFrame {
+  return { tag: 'Pop', pop }
+}
+
 export class EffectStack extends Stack<EffectFrame> {
   public push(frame: EffectFrame): EffectStack {
     const optimized = optimizeEffectFrame(frame, this.value)
@@ -63,9 +72,10 @@ const optimizeEffectFrame = (
 ): Maybe.Maybe<EffectFrame> => {
   if (frame.tag === 'FlatMap') return optimizeFlatMapFrame(previous, frame)
   if (frame.tag === 'Match') return optimizeMatchFrame(previous, frame)
+  if (frame.tag === 'Map') return optimizeMapFrame(previous, frame)
   if (frame.tag === 'OrElse') return optimizeOrElseFrame(previous, frame)
 
-  return optimizeMapFrame(previous, frame)
+  return optimizePopFrame(previous, frame)
 }
 
 const optimizeMapFrame = (previous: EffectFrame, frame: MapFrame): Maybe.Maybe<EffectFrame> => {
@@ -109,6 +119,16 @@ const optimizeMatchFrame = (previous: EffectFrame, frame: MatchFrame): Maybe.May
 
   if (prev === 'Map') {
     return Maybe.Just(MatchFrame(flow(Either.map(previous.f), frame.f)))
+  }
+
+  return Maybe.Nothing
+}
+
+const optimizePopFrame = (previous: EffectFrame, frame: PopFrame): Maybe.Maybe<EffectFrame> => {
+  const prev = previous.tag
+
+  if (prev === 'Pop') {
+    return Maybe.Just(PopFrame(flow(previous.pop, frame.pop)))
   }
 
   return Maybe.Nothing
