@@ -45,7 +45,7 @@ module.exports = {
       },
     ],
     'import/no-unresolved': 'off', // Allow TS to do this checking,
-    'import/no-cycle': ['error', { maxDepth: 3 }],
+    'import/no-cycle': ['error', { maxDepth: Infinity }],
   },
   settings: {
     'import/parsers': {

@@ -11,7 +11,7 @@ import * as Cause from '@/Cause/index.js'
 import * as Exit from '@/Exit/index.js'
 import { testSuite } from '@/_internal/suite.js'
 
-testSuite.only(import.meta.url, () => {
+testSuite(import.meta.url, () => {
   it('Now', async () => {
     const value = Math.random()
     deepStrictEqual(await runTest(Effect.now(value)), value)
@@ -32,8 +32,7 @@ testSuite.only(import.meta.url, () => {
     const exit = await runTestExit(Effect.fromCause(cause))
 
     ok(Either.isLeft(exit))
-    ok(exit.left.tag === 'Traced')
-    deepStrictEqual(exit.left.cause, cause)
+    deepStrictEqual(exit.left, cause)
   })
 
   it('Map', async () => {
@@ -86,7 +85,27 @@ testSuite.only(import.meta.url, () => {
 
     const program = pipe(
       Effect.yield(new Add([1, 2, 3])),
-      Effect.handle(Effect.handler(Add, (add) => Effect.now(add.sum()))),
+      Add.handle((a) => Effect.now(a.sum())),
+    )
+
+    console.time('Yield/Handle')
+    deepStrictEqual(await runTest(program), 6)
+    console.timeEnd('Yield/Handle')
+  })
+
+  it('allows yielding/handling effects with generators', async () => {
+    //                                  Name,    Input, Error, Output
+    class GetNums extends Effect.instr('GetNums')<void, never, ReadonlyArray<number>> {}
+    class Add extends Effect.instr('Add')<ReadonlyArray<number>, never, number> {}
+
+    const program = pipe(
+      Effect.Effect(function* () {
+        const nums = yield* GetNums.make()
+
+        return yield* Add.make(nums)
+      }),
+      GetNums.handle(() => Effect.now([1, 2, 3])),
+      Add.handle((add) => Effect.now(add.input.reduce((a, b) => a + b, 0))),
     )
 
     console.time('Yield/Handle')
@@ -98,10 +117,10 @@ testSuite.only(import.meta.url, () => {
     it('native comparison (recursive v1)', () => {
       const fib = (n: number): number => {
         if (n < 2) return n
-        return fib(n - 1) + fib(n - 2)
+        return fib(n - 2) + fib(n - 1)
       }
 
-      const total = 100
+      const total = 10
       let values = 0
 
       for (let i = 0; i < total; ++i) {
@@ -120,7 +139,7 @@ testSuite.only(import.meta.url, () => {
         return fib(n - 1, n2, n1 + n2)
       }
 
-      const total = 100
+      const total = 10
       let values = 0
 
       for (let i = 0; i < total; ++i) {
@@ -146,7 +165,7 @@ testSuite.only(import.meta.url, () => {
       const program = fib(25)
       const constructorEnd = performance.now()
 
-      const total = 100
+      const total = 10
       let values = 0
 
       for (let i = 0; i < total; ++i) {
@@ -171,7 +190,7 @@ testSuite.only(import.meta.url, () => {
       const program = fib(25)
       const constructorEnd = performance.now()
 
-      const total = 100
+      const total = 10
       let values = 0
 
       for (let i = 0; i < total; ++i) {
@@ -190,14 +209,14 @@ testSuite.only(import.meta.url, () => {
             return n
           }
 
-          return (yield* _(fib(n - 1))) + (yield* _(fib(n - 1)))
+          return (yield* _(fib(n - 2))) + (yield* _(fib(n - 1)))
         })
 
       const constructorStart = performance.now()
       const program = fib(25)
       const constructorEnd = performance.now()
 
-      const total = 100
+      const total = 1
       let values = 0
 
       for (let i = 0; i < total; ++i) {

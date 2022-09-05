@@ -1,4 +1,5 @@
 export * from './Effect.js'
+export * from './EffectContext.js'
 export * from './EffectRuntime.js'
 export * from './EffectStack.js'
 export * from './EffectStatus.js'

@@ -1,13 +1,16 @@
-import { Either, Maybe, flow } from 'hkt-ts'
-import { match } from 'hkt-ts/Either'
-
 import { Effect } from './Effect.js'
 
 import { Cause } from '@/Cause/index.js'
 import { Exit } from '@/Exit/index.js'
 import { Stack } from '@/Stack/index.js'
 
-export type EffectFrame = MapFrame | FlatMapFrame | OrElseFrame | MatchFrame | PopFrame
+export type EffectFrame =
+  | MapFrame
+  | FlatMapFrame
+  | OrElseFrame
+  | MatchFrame
+  | PopFrame
+  | InterruptFrame
 
 export interface MapFrame {
   readonly tag: 'Map'
@@ -54,82 +57,12 @@ export function PopFrame(pop: () => void): PopFrame {
   return { tag: 'Pop', pop }
 }
 
-export class EffectStack extends Stack<EffectFrame> {
-  public push(frame: EffectFrame): EffectStack {
-    const optimized = optimizeEffectFrame(frame, this.value)
-
-    if (Maybe.isJust(optimized)) {
-      return super.replace(() => optimized.value)
-    }
-
-    return super.push(frame)
-  }
+export interface InterruptFrame {
+  readonly tag: 'Interrupt'
 }
 
-const optimizeEffectFrame = (
-  previous: EffectFrame,
-  frame: EffectFrame,
-): Maybe.Maybe<EffectFrame> => {
-  if (frame.tag === 'FlatMap') return optimizeFlatMapFrame(previous, frame)
-  if (frame.tag === 'Match') return optimizeMatchFrame(previous, frame)
-  if (frame.tag === 'Map') return optimizeMapFrame(previous, frame)
-  if (frame.tag === 'OrElse') return optimizeOrElseFrame(previous, frame)
-
-  return optimizePopFrame(previous, frame)
+export const InterruptFrame: InterruptFrame = {
+  tag: 'Interrupt',
 }
 
-const optimizeMapFrame = (previous: EffectFrame, frame: MapFrame): Maybe.Maybe<EffectFrame> => {
-  const prev = previous.tag
-
-  if (prev === 'Map') {
-    return Maybe.Just(MapFrame(flow(previous.f, frame.f)))
-  }
-
-  return Maybe.Nothing
-}
-
-const optimizeFlatMapFrame = (
-  previous: EffectFrame,
-  frame: FlatMapFrame,
-): Maybe.Maybe<EffectFrame> => {
-  const prev = previous.tag
-
-  if (prev === 'Map') {
-    return Maybe.Just(FlatMapFrame(flow(previous.f, frame.f)))
-  }
-
-  return Maybe.Nothing
-}
-
-const optimizeOrElseFrame = (
-  previous: EffectFrame,
-  frame: OrElseFrame,
-): Maybe.Maybe<EffectFrame> => {
-  const prev = previous.tag
-
-  if (prev === 'FlatMap') {
-    return Maybe.Just(MatchFrame(match(frame.f, previous.f)))
-  }
-
-  return Maybe.Nothing
-}
-
-const optimizeMatchFrame = (previous: EffectFrame, frame: MatchFrame): Maybe.Maybe<EffectFrame> => {
-  const prev = previous.tag
-
-  if (prev === 'Map') {
-    return Maybe.Just(MatchFrame(flow(Either.map(previous.f), frame.f)))
-  }
-
-  return Maybe.Nothing
-}
-
-const optimizePopFrame = (previous: EffectFrame, frame: PopFrame): Maybe.Maybe<EffectFrame> => {
-  const prev = previous.tag
-
-  if (prev === 'Pop') {
-    return Maybe.Just(PopFrame(flow(previous.pop, frame.pop)))
-  }
-
-  return Maybe.Nothing
-}
+export class EffectStack extends Stack<EffectFrame> {}

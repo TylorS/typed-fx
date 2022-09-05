@@ -30,7 +30,7 @@ export const Console: Logger<string, void> = {
 
       logWithLevel(
         trace.tag !== 'EmptyTrace'
-          ? message + '\n    ' + Trace.debug(trace).replaceAll('\n', '\n    ')
+          ? message + '\n    ' + Trace.debug(trace).replace(/\n/g, '\n    ')
           : message,
         level,
       )

@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as Either from 'hkt-ts/Either'
 import { DeepEquals } from 'hkt-ts/Typeclass/Eq'
 import * as F from 'hkt-ts/function'
+import { InstanceOf } from 'ts-morph'
 
 import type { Future } from './Future.js'
 
@@ -28,17 +31,57 @@ export type Effect<Fx extends Effect.AnyIO, E, A> =
   // Effects
   | Effect.Yield<Fx>
   | Effect.Handle<Fx, any, any, any, Fx, E, A>
-  // Intrinstics
   | Effect.GetHandlers<Fx>
+  // Tracing
   | Effect.GetTrace
-  | Effect.GetPlatform
-  | Effect.GetFiberId
   | Effect.AddTrace<Fx, E, A>
+  // Interruption
+  | Effect.GetInterruptStatus
+  | Effect.SetInterruptStatus<Fx, E, A>
+  // Intrinstics
+  | Effect.GetFiberId
+  | Effect.GetPlatform
 
-export function Effect<Fx extends Effect.AnyIO, E, A>(
-  f: (_: typeof liftEffect) => Generator<Effect<Fx, E, any>, A>,
+type NoYields =
+  | Effect.GetFiberId
+  | Effect.GetPlatform
+  | Effect.GetTrace
+  | Effect.GetInterruptStatus
+  | Effect.Now<any>
+  | Effect.FromLazy<any>
+  | Effect.FromCause<any>
+
+export type YieldOf<T> = [Exclude<T, NoYields>] extends [never]
+  ? never
+  : Exclude<T, NoYields> extends Effect<infer _Y, infer _E, infer _A>
+  ? _Y
+  : never
+
+type NoErrors =
+  | Effect.GetFiberId
+  | Effect.GetPlatform
+  | Effect.GetTrace
+  | Effect.GetInterruptStatus
+  | Effect.Now<any>
+  | Effect.FromLazy<any>
+  | Effect.Yield<any>
+  | Effect.GetHandlers<any>
+
+export type ErrorsOf<T> = [Exclude<T, NoErrors>] extends [never]
+  ? [never]
+  : [Exclude<T, NoErrors>] extends [Effect<infer _Y, infer _E, infer _A>]
+  ? _E
+  : never
+
+export type OutputOf<T> = [T] extends [Effect<infer _Y, infer _E, infer _A>] ? _A : never
+
+type YieldFromGenerator<T> = T extends Generator<infer Y, infer _R, infer _N> ? Y : never
+type ReturnFromGenerator<T> = T extends Generator<infer _Y, infer R, infer _N> ? R : never
+
+export function Effect<G extends Generator<Effect<any, any, any>, any>>(
+  f: (_: typeof liftEffect) => G,
   __trace?: string,
-) {
+): Effect<YieldOf<YieldFromGenerator<G>>, ErrorsOf<YieldFromGenerator<G>>, ReturnFromGenerator<G>> {
   return Effect.Lazy(() => {
     const gen = f(liftEffect)
 
@@ -406,12 +449,39 @@ export namespace Effect {
   }
 
   export function instr<Tag extends string>(tag: Tag) {
+    type InputOf<T> = T extends {
+      new (input: infer I): any
+    }
+      ? [input: I, __trace?: string]
+      : [input: void, __trace?: string]
+
     return class Instruction<I, E, A> extends IO<Tag, E, A> {
       static tag: Tag = tag
       readonly tag: Tag = tag
 
       constructor(readonly input: I, readonly __trace?: string) {
         super(__trace)
+      }
+
+      static make<
+        T extends {
+          readonly tag: string
+          new (input: any, __trace?: string): Instruction<any, any, any>
+        },
+      >(this: T, ...args: InputOf<T>): InstanceOf<T> {
+        return new (this as any)(...args) as InstanceOf<T>
+      }
+
+      static handle<
+        T extends {
+          readonly tag: string
+          new (...args: any): Effect.AnyIO
+        },
+        Fx2 extends Effect.AnyIO,
+        E2,
+        B,
+      >(this: T, f: (io: InstanceType<T>) => Effect<Fx2, E2, B>, __trace?: string) {
+        return handle(handler(this, f), __trace)
       }
     }
   }
@@ -426,6 +496,36 @@ export namespace Effect {
   export class Handler<Tag extends string, E, A, Fx extends AnyIO, E2, B> {
     constructor(readonly tag: Tag, readonly f: (i: IO<Tag, E, A>) => Effect<Fx, E2, B>) {}
   }
+
+  export namespace Handler {
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+
+    export type TagOf<T> = T extends Handler<
+      infer _Tag,
+      infer _E,
+      infer _A,
+      infer _Fx,
+      infer _E2,
+      infer _A
+    >
+      ? _Tag
+      : never
+
+    export type EffectsOf<T> = T extends Handler<
+      infer _Tag,
+      infer _E,
+      infer _A,
+      infer _Fx,
+      infer _E2,
+      infer _A
+    >
+      ? _Fx
+      : never
+
+    /* eslint-enable @typescript-eslint/no-unused-vars */
+  }
+
+  export type AnyHandler = Handler<any, any, any, any, any, any>
 
   export function Handle<
     Fx extends AnyIO,
@@ -460,6 +560,18 @@ export namespace Effect {
   export interface HandlerMap<Fx extends AnyIO>
     extends ImmutableMap<Fx['tag'], Stack<Handler<Fx['tag'], any, any, Fx, any, any>>> {}
 
+  export function HandlerMap<Handlers extends ReadonlyArray<AnyHandler>>(
+    ...handlers: Handlers
+  ): HandlerMap<Handler.EffectsOf<Handlers[number]>> {
+    return ImmutableMap(
+      new globalThis.Map(handlers.map((h) => [h.tag, new Stack(h)])),
+    ) as HandlerMap<Handler.EffectsOf<Handlers[number]>>
+  }
+
+  export namespace HandlerMap {
+    export const Empty = HandlerMap<never>()
+  }
+
   export interface GetTrace {
     readonly tag: 'GetTrace'
     readonly __trace?: string
@@ -467,24 +579,6 @@ export namespace Effect {
 
   export function GetTrace(__trace?: string): Effect<never, never, StackTrace> {
     return { tag: 'GetTrace', __trace }
-  }
-
-  export interface GetPlatform {
-    readonly tag: 'GetPlatform'
-    readonly __trace?: string
-  }
-
-  export function GetPlatform(__trace?: string): Effect<never, never, Platform> {
-    return { tag: 'GetPlatform', __trace }
-  }
-
-  export interface GetFiberId {
-    readonly tag: 'GetFiberId'
-    readonly __trace?: string
-  }
-
-  export function GetFiberId(__trace?: string): Effect<never, never, FiberId.Live> {
-    return { tag: 'GetFiberId', __trace }
   }
 
   export interface AddTrace<Fx extends AnyIO, E, A> {
@@ -500,6 +594,49 @@ export namespace Effect {
   ): Effect<Fx, E, A> {
     return { tag: 'AddTrace', effect, trace }
   }
+
+  export interface GetInterruptStatus {
+    readonly tag: 'GetInterruptStatus'
+    readonly __trace?: string
+  }
+
+  export function GetInterruptStatus(__trace?: string): Effect<never, never, boolean> {
+    return { tag: 'GetInterruptStatus', __trace }
+  }
+
+  export interface SetInterruptStatus<Fx extends AnyIO, E, A> {
+    readonly tag: 'SetInterruptStatus'
+    readonly effect: Effect<Fx, E, A>
+    readonly interruptStatus: boolean
+    readonly __trace?: string
+  }
+
+  export function SetInterruptStatus<Fx extends AnyIO, E, A>(
+    effect: Effect<Fx, E, A>,
+    interruptStatus: boolean,
+    __trace?: string,
+  ): Effect<Fx, E, A> {
+    return { tag: 'SetInterruptStatus', effect, interruptStatus, __trace }
+  }
+
+  export interface GetFiberId {
+    readonly tag: 'GetFiberId'
+    readonly __trace?: string
+  }
+
+  export function GetFiberId(__trace?: string): Effect<never, never, FiberId.Live> {
+    return { tag: 'GetFiberId', __trace }
+  }
+
+  export interface GetPlatform {
+    readonly tag: 'GetPlatform'
+    readonly __trace?: string
+  }
+
+  export function GetPlatform(__trace?: string): Effect<never, never, Platform> {
+    return { tag: 'GetPlatform', __trace }
+  }
+
   // #endregion
 }
 

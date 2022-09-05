@@ -19,7 +19,7 @@ import * as N from 'hkt-ts/number'
 
 import { Renderer, prettyPrint } from './Renderer.js'
 
-import * as FiberId from '@/FiberId/index.js'
+import * as FiberId from '@/FiberId/FiberId.js'
 import * as Trace from '@/Trace/Trace.js'
 
 export type Cause<E> =
