@@ -247,16 +247,17 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     }
 
     const inner = settable()
+
     inner.add(
-      this.addDisposable(
-        Future.addObserver(effect.future, (effect) => {
-          inner.dispose()
-          this.resetOpCount()
-          this._current = Maybe.Just(effect)
-          this.setTimer(() => this.run())
-        }),
-      ),
+      Future.addObserver(effect.future, (effect) => {
+        inner.dispose()
+        this.resetOpCount()
+        this._current = Maybe.Just(effect)
+        this.setTimer(() => this.run())
+      }),
     )
+
+    inner.add(this.addDisposable(inner))
   }
 
   protected Yield({ effect }: Effect.Effect.Yield<Effect.Effect.AnyIO>) {
