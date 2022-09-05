@@ -123,14 +123,7 @@ export function trimOverlappingTraces(current: Trace, incoming: Trace): Trace {
     return current
   }
 
-  const frames = trimOverlappingFrames(
-    current.frames.slice(0, incoming.frames.length), // Only compare the same amount of values
-    incoming.frames,
-  )
-
-  return frames.length === 0
-    ? EmptyTrace
-    : new StackFrameTrace(trimOverlappingFrames(current.frames, incoming.frames))
+  return new StackFrameTrace(trimOverlappingFrames(current.frames, incoming.frames))
 }
 
 function trimOverlappingFrames(
@@ -140,22 +133,17 @@ function trimOverlappingFrames(
   // Clone our Array for mutation
   const outgoing: Array<StackFrame.StackFrame> = [...incoming]
 
-  let cIndex = current.length - 1
+  let cIndex = 0
   let iIndex = 0
   let deleted = 0
 
-  for (; cIndex > -1 && iIndex < incoming.length; ) {
+  for (; cIndex < current.length && iIndex < incoming.length; ) {
     const c = current[cIndex]
     const i = incoming[iIndex]
 
-    // If neither are Runtime instructions, lets just break early
-    if (!(c.tag === 'Runtime' || i.tag === 'Runtime')) {
-      break
-    }
-
     // Skip over custom/instrumented traces
     if (c.tag !== 'Runtime') {
-      cIndex--
+      cIndex++
 
       continue
     }
@@ -165,15 +153,20 @@ function trimOverlappingFrames(
       continue
     }
 
-    // If we don't have a match, just break
-    if (!StackFrame.Eq.equals(c, i)) {
-      break
+    // If we have a match remove it from the trace
+    if (StackFrame.Eq.equals(c, i)) {
+      // Remove this Trace
+      outgoing.splice(iIndex - deleted++, 1)
+      cIndex++
+      iIndex++
+      continue
     }
 
-    // Remove this Trace
-    outgoing.splice(iIndex - deleted++, 1)
-    cIndex--
-    iIndex++
+    if (cIndex++ === current.length) {
+      break
+    } else if (iIndex++ === incoming.length) {
+      break
+    }
   }
 
   return outgoing

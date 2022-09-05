@@ -1,6 +1,6 @@
 import { dirname } from 'path'
 
-import { ExclusiveSuiteFunction, Suite, SuiteFunction } from 'mocha'
+import { ExclusiveSuiteFunction, Suite, SuiteFunction, describe } from 'mocha'
 
 declare global {
   export interface ImportMeta {
