@@ -53,20 +53,14 @@ testSuite(import.meta.url, () => {
     const first = Math.random()
     const second = Math.random()
 
-    const expected = (first * 2) / (second * 2)
+    const expected = first / 2 / (second / 2)
 
     deepStrictEqual(
       await runTest(
         pipe(
           Effect.now(first),
-          Effect.map((a: number) => a * 2),
-          Effect.flatMap((a) =>
-            pipe(
-              Effect.now(second),
-              Effect.map((a: number) => a * 2),
-              Effect.flatMap((b) => Effect.now(a / b)),
-            ),
-          ),
+          Effect.map((a: number) => a / 2),
+          Effect.map((f) => f / (second / 2)),
         ),
       ),
       expected,
