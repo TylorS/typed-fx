@@ -232,7 +232,9 @@ testSuite(import.meta.url, () => {
 
 const runBench = <A>(program: Effect.Effect<never, never, A>, expected: A) =>
   new Promise<number>((resolve, reject) => {
+    console.time('EffectRuntime Construction')
     const runtime = new EffectRuntime(program)
+    console.timeEnd('EffectRuntime Construction')
     runtime.addObserver((exit) => {
       resolve(performance.now() - start)
 

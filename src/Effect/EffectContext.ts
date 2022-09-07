@@ -1,26 +1,30 @@
-import type { Effect } from './Effect.js'
+import { Maybe, Nothing } from 'hkt-ts/Maybe'
 
-import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
+import { EffectRefs } from './EffectRefs.js'
+
 import { Platform } from '@/Platform/index.js'
 import { StackTrace } from '@/Trace/Trace.js'
 
-export interface EffectContext<Fx extends Effect.AnyIO> {
-  readonly handlers: Effect.HandlerMap<Fx> // = ImmutableMap()
-  readonly platform: Platform // = Platform()
-  readonly stackTrace: StackTrace // = Trace.StackTrace()
-  readonly interruptStatus: boolean // = true
+export interface EffectContext {
+  readonly platform: Platform
+  readonly refs: EffectRefs
+  readonly stackTrace: StackTrace
+  readonly interruptStatus: boolean
+  readonly parent: Maybe<EffectContext>
 }
 
-export function EffectContext<Fx extends Effect.AnyIO = never>(
-  handlers: Effect.HandlerMap<Fx> = ImmutableMap(),
+export function EffectContext(
   platform: Platform = Platform(),
+  refs: EffectRefs = EffectRefs(),
   stackTrace: StackTrace = StackTrace(),
   interruptStatus = true,
-): EffectContext<Fx> {
+  parent: Maybe<EffectContext> = Nothing,
+): EffectContext {
   return {
-    handlers,
     platform,
+    refs,
     stackTrace,
     interruptStatus,
+    parent,
   }
 }

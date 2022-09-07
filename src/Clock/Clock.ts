@@ -2,15 +2,12 @@ import { Lazy } from 'hkt-ts'
 import * as Associative from 'hkt-ts/Typeclass/Associative'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
-import type { Service } from '@/Service/index.js'
 import { Delay, MAX_UNIX_TIME, MIN_UNIX_TIME, Time, UnixTime } from '@/Time/index.js'
 
 export interface Clock {
   readonly startTime: UnixTime
   readonly getCurrentTime: Lazy<Time>
 }
-
-export const Clock = Symbol('Clock') as Service<Clock>
 
 export function make(startTime: UnixTime, getCurrentTime: Lazy<Time>): Clock {
   return {

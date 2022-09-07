@@ -1,37 +1,27 @@
-import { AnyExit } from '@/Exit/Exit.js'
+import { Exit } from '@/Exit/Exit.js'
 
-export type FiberStatus = Suspended | Running | Done
+export type FiberStatus<E, A> = Suspended | Running | Done<E, A>
 
 export interface Suspended {
   readonly tag: 'Suspended'
-  readonly isInterruptable: boolean
 }
-export const Suspended = (isInterruptable: () => boolean): Suspended => ({
+export const Suspended: Suspended = {
   tag: 'Suspended',
-  get isInterruptable() {
-    return isInterruptable()
-  },
-})
+}
 
 export interface Running {
   readonly tag: 'Running'
-  readonly isInterruptable: boolean
 }
-export const Running = (isInterruptable: () => boolean): Running => ({
+export const Running: Running = {
   tag: 'Running',
-  get isInterruptable() {
-    return isInterruptable()
-  },
-})
-
-export interface Done {
-  readonly tag: 'Done'
-  readonly isInterruptable: false
-  readonly exit: AnyExit
 }
 
-export const Done = (exit: AnyExit): Done => ({
+export interface Done<E, A> {
+  readonly tag: 'Done'
+  readonly exit: Exit<E, A>
+}
+
+export const Done = <E, A>(exit: Exit<E, A>): Done<E, A> => ({
   tag: 'Done',
-  isInterruptable: false,
   exit,
 })

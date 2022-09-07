@@ -1,11 +1,14 @@
-import { Maybe, flow, pipe } from 'hkt-ts'
-import { Left, Right, isLeft, match } from 'hkt-ts/Either'
+import { Maybe, constVoid, flow, pipe } from 'hkt-ts'
+import * as Either from 'hkt-ts/Either'
 import { isNonEmpty } from 'hkt-ts/NonEmptyArray'
 import { concatAll } from 'hkt-ts/Typeclass/Associative'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import * as Effect from './Effect.js'
 import { EffectContext } from './EffectContext.js'
+import { EffectObservers, Observer } from './EffectObservers.js'
+import { EffectRefs } from './EffectRefs.js'
+import { EffectScope } from './EffectScope.js'
 import {
   EffectFrame,
   EffectStack,
@@ -16,7 +19,7 @@ import {
   OrElseFrame,
   PopFrame,
 } from './EffectStack.js'
-import { Done, EffectStatus, Running, Suspended } from './EffectStatus.js'
+import { Fiber } from './Fiber.js'
 import { Future } from './Future.js'
 
 import { Atomic } from '@/Atomic/Atomic.js'
@@ -25,69 +28,71 @@ import * as Cause from '@/Cause/index.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
 import { Exit } from '@/Exit/Exit.js'
 import * as FiberId from '@/FiberId/FiberId.js'
+import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
+import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
 import { Stack } from '@/Stack/index.js'
 import { Delay } from '@/Time/index.js'
 import * as Trace from '@/Trace/Trace.js'
 
-// TODO: Allow Running Arbitrary Effects within the Runtime instead of Interrupt
-// TODO: Supervision ?
-// TODO: Both
-// TODO: Either
-// TODO: Eagerly evaluate Both/Either for optimization
+// TODO: Allow Running Arbitrary Effects within the Runtime
+// TODO: Supervision
 
 const CauseSeqAssoc = Cause.makeSequentialAssociative<any>()
 const concatAllSeqCause = concatAll(CauseSeqAssoc)
 
-export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
+export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> implements Fiber<E, A> {
   // Fully internalized state
   protected _started = false // Whether or not this fiber has been manually started yet
   protected _current: Maybe.Maybe<Effect.Effect<any, any, any>> = Maybe.Nothing // The current Effect to process
   protected _stack: EffectStack | null = null // The control flow for returning Exit values
-  protected _observers: Array<Observer<E, A>> = [] // Allow of the observers of this Fiber's exit value.
+  protected _observers = new EffectObservers<E, A>() // The observers of this Fiber's exit value.
   protected _disposable: Maybe.Maybe<Settable> = Maybe.Nothing // Any resources that should be cleaned up after the effect is complete.
-  protected _children = Atomic<ReadonlyArray<EffectRuntime<any, any, any>>>([]) // Any child Fiber forked from this Runtime.
+  protected _remainingOpCount: NonNegativeInteger // How many operations remain until the Fiber yields cooperatively
+  protected _handlers: Atomic<Effect.Effect.HandlerMap<any>> // The current IO handlers
+  protected _stackTrace: Atomic<Trace.StackTrace> // The current StackTrace
+  protected _interruptStatus: Atomic<Stack<boolean>> // The current interruptStatus
+  protected _interruptedBy = Atomic<ReadonlyArray<FiberId.FiberId>>([]) // List of all interrupting Fibers
+  protected _scope: EffectScope<E, A> = EffectScope((exit) => this.done(exit))
 
-  // Sampled view EffectRuntime.status
-  protected _status: EffectStatus<E, A> = Suspended
-
-  // Sampled state via EffectRuntime.state
-  protected _remainingOpCount: NonNegativeInteger
-  protected _handlers: Atomic<Effect.Effect.HandlerMap<any>>
-  protected _stackTrace: Atomic<Trace.StackTrace>
-  protected _interruptStatus: Atomic<Stack<boolean>>
-  protected _interruptedBy = Atomic<ReadonlyArray<FiberId.FiberId>>([])
+  // Sampled via EffectRuntime.status
+  protected _status: FiberStatus<E, A> = Suspended
 
   constructor(
     readonly effect: Effect.Effect<Fx, E, A>,
-    readonly context: EffectContext<Fx> = EffectContext(),
+    readonly effectContext: EffectContext = EffectContext(),
+    readonly handlers: Effect.Effect.HandlerMap<Fx> = ImmutableMap(),
   ) {
-    this._remainingOpCount = context.platform.maxOpCount
-    this._handlers = Atomic(context.handlers)
-    this._stackTrace = Atomic(context.stackTrace)
-    this._interruptStatus = Atomic(new Stack(context.interruptStatus))
+    this._remainingOpCount = effectContext.platform.maxOpCount
+    this._handlers = Atomic(handlers)
+    this._stackTrace = Atomic(effectContext.stackTrace)
+    this._interruptStatus = Atomic(new Stack(effectContext.interruptStatus))
   }
 
-  readonly id: FiberId.FiberId.Live = FiberId.Live(this.context.platform)
+  readonly tag = 'Live'
+
+  /**
+   * The ID of the current Fiber
+   */
+  readonly id: FiberId.FiberId.Live = FiberId.Live(this.effectContext.platform)
 
   /**
    * Get the current status of the this Fiber.
    */
-  get status(): EffectStatus<E, A> {
+  get status(): FiberStatus<E, A> {
     return this._status
   }
 
-  /**
-   * Inspect the current state of the Fiber
-   */
-  get state(): EffectContext<Fx> {
+  get context(): EffectContext {
     return {
-      platform: this.context.platform,
-      handlers: this._handlers.get(),
+      ...this.effectContext,
       stackTrace: this._stackTrace.get(),
       interruptStatus: this._interruptStatus.get().value,
     }
   }
 
+  /**
+   * Await the exit value of this Fiber.
+   */
   readonly exit = Effect.lazy(() => {
     if (this._status.tag === 'Done') {
       return Effect.now(this._status.exit)
@@ -99,6 +104,13 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
 
     return Effect.wait(future)
   })
+
+  /**
+   * Get the current Trace
+   */
+  readonly trace = Effect.fromLazy(() =>
+    Trace.getTraceUpTo(this._stackTrace.get(), this.effectContext.platform.maxTraceCount),
+  )
 
   /**
    * Start the effect. By default, the effect will be started asynchronously.
@@ -115,9 +127,9 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     this._current = Maybe.Just(this.effect)
 
     if (async) {
-      this.setTimer(() => this.run())
+      this.setTimer(() => this.eventLoop())
     } else {
-      this.run()
+      this.eventLoop()
     }
 
     return true
@@ -132,26 +144,22 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     const status = this._status
 
     if (status.tag === 'Done') {
-      return this.context.platform.timer.setTimer(() => observer(status.exit), Delay(0))
+      return this.effectContext.platform.timer.setTimer(() => observer(status.exit), Delay(0))
     }
 
-    this._observers.push(observer)
-
-    return Disposable(() => {
-      const i = this._observers.indexOf(observer)
-
-      if (i > -1) {
-        this._observers.splice(i, 1)
-      }
-    })
+    return this._observers.addObserver(observer)
   }
 
-  readonly interruptAs = (id: FiberId.FiberId): Effect.Effect<never, never, Exit<E, A>> =>
+  /**
+   * Interrupt the Fiber. This will interrupt the effect and all of its children as soon as
+   * possible. If the effect is marked as interruptible, it will be interrupted immediately.
+   * If the effect is not interruptible, it will be interrupted as soon as it becomes
+   * interruptable, if ever.
+   */
+  readonly interruptAs = (id: FiberId.FiberId): Effect.Effect.Of<Exit<E, A>> =>
     Effect.lazy(() => {
       if (this._interruptStatus.get().value) {
-        // Immediately interrupt the Fiber
-        this.dispose()
-        this.continueWithTracedCause(Cause.interrupted(id))
+        this.yieldNow(Effect.fromCause(Cause.interrupted(id)))
       } else {
         // Record the interrupting FiberId for if/when the interrupt status becomes true again.
         this._interruptedBy.modify((ids) => [Maybe.Nothing, [...ids, id]])
@@ -162,7 +170,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
 
   // Internals
 
-  protected run() {
+  protected eventLoop() {
     this.running()
 
     while (Maybe.isJust(this._current)) {
@@ -190,17 +198,15 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
 
   protected done(exit: Exit<E, A>) {
     this._status = Done(exit)
-
-    if (this._observers.length > 0) {
-      this._observers.forEach((observer) => observer(exit))
-      this._observers = []
-    } else if (isLeft(exit)) {
-      this.context.platform.reportFailure(prettyPrint(exit.left, this.context.platform.renderer))
-    }
-
-    this._current = Maybe.Nothing
-
     this.dispose()
+
+    if (this._observers.isNonEmpty()) {
+      this._observers.notifyExit(exit)
+    } else if (Either.isLeft(exit)) {
+      this.effectContext.platform.reportFailure(
+        prettyPrint(exit.left, this.effectContext.platform.renderer),
+      )
+    }
   }
 
   protected step(effect: Effect.Effect<any, any, any>) {
@@ -215,24 +221,6 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     ;(this[effect.tag] as (e: typeof effect) => void)(effect)
   }
 
-  protected yieldNow(effect: Effect.Effect<any, any, any>) {
-    this.resetOpCount()
-    this._current = Maybe.Nothing
-    this.setTimer(() => {
-      this._current = Maybe.Just(effect)
-      this.run()
-    })
-  }
-
-  protected addTrace(trace: Trace.Trace) {
-    const trimmed = Trace.getTrimmedTrace(Cause.Empty, this._stackTrace.get())
-    const custom = Trace.concat(trace, trimmed)
-
-    this._stackTrace.modify((prev) => [null, prev.push(custom)])
-
-    this.onPop(() => this._stackTrace.modify((prev) => [null, prev.pop() ?? prev]))
-  }
-
   protected Now({ value }: Effect.Effect.Now<any>) {
     this.continueWith(value)
   }
@@ -241,12 +229,12 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     this.continueWith(f())
   }
 
-  protected FromCause({ cause }: Effect.Effect.FromCause<any>) {
-    this.continueWithCause(cause)
-  }
-
   protected Lazy({ f }: Effect.Effect.Lazy<any, any, any>) {
     this._current = Maybe.Just(f())
+  }
+
+  protected FromCause({ cause }: Effect.Effect.FromCause<any>) {
+    this.continueWithCause(cause)
   }
 
   protected Map({ effect, f }: Effect.Effect.Map<any, any, any, any>) {
@@ -269,7 +257,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     onLeft,
     onRight,
   }: Effect.Effect.Match<any, any, any, any, any, any, any, any, any>) {
-    this.pushFrame(MatchFrame(match(onLeft, onRight)))
+    this.pushFrame(MatchFrame(Either.match(onLeft, onRight)))
     this._current = Maybe.Just(effect)
   }
 
@@ -286,16 +274,50 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
 
     this._current = Maybe.Nothing
 
-    const inner = settable()
-
-    inner.add(
+    this.addDisposable((remove) =>
       Future.addObserver(future, (effect) => {
-        inner.dispose()
+        remove()
         this.yieldNow(effect)
       }),
     )
+  }
 
-    inner.add(this.addDisposable(inner))
+  protected Both({ left, right }: Effect.Effect.Both<any, any, any, any, any, any, any>) {
+    const ctx = this.context
+    const l = new EffectRuntime(left, ctx, this._handlers.get())
+    const r = new EffectRuntime(right, ctx, this._handlers.get())
+    const future = runBoth(l, r)
+
+    this._current = Maybe.Just(Effect.wait(future))
+  }
+
+  protected Either({ left, right }: Effect.Effect.Either<any, any, any, any, any, any, any>) {
+    const ctx = this.context
+    const l = new EffectRuntime(left, ctx, this._handlers.get())
+    const r = new EffectRuntime(right, ctx, this._handlers.get())
+    const future = runEither(l, r)
+
+    this._current = Maybe.Just(Effect.wait(future))
+  }
+
+  protected Fork({ effect, params }: Effect.Effect.Fork<any, any, any>) {
+    const child = new EffectRuntime(
+      effect,
+      {
+        platform: params?.platform ?? this.effectContext.platform.fork(),
+        refs: params?.refs ?? this.effectContext.refs.fork(),
+        stackTrace: params?.stackTrace ?? this._stackTrace.get(),
+        interruptStatus: params?.interruptStatus ?? this._interruptStatus.get().value,
+        parent: params?.parent ?? Maybe.Just(this.effectContext),
+      },
+      this._handlers.get(),
+    )
+    const forkScope = params?.forkScope ?? this._scope
+
+    forkScope.addChild(child)
+    child.addDisposable(() => Disposable(() => forkScope.removeChild(child)))
+    child.start(params?.async)
+    this.continueWith(child)
   }
 
   protected Yield({ effect }: Effect.Effect.Yield<Effect.Effect.AnyIO>) {
@@ -388,9 +410,32 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected GetPlatform(_: Effect.Effect.GetPlatform) {
-    this.continueWith(this.context.platform)
+  protected GetFiberChildren(_: Effect.Effect.GetFiberChildren) {
+    this.continueWith(this._scope.children)
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected GetPlatform(_: Effect.Effect.GetPlatform) {
+    this.continueWith(this.effectContext.platform)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected GetEffectRefs(_: Effect.Effect.GetEffectRefs) {
+    this.continueWith(this.effectContext.refs)
+  }
+
+  protected EffectRefLocally({
+    effect,
+    ref,
+    value,
+  }: Effect.Effect.EffectRefLocally<any, any, any, any, any, any>) {
+    const refs = this.effectContext.refs
+    EffectRefs.pushLocal(refs, ref, value)
+    this.onPop(() => EffectRefs.popLocal(refs, ref))
+    this._current = Maybe.Just(effect)
+  }
+
+  // #region Effect Stack Management
 
   protected continueWith(a: any) {
     let frame = this.popFrame()
@@ -399,11 +444,9 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
       const tag = frame.tag
 
       if (tag === 'FlatMap') {
-        this._current = Maybe.Just(frame.f(a))
-        return
+        return (this._current = Maybe.Just(frame.f(a)))
       } else if (tag === 'Match') {
-        this._current = Maybe.Just(frame.f(Right(a)))
-        return
+        return (this._current = Maybe.Just(frame.f(Either.Right(a))))
       } else if (tag === 'Map') {
         a = frame.f(a)
       } else if (tag === 'Pop') {
@@ -415,7 +458,9 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
       frame = this.popFrame()
     }
 
-    this.done(Right(a))
+    if (!this._scope.close(Either.Right(a))) {
+      this.interruptChildren()
+    }
   }
 
   protected continueWithCause(cause: Cause.Cause<any>) {
@@ -428,7 +473,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
         this._current = Maybe.Just(frame.f(cause))
         return
       } else if (tag === 'Match') {
-        this._current = Maybe.Just(frame.f(Left(cause)))
+        this._current = Maybe.Just(frame.f(Either.Left(cause)))
         return
       } else if (tag === 'Pop') {
         frame.pop()
@@ -439,7 +484,9 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
       frame = this.popFrame()
     }
 
-    this.done(Left(cause))
+    if (!this._scope.close(Either.Left(cause))) {
+      this.interruptChildren()
+    }
   }
 
   protected continueWithTracedCause(cause: Cause.Cause<any>) {
@@ -447,7 +494,7 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     const trimmed = Trace.getTrimmedTrace(cause, stackTrace)
     const current = Trace.getTraceUpTo(
       stackTrace.push(trimmed),
-      this.context.platform.maxTraceCount,
+      this.effectContext.platform.maxTraceCount,
     )
 
     this.continueWithCause(Cause.traced(Trace.concat(trimmed, current))(cause))
@@ -469,44 +516,8 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
     return frame
   }
 
-  protected setTimer(f: () => void) {
-    const inner = settable()
-
-    inner.add(this.context.platform.timer.setTimer(f, Delay(0)))
-    inner.add(this.addDisposable(inner))
-
-    return inner
-  }
-
-  protected addDisposable(d: Disposable) {
-    if (Maybe.isNothing(this._disposable)) {
-      const s = settable()
-
-      this._disposable = Maybe.Just(s)
-
-      return s.add(d)
-    }
-
-    return this._disposable.value.add(d)
-  }
-
-  protected dispose() {
-    if (Maybe.isJust(this._disposable)) {
-      Maybe.fromJust(this._disposable).dispose()
-      this._disposable = Maybe.Nothing
-    }
-  }
-
   protected onPop(f: () => void) {
     this.pushFrame(PopFrame(f))
-  }
-
-  protected resetOpCount() {
-    this._remainingOpCount = this.context.platform.maxOpCount
-  }
-
-  protected shouldInterrupt() {
-    return this._interruptedBy.get().length > 0
   }
 
   protected interruptNow(cause: Cause.Cause<any>): boolean {
@@ -522,8 +533,149 @@ export class EffectRuntime<Fx extends Effect.Effect.AnyIO, E, A> {
 
     return true
   }
+
+  protected interruptChildren() {
+    const interrupts = this._scope.children.map((child) => child.interruptAs(this.id))
+
+    if (isNonEmpty(interrupts)) {
+      const [f, ...rest] = interrupts
+      this._current = Maybe.Just(
+        rest.reduce((acc, x) => Effect.both(x)(acc), f as Effect.Effect<any, any, any>),
+      )
+    }
+  }
+
+  // #endregion
+
+  protected yieldNow(effect: Effect.Effect<any, any, any>) {
+    this._current = Maybe.Nothing
+    this.setTimer(() => {
+      this._current = Maybe.Just(effect)
+      this.eventLoop()
+    })
+    this.resetOpCount()
+  }
+
+  protected addTrace(trace: Trace.Trace) {
+    const trimmed = Trace.getTrimmedTrace(Cause.Empty, this._stackTrace.get())
+    const custom = Trace.concat(trace, trimmed)
+
+    this._stackTrace.modify((prev) => [null, prev.push(custom)])
+
+    this.onPop(() => this._stackTrace.modify((prev) => [null, prev.pop() ?? prev]))
+  }
+
+  protected setTimer(f: () => void) {
+    return this.addDisposable((remove) => {
+      return this.effectContext.platform.timer.setTimer(() => {
+        remove()
+        f()
+      }, Delay(0))
+    })
+  }
+
+  protected addDisposable(f: (remove: () => void) => Disposable) {
+    const s = pipe(
+      this._disposable,
+      Maybe.getOrElse(() => {
+        const s = settable()
+
+        this._disposable = Maybe.Just(s)
+
+        return s
+      }),
+    )
+
+    const inner = settable()
+
+    inner.add(f(() => inner.dispose()))
+    inner.add(s.add(inner))
+
+    return inner
+  }
+
+  protected dispose() {
+    this._current = Maybe.Nothing
+
+    if (Maybe.isJust(this._disposable)) {
+      Maybe.fromJust(this._disposable).dispose()
+      this._disposable = Maybe.Nothing
+    }
+  }
+
+  protected resetOpCount() {
+    this._remainingOpCount = this.effectContext.platform.maxOpCount
+  }
 }
 
-export interface Observer<E, A> {
-  (exit: Exit<E, A>): void
+function runBoth(
+  left: EffectRuntime<any, any, any>,
+  right: EffectRuntime<any, any, any>,
+): Future<any, any, any> {
+  const future = Future.Pending<any, any, any>()
+
+  let leftExit: Maybe.Maybe<any> = Maybe.Nothing
+  let rightExit: Maybe.Maybe<any> = Maybe.Nothing
+
+  const cancel = (side: 'l' | 'r') =>
+    side === 'l' ? right.interruptAs(left.id) : left.interruptAs(right.id)
+
+  const done = (side: 'l' | 'r') => (exit: Exit<any, any>) => {
+    if (Either.isLeft(exit)) {
+      return Future.complete(future)(
+        pipe(
+          cancel(side),
+          Effect.flatMap(() => Effect.fromCause(exit.left)),
+        ),
+      )
+    }
+
+    if (side === 'l') {
+      leftExit = Maybe.Just(exit.right)
+    } else {
+      rightExit = Maybe.Just(exit.right)
+    }
+
+    pipe(
+      Maybe.tuple(leftExit, rightExit),
+      Maybe.match(constVoid, ([l, r]) => Future.complete(future)(Effect.now([l, r]))),
+    )
+  }
+
+  left.addObserver(done('l'))
+  right.addObserver(done('r'))
+
+  left.start(false)
+  right.start(false)
+
+  return future
+}
+
+function runEither(
+  left: EffectRuntime<any, any, any>,
+  right: EffectRuntime<any, any, any>,
+): Future<any, any, any> {
+  const future = Future.Pending<any, any, any>()
+
+  const done = (side: 'l' | 'r') => (exit: Exit<any, any>) =>
+    Future.complete(future)(
+      pipe(
+        side === 'l' ? right.interruptAs(left.id) : left.interruptAs(right.id),
+        Effect.flatMap(() =>
+          pipe(
+            exit,
+            Either.map<any, any>(side === 'l' ? Either.Left : Either.Right),
+            Effect.fromExit,
+          ),
+        ),
+      ),
+    )
+
+  left.addObserver(done('l'))
+  right.addObserver(done('r'))
+
+  left.start(false)
+  right.start(false)
+
+  return future
 }

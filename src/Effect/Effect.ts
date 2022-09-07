@@ -1,10 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import * as Either from 'hkt-ts/Either'
+import * as E from 'hkt-ts/Either'
 import { DeepEquals } from 'hkt-ts/Typeclass/Eq'
 import * as F from 'hkt-ts/function'
 import { InstanceOf } from 'ts-morph'
 
+import type { EffectContext } from './EffectContext.js'
+import type { EffectRef } from './EffectRef.js'
+import type { EffectRefs } from './EffectRefs.js'
+import type { EffectScope } from './EffectScope.js'
+import type { Fiber } from './Fiber.js'
 import type { Future } from './Future.js'
 
 import { getCauseError } from '@/Cause/CauseError.js'
@@ -28,10 +32,16 @@ export type Effect<Fx extends Effect.AnyIO, E, A> =
   | Effect.OrElse<Fx, any, A, Fx, E, A>
   | Effect.Match<Fx, any, any, Fx, E, A, Fx, E, A>
   | Effect.Wait<Fx, E, A>
+  | Effect.Both<Fx, E, any, Fx, E, any, A>
+  | Effect.Either<Fx, E, any, Fx, E, any, A>
+  | Effect.Fork<any, any, any>
   // Effects
   | Effect.Yield<Fx>
   | Effect.Handle<Fx, any, any, any, Fx, E, A>
   | Effect.GetHandlers<Fx>
+  // Refs
+  | Effect.GetEffectRefs
+  | Effect.EffectRefLocally<Fx, E, A, any, any, any>
   // Tracing
   | Effect.GetTrace
   | Effect.AddTrace<Fx, E, A>
@@ -40,16 +50,19 @@ export type Effect<Fx extends Effect.AnyIO, E, A> =
   | Effect.SetInterruptStatus<Fx, E, A>
   // Intrinstics
   | Effect.GetFiberId
+  | Effect.GetFiberChildren
   | Effect.GetPlatform
 
 type NoYields =
   | Effect.GetFiberId
+  | Effect.GetFiberChildren
   | Effect.GetPlatform
   | Effect.GetTrace
   | Effect.GetInterruptStatus
   | Effect.Now<any>
   | Effect.FromLazy<any>
   | Effect.FromCause<any>
+  | Effect.Fork<any, any, any>
 
 export type YieldOf<T> = [Exclude<T, NoYields>] extends [never]
   ? never
@@ -59,6 +72,7 @@ export type YieldOf<T> = [Exclude<T, NoYields>] extends [never]
 
 type NoErrors =
   | Effect.GetFiberId
+  | Effect.GetFiberChildren
   | Effect.GetPlatform
   | Effect.GetTrace
   | Effect.GetInterruptStatus
@@ -66,6 +80,7 @@ type NoErrors =
   | Effect.FromLazy<any>
   | Effect.Yield<any>
   | Effect.GetHandlers<any>
+  | Effect.Fork<any, any, any>
 
 export type ErrorsOf<T> = [Exclude<T, NoErrors>] extends [never]
   ? [never]
@@ -164,6 +179,28 @@ export const wait = <Fx extends Effect.AnyIO, E, A>(
   __trace?: string,
 ): Effect<Fx, E, A> => Effect.Wait(effect, __trace)
 
+export const both =
+  <Fx2 extends Effect.AnyIO, E2, A2>(second: Effect<Fx2, E2, A2>, __trace?: string) =>
+  <Fx extends Effect.AnyIO, E, A>(first: Effect<Fx, E, A>) =>
+    Effect.Both(first, second, __trace)
+
+export const either =
+  <Fx2 extends Effect.AnyIO, E2, A2>(second: Effect<Fx2, E2, A2>, __trace?: string) =>
+  <Fx extends Effect.AnyIO, E, A>(
+    first: Effect<Fx, E, A>,
+  ): Effect<Fx | Fx2, E | E2, E.Either<A, A2>> =>
+    Effect.Either(first, second, __trace)
+
+export const forkWithParams =
+  (params: Effect.ForkParams, __trace?: string) =>
+  <Fx extends Effect.AnyIO, E, A>(effect: Effect<Fx, E, A>): Effect<Fx, never, Fiber<E, A>> =>
+    Effect.Fork(effect, params, __trace)
+
+export const fork = <Fx extends Effect.AnyIO, E, A>(
+  effect: Effect<Fx, E, A>,
+  __trace?: string,
+): Effect<Fx, never, Fiber<E, A>> => Effect.Fork(effect, undefined, __trace)
+
 export const effect = <Tag extends string, E, A>(io: Effect.IO<Tag, E, A>, __trace?: string) =>
   Effect.Yield(io, __trace)
 
@@ -206,6 +243,13 @@ export const handler = <
 export const getHandlers = <Fx extends Effect.AnyIO>(__trace?: string) =>
   Effect.GetHandlers<Fx>(__trace)
 
+export const getEffectRefs = (__trace?: string) => Effect.GetEffectRefs(__trace)
+
+export const effectRefLocally =
+  <Fx2 extends Effect.AnyIO, E2, B>(ref: EffectRef<Fx2, E2, B>, value: B, __trace?: string) =>
+  <Fx extends Effect.AnyIO, E, A>(effect: Effect<Fx, E, A>) =>
+    Effect.EffectRefLocally(effect, ref, value, __trace)
+
 export const getTrace = (__trace?: string) => Effect.GetTrace(__trace)
 
 export const addTrace =
@@ -219,14 +263,14 @@ export const addCustomTrace =
     trace ? addTrace(Trace.custom(trace))(effect) : effect
 
 export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): Effect<never, E, A> =>
-  Either.isLeft(exit) ? fromCause(exit.left, __trace) : now(exit.right, __trace)
+  E.isLeft(exit) ? fromCause(exit.left, __trace) : now(exit.right, __trace)
 
-export const fromEither = <E, A>(
-  either: Either.Either<E, A>,
-  __trace?: string,
-): Effect<never, E, A> => fromExit(Exit.fromEither(either), __trace)
+export const fromEither = <E, A>(either: E.Either<E, A>, __trace?: string): Effect<never, E, A> =>
+  fromExit(Exit.fromEither(either), __trace)
 
 export namespace Effect {
+  export type Of<A> = Effect<never, never, A>
+
   // #region Constructors
   export interface Now<A> {
     readonly tag: 'Now'
@@ -407,6 +451,60 @@ export namespace Effect {
     return { tag: 'Wait', future, __trace } as Wait<Fx, E, A>
   }
 
+  export interface Fork<Fx extends AnyIO, E, A> {
+    readonly tag: 'Fork'
+    readonly effect: Effect<Fx, E, A>
+    readonly params?: ForkParams
+    readonly __trace?: string
+  }
+
+  export interface Both<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, A2, C> {
+    readonly __A: () => C
+
+    readonly tag: 'Both'
+    readonly left: Effect<Fx, E, A>
+    readonly right: Effect<Fx2, E2, A2>
+    readonly __trace?: string
+  }
+
+  export function Both<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, A2>(
+    left: Effect<Fx, E, A>,
+    right: Effect<Fx2, E2, A2>,
+    __trace?: string,
+  ): Effect<Fx | Fx2, E | E2, readonly [A, A2]> {
+    return { tag: 'Both', left, right, __trace } as Both<Fx, E, A, Fx2, E2, A2, readonly [A, A2]>
+  }
+
+  export interface Either<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, A2, C> {
+    readonly __A: () => C
+
+    readonly tag: 'Either'
+    readonly left: Effect<Fx, E, A>
+    readonly right: Effect<Fx2, E2, A2>
+    readonly __trace?: string
+  }
+
+  export function Either<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, A2>(
+    left: Effect<Fx, E, A>,
+    right: Effect<Fx2, E2, A2>,
+    __trace?: string,
+  ): Effect<Fx | Fx2, E | E2, E.Either<A, A2>> {
+    return { tag: 'Either', left, right, __trace } as Either<Fx, E, A, Fx2, E2, A2, E.Either<A, A2>>
+  }
+
+  export function Fork<Fx extends AnyIO, E, A>(
+    effect: Effect<Fx, E, A>,
+    params?: ForkParams,
+    __trace?: string,
+  ): Effect<Fx, never, Fiber<E, A>> {
+    return { tag: 'Fork', effect, params, __trace }
+  }
+
+  export interface ForkParams extends Partial<EffectContext> {
+    readonly forkScope?: EffectScope<any, any>
+    readonly async?: boolean
+  }
+
   // #endregion
 
   // #region Effects
@@ -455,6 +553,11 @@ export namespace Effect {
       ? [input: I, __trace?: string]
       : [input: void, __trace?: string]
 
+    type AnyInstructionConstructor = {
+      readonly tag: string
+      new (input: any, __trace?: string): AnyIO
+    }
+
     return class Instruction<I, E, A> extends IO<Tag, E, A> {
       static tag: Tag = tag
       readonly tag: Tag = tag
@@ -463,25 +566,23 @@ export namespace Effect {
         super(__trace)
       }
 
-      static make<
-        T extends {
-          readonly tag: string
-          new (input: any, __trace?: string): Instruction<any, any, any>
-        },
-      >(this: T, ...args: InputOf<T>): InstanceOf<T> {
+      static make<T extends AnyInstructionConstructor>(
+        this: T,
+        ...args: InputOf<T>
+      ): InstanceOf<T> {
         return new (this as any)(...args) as InstanceOf<T>
       }
 
-      static handle<
-        T extends {
-          readonly tag: string
-          new (...args: any): Effect.AnyIO
-        },
-        Fx2 extends Effect.AnyIO,
-        E2,
-        B,
-      >(this: T, f: (io: InstanceType<T>) => Effect<Fx2, E2, B>, __trace?: string) {
+      static handle<T extends AnyInstructionConstructor, Fx2 extends Effect.AnyIO, E2, B>(
+        this: T,
+        f: (io: InstanceType<T>) => Effect<Fx2, E2, B>,
+        __trace?: string,
+      ) {
         return handle(handler(this, f), __trace)
+      }
+
+      is<T2 extends AnyInstructionConstructor>(that: T2): this is InstanceOf<T2> {
+        return this.tag === that.tag
       }
     }
   }
@@ -572,6 +673,32 @@ export namespace Effect {
     export const Empty = HandlerMap<never>()
   }
 
+  export interface GetEffectRefs {
+    readonly tag: 'GetEffectRefs'
+    readonly __trace?: string
+  }
+
+  export function GetEffectRefs(__trace?: string): Effect<never, never, EffectRefs> {
+    return { tag: 'GetEffectRefs', __trace }
+  }
+
+  export interface EffectRefLocally<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, B> {
+    readonly tag: 'EffectRefLocally'
+    readonly effect: Effect<Fx, E, A>
+    readonly ref: EffectRef<Fx2, E2, B>
+    readonly value: B
+    readonly __trace?: string
+  }
+
+  export function EffectRefLocally<Fx extends AnyIO, E, A, Fx2 extends AnyIO, E2, B>(
+    effect: Effect<Fx, E, A>,
+    ref: EffectRef<Fx2, E2, B>,
+    value: B,
+    __trace?: string,
+  ): Effect<Fx, E, A> {
+    return { tag: 'EffectRefLocally', effect, ref, value, __trace }
+  }
+
   export interface GetTrace {
     readonly tag: 'GetTrace'
     readonly __trace?: string
@@ -626,6 +753,17 @@ export namespace Effect {
 
   export function GetFiberId(__trace?: string): Effect<never, never, FiberId.Live> {
     return { tag: 'GetFiberId', __trace }
+  }
+
+  export interface GetFiberChildren {
+    readonly tag: 'GetFiberChildren'
+    readonly __trace?: string
+  }
+
+  export function GetFiberChildren(
+    __trace?: string,
+  ): Effect<never, never, ReadonlyArray<Fiber<any, any>>> {
+    return { tag: 'GetFiberChildren', __trace }
   }
 
   export interface GetPlatform {
