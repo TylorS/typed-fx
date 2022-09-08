@@ -156,7 +156,7 @@ export class IORuntime<E, A> {
   }
 
   protected addDisposable(disposable: Disposable) {
-    if (this._disposable.tag === 'Nothing') {
+    if (Maybe.isNothing(this._disposable)) {
       const d = settable()
 
       this._disposable = Maybe.Just(d)

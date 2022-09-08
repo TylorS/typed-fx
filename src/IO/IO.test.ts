@@ -12,7 +12,7 @@ import * as Exit from '@/Exit/Exit.js'
 import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer.js'
 import { testSuite } from '@/_internal/suite.js'
 
-testSuite(import.meta.url, () => {
+testSuite.only(import.meta.url, () => {
   describe('IO', () => {
     it(IO.Now.tag, (done) => {
       const value = Math.random()
@@ -160,7 +160,7 @@ testSuite(import.meta.url, () => {
       return IO.FlatMapIO.make(fib(n - 2), (a) => IO.MapIO.make(fib(n - 1), (b) => a + b))
     }
 
-    const total = 25
+    const total = 10
     let values = 0
     console.time('Construct Fib25')
     const program = fib(25)
