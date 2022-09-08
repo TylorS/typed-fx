@@ -49,7 +49,7 @@ export class IORuntime<E, A> {
         this._instr = Maybe.Just(frame.f(Right(a)))
         return
       } else if (tag === 'Map') {
-        return (a = frame.f(a))
+        a = frame.f(a)
       }
 
       frame = this._stackFrames.pop()
