@@ -19,9 +19,9 @@ import { Trace } from '@/Trace/Trace.js'
 export type Instruction<R, E, A> =
   | Access<R, R, E, A>
   | AddTrace<R, E, A>
-  | BothFx<R, E, any, R, E, any>
+  | BothFx<R, E, A>
   | DeleteFiberRef<R, E, any, A>
-  | EitherFx<R, E, any, R, E, any>
+  | EitherFx<R, E, A>
   | FiberRefLocally<any, any, any, R, E, A>
   | FlatMap<R, E, any, R, E, A>
   | Fork<R, any, A>
@@ -33,7 +33,7 @@ export type Instruction<R, E, A> =
   | GetTrace
   | LazyFx<R, E, A>
   | MapFx<R, E, any, A>
-  | Match<R, E, any, R, E, A, R, E, A>
+  | Match<R, any, any, R, E, A, R, E, A>
   | ModifyFiberRef<R, E, any, A>
   | Now<A>
   | Provide<any, E, A>
@@ -60,7 +60,7 @@ export abstract class Instr<R, E, A> {
     this.instr = this
   }
 
-  *[Symbol.iterator](): Generator<this, A, A> {
+  *[Symbol.iterator](): Generator<this, A, any> {
     return yield this
   }
 }
@@ -120,7 +120,7 @@ export class MapFx<R, E, A, B> extends Instr<R, E, B> {
 
     // Fuse together multiple maps.
     if (prev.tag === 'Map') {
-      return MapFx.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace)
+      return MapFx.make(prev.fx, flow(prev.f, f), __trace)
     }
 
     return new MapFx(fx, f, __trace)
@@ -145,11 +145,6 @@ export class FlatMap<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
   ): Fx<R | R2, E | E2, B> {
     const prev = fx.instr
 
-    // Eearly evaluate the chain. Stack unsafe.
-    if (prev.tag === 'Now') {
-      return f(prev.value)
-    }
-
     // Flatmap cannot process failures
     if (prev.tag === 'FromCause') {
       return prev
@@ -157,7 +152,7 @@ export class FlatMap<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
 
     // Fuse together Map + FlatMap into a single FlatMap.
     if (prev.tag === 'Map') {
-      return FlatMap.make(prev.fx as Fx<any, any, any>, flow(prev.f, f), __trace)
+      return FlatMap.make(prev.fx, flow(prev.f, f), __trace)
     }
 
     return new FlatMap(fx, f, __trace)
@@ -184,22 +179,12 @@ export class Match<R, E, A, R2, E2, B, R3, E3, C> extends Instr<R | R2 | R3, E2 
   ): Fx<R | R2 | R3, E2 | E3, B | C> {
     const prev = fx.instr
 
-    // Eagerly evaluate the onRight chain. Stack unsafe.
-    if (prev.tag === 'Now') {
-      return onRight(prev.value)
-    }
-
-    // Eagerly evaluate the onLeft chain. Stack unsafe.
-    if (prev.tag === 'FromCause') {
-      return onLeft(prev.cause)
-    }
-
     // Fuse together Map + Match
     if (prev.tag === 'Map') {
-      return Match.make(prev.fx as Fx<any, any, any>, onLeft, flow(prev.f, onRight), __trace)
+      return Match.make(prev.fx, onLeft, flow(prev.f, onRight), __trace)
     }
 
-    return new Match(fx, onLeft, onRight, __trace) as any
+    return new Match(fx, onLeft, onRight, __trace)
   }
 }
 
@@ -288,7 +273,7 @@ export class LazyFx<R, E, A> extends Instr<R, E, A> {
 export class Wait<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'Wait'
 
-  constructor(readonly future: Future<R, E, A>, readonly __trace?: string) {
+  constructor(readonly future: Future<any, any, any>, readonly __trace?: string) {
     super(__trace)
   }
 
@@ -446,12 +431,12 @@ export class Fork<R, E, A> extends Instr<R, never, Live<E, A>> {
   }
 }
 
-export class BothFx<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, readonly [A, B]> {
+export class BothFx<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'Both'
 
   constructor(
-    readonly first: Fx<R, E, A>,
-    readonly second: Fx<R2, E2, B>,
+    readonly first: Fx<any, any, any>,
+    readonly second: Fx<any, any, any>,
     readonly __trace?: string,
   ) {
     super(__trace)
@@ -470,16 +455,16 @@ export class BothFx<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, readonly [
       return second.instr
     }
 
-    return new BothFx(first, second, __trace) as Fx<R | R2, E | E2, readonly [A, B]>
+    return new BothFx(first, second, __trace)
   }
 }
 
-export class EitherFx<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, Either<A, B>> {
+export class EitherFx<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'Either'
 
   constructor(
-    readonly first: Fx<R, E, A>,
-    readonly second: Fx<R2, E2, B>,
+    readonly first: Fx<any, any, any>,
+    readonly second: Fx<any, any, any>,
     readonly __trace?: string,
   ) {
     super(__trace)
@@ -510,6 +495,6 @@ export class EitherFx<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, Either<A
       return si
     }
 
-    return new EitherFx(first, second, __trace) as any
+    return new EitherFx(first, second, __trace)
   }
 }

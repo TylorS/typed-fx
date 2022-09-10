@@ -359,7 +359,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processMatch(instr: Extract<AnyInstruction, { readonly tag: 'Match' }>) {
-    this.pushFrame(ExitFrame(Either.match(instr.onLeft as any, instr.onRight as any)))
+    this.pushFrame(ExitFrame(Either.match(instr.onLeft, instr.onRight)))
     this._current = Maybe.Just(instr.fx.instr)
   }
 
@@ -491,7 +491,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
     const inner = settable()
 
     inner.add(
-      addObserver(instr.future as any, (fx) => {
+      addObserver(instr.future, (fx) => {
         if (!inner.isDisposed()) {
           inner.dispose()
           this._current = Maybe.Just(fx.instr)
@@ -621,12 +621,12 @@ export class FiberRuntime<F extends Fx.AnyFx>
     )
 
   protected pushPopFiberRef = (ref: FiberRef.AnyFiberRef, value: any) => {
-    FiberRefs.setFiberRefLocally(ref as any, value)(this.context.fiberRefs)
+    FiberRefs.setFiberRefLocally(ref, value)(this.context.fiberRefs)
 
     this.pushFrame(
       ExitFrame((exit) =>
         Fx.lazy(() => {
-          FiberRefs.popLocalFiberRef(ref as any)(this.context.fiberRefs)
+          FiberRefs.popLocalFiberRef(ref)(this.context.fiberRefs)
 
           return Fx.fromExit(exit)
         }),
@@ -686,7 +686,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       this.context.fiberRefs,
       FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
       Maybe.match(
-        () => Trace.Trace.runtime(new Error()),
+        () => Trace.Trace.runtime(new Error(), this.getCurrentTrace),
         (stackTrace) => Trace.getTraceUpTo(stackTrace, this.context.platform.maxTraceCount),
       ),
     )
@@ -697,7 +697,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       this.context.fiberRefs,
       FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
       Maybe.match(
-        () => Trace.Trace.runtime(new Error()),
+        () => Trace.Trace.runtime(new Error(), this.getRuntimeTrace),
         (stackTrace) => Trace.getTrimmedTrace(Cause.Empty, stackTrace),
       ),
     )
