@@ -36,8 +36,8 @@ export function gracefulShutdown(
         }, DELAY)
 
         // Add a listener to the process to gracefully exit when the process is killed.
-        process.addListener('SIGTERM', () => gracefulExit())
-        process.addListener('SIGINT', () => gracefulExit())
+        process.addListener('SIGTERM', gracefulExit)
+        process.addListener('SIGINT', gracefulExit)
       }
     },
     onEnd: (parent) => (fiber, exit) => {
