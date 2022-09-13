@@ -81,7 +81,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
     Wait: this.processWait.bind(this),
   }
 
-  constructor(readonly fx: F, readonly context: FiberContext<FiberId.Live> = FiberContext()) {
+  constructor(readonly fx: F, readonly context: FiberContext = FiberContext()) {
     // All Fibers start Suspended
     this._status = Suspended(this.getInterruptStatus)
 
@@ -90,7 +90,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   readonly tag = 'Live'
-  readonly id: FiberId.Live = this.context.id
+  readonly id: FiberId.FiberId = this.context.id
   readonly status = Fx.fromLazy(() => this._status)
   readonly trace = Fx.fromLazy(() => this.getCurrentTrace())
   readonly exit = Fx.lazy(() => {

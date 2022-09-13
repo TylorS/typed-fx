@@ -20,7 +20,7 @@ export type OutputOf<T> = [T] extends [Fiber<infer _E, infer A>] ? A : never
 
 export interface Live<E, A> {
   readonly tag: 'Live'
-  readonly id: FiberId.Live
+  readonly id: FiberId
   readonly context: FiberContext
   readonly status: Of<FiberStatus>
   readonly exit: Of<Exit<E, A>>
@@ -37,7 +37,7 @@ export const Live = <E, A>(params: Omit<Live<E, A>, 'tag'>): Live<E, A> => ({
 
 export interface Synthetic<E, A> {
   readonly tag: 'Synthetic'
-  readonly id: FiberId.Synthetic
+  readonly id: FiberId
   readonly exit: Of<Exit<E, A>>
   readonly inheritFiberRefs: Of<void>
   readonly interruptAs: (id: FiberId) => Of<Exit<E, A>>
