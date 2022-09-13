@@ -1,5 +1,6 @@
 import { pipe } from 'hkt-ts'
 import * as A from 'hkt-ts/Array'
+import { not } from 'hkt-ts/Predicate'
 import * as ASSOC from 'hkt-ts/Typeclass/Associative'
 import * as D from 'hkt-ts/Typeclass/Debug'
 import * as E from 'hkt-ts/Typeclass/Eq'
@@ -123,10 +124,7 @@ export function trimOverlappingTraces(current: Trace, incoming: Trace): Trace {
     return current
   }
 
-  const frames = trimOverlappingFrames(
-    current.frames.slice(0, incoming.frames.length), // Only compare the same amount of values
-    incoming.frames,
-  )
+  const frames = trimOverlappingFrames(current.frames, incoming.frames)
 
   return frames.length === 0
     ? EmptyTrace
@@ -137,46 +135,9 @@ function trimOverlappingFrames(
   current: ReadonlyArray<StackFrame.StackFrame>,
   incoming: ReadonlyArray<StackFrame.StackFrame>,
 ): ReadonlyArray<StackFrame.StackFrame> {
-  // Clone our Array for mutation
-  const outgoing: Array<StackFrame.StackFrame> = [...incoming]
+  const intersected = A.intersection(E.DeepEquals)(incoming)(current.slice(0, incoming.length))
 
-  let cIndex = current.length - 1
-  let iIndex = 0
-  let deleted = 0
-
-  for (; cIndex > -1 && iIndex < incoming.length; ) {
-    const c = current[cIndex]
-    const i = incoming[iIndex]
-
-    // If neither are Runtime instructions, lets just break early
-    if (!(c.tag === 'Runtime' || i.tag === 'Runtime')) {
-      break
-    }
-
-    // Skip over custom/instrumented traces
-    if (c.tag !== 'Runtime') {
-      cIndex--
-
-      continue
-    }
-    if (i.tag !== 'Runtime') {
-      iIndex++
-
-      continue
-    }
-
-    // If we don't have a match, just break
-    if (!StackFrame.Eq.equals(c, i)) {
-      break
-    }
-
-    // Remove this Trace
-    outgoing.splice(iIndex - deleted++, 1)
-    cIndex--
-    iIndex++
-  }
-
-  return outgoing
+  return incoming.filter(not((a) => A.contains(E.DeepEquals)(a)(intersected)))
 }
 
 export interface StackTrace extends Stack<Trace> {}
@@ -208,7 +169,7 @@ export function getTrimmedTrace<E>(
     (cause.tag === 'Unexpected' || cause.tag === 'Expected') && cause.error instanceof Error
       ? cause.error
       : new Error()
-  const trace = Trace.runtime(error, targetObject ?? getTrimmedTrace)
+  const trace = Trace.runtime(error, targetObject)
   const toCompare = getTraceUpTo(stackTrace, trace.frames.length)
 
   return trimOverlappingTraces(toCompare, trace)

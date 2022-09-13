@@ -212,7 +212,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processAddTrace(instr: Extract<AnyInstruction, { readonly tag: 'AddTrace' }>) {
-    this.pushPopFiberRef(Builtin.CurrentTrace, instr.trace)
+    this.pushPopFiberRef(Builtin.CurrentTrace, Trace.concat(instr.trace, this.getRuntimeTrace()))
     this._current = Maybe.Just(instr.fx.instr)
   }
 
@@ -697,7 +697,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       this.context.fiberRefs,
       FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
       Maybe.match(
-        () => Trace.Trace.runtime(new Error(), this.getRuntimeTrace),
+        () => Trace.Trace.runtime(new Error()),
         (stackTrace) => Trace.getTrimmedTrace(Cause.Empty, stackTrace),
       ),
     )
