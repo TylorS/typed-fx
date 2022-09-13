@@ -2,7 +2,7 @@ import { pipe } from 'hkt-ts/function'
 
 import { Service } from './Service.js'
 
-import { Fx, RIO, ask, flatMap } from '@/Fx/Fx.js'
+import { Fx, RIO, ask, flatMap, fromLazy } from '@/Fx/Fx.js'
 import * as Layer from '@/Layer/Layer.js'
 import { Scope } from '@/Scope/Scope.js'
 
@@ -71,6 +71,18 @@ export class Id {
     provider: Fx<R, E, InstanceOf<S>> | Fx<R | Scope, E, InstanceOf<S>>,
   ): Layer.Layer<R, E, InstanceOf<S>> {
     return Layer.fromFx(this.id(), provider)
+  }
+
+  static layerOf<
+    S extends {
+      readonly id: () => Service<any>
+      new (...args: any): any
+    },
+  >(this: S, ...args: ConstructorParameters<S>): Layer.Layer<never, never, InstanceOf<S>> {
+    return Layer.fromFx(
+      this.id(),
+      fromLazy(() => new this(...(args as any))),
+    )
   }
 }
 

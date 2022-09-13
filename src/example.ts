@@ -12,50 +12,20 @@ const VALID_NO_ANSWERS = ['n', 'no', 'nope']
 const MIN = 1
 const MAX = 5
 
-class AskQuestion extends Service.tagged('AskQuestion') {
-  constructor(readonly ask: (s: string) => Fx.Of<string>) {
-    super()
-  }
+// Servies
+class AskQuestion extends Service.fn<(s: string) => Fx.Of<string>>()('AskQuestion') {}
+class PutStr extends Service.fn<(s: string) => Fx.Of<void>>()('PutString') {}
+class RandomNumber extends Service.fn<() => Fx.Of<number>>()('RandomNumber') {}
 
-  static apply(question: string) {
-    return AskQuestion.with((s) => s.ask(question))
-  }
-}
-
-class PutStr extends Service.tagged('PutStr') {
-  constructor(readonly print: (s: string) => Fx.Of<void>) {
-    super()
-  }
-
-  static apply(msg: string) {
-    return PutStr.with((s) => s.print(msg))
-  }
-}
-
-class RandomNumber extends Service.tagged('RandomNumber') {
-  constructor(readonly get: Fx.Of<number>) {
-    super()
-  }
-
-  static random = RandomNumber.with((s) => s.get)
-}
-
+// Refs
 class Name extends Ref.Ref('Name', AskQuestion.apply('What is your name?')) {}
-
 class ShouldContinue extends Ref.Ref('ShouldContinue', Fx.now(true)) {}
-
-class Secret extends Ref.Ref('Secret', RandomNumber.random) {}
+class Secret extends Ref.Ref('Secret', RandomNumber.apply()) {}
 
 const welcomeToTheGame = pipe(
   Name.get(),
   Fx.flatMap((name) => PutStr.apply(`Hello ${name}, welcome to the game!`)),
 )
-
-function parseInteger(s: string): Maybe.Maybe<number> {
-  const i = parseInt(s, 10)
-
-  return Number.isNaN(i) ? Maybe.Nothing : Maybe.Just(i)
-}
 
 const unknownGuess = PutStr.apply(`You did not enter an integer!`)
 
@@ -110,7 +80,7 @@ const round = Fx.Fx(function* () {
     ),
   )
 
-  yield* Secret.set(yield* RandomNumber.random)
+  yield* Secret.set(yield* RandomNumber.apply())
 })
 
 const game = Fx.Fx(function* () {
@@ -143,26 +113,27 @@ const main = pipe(
     Ref.atomic(Name),
     Ref.atomic(ShouldContinue),
     Ref.atomic(Secret),
-    PutStr.layer(Fx.fromLazy(() => new PutStr(flow(console.log, Fx.now)))),
-    RandomNumber.layer(
-      Fx.fromLazy(
-        () =>
-          new RandomNumber(Fx.fromLazy(() => Math.floor((MAX - MIN + 1) * Math.random() + MIN))),
-      ),
+    RandomNumber.layerOf(() =>
+      Fx.fromLazy(() => Math.floor((MAX - MIN + 1) * Math.random() + MIN)),
     ),
-    AskQuestion.layer(
-      Fx.fromLazy(
-        () =>
-          new AskQuestion((s) =>
-            Fx.lazy(() => {
-              console.log(s)
+    AskQuestion.layerOf((s) =>
+      Fx.lazy(() => {
+        console.log(s)
 
-              return readResponse
-            }),
-          ),
-      ),
+        return readResponse
+      }),
     ),
+    PutStr.layerOf(flow(console.log, Fx.now)),
   ),
 )
 
-Fx.runMain(main)
+function parseInteger(s: string): Maybe.Maybe<number> {
+  const i = parseInt(s, 10)
+
+  return Number.isNaN(i) ? Maybe.Nothing : Maybe.Just(i)
+}
+
+Fx.runMain(main).catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})
