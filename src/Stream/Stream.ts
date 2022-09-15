@@ -1,16 +1,16 @@
-import { Live } from '@/Fiber/Fiber.js'
+import { Fiber } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/Fx.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 
-export interface Stream<R, E, A> {
-  readonly fork: <E2>(
+export interface Stream<R = never, E = never, A = unknown> {
+  readonly fork: <E2 = never>(
     sink: Sink<E | E2, A>,
     scheduler: Scheduler,
     context: FiberContext<FiberId.Live>,
-  ) => Fx.RIO<R, Live<E | E2, any>>
+  ) => Fx.RIO<R, Fiber<E | E2, any>>
 }
 
 export interface RIO<R, A> extends Stream<R, never, A> {}

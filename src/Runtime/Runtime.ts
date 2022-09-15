@@ -8,9 +8,9 @@ import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { Fx } from '@/Fx/Fx.js'
 
 export interface Runtime<R> {
-  readonly runFiber: <E, A>(fx: Fx<R, E, A>) => Live<E, A>
-  readonly runExit: <E, A>(fx: Fx<R, E, A>) => Promise<Exit<E, A>>
-  readonly run: <E, A>(fx: Fx<R, E, A>) => Promise<A>
+  readonly runFiber: <E = never, A = any>(fx: Fx<R, E, A>) => Live<E, A>
+  readonly runExit: <E = never, A = any>(fx: Fx<R, E, A>) => Promise<Exit<E, A>>
+  readonly run: <E = never, A = any>(fx: Fx<R, E, A>) => Promise<A>
 }
 
 export function Runtime<R = never>(context: FiberContext): Runtime<R> {

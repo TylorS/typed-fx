@@ -30,7 +30,7 @@ export interface Live<E, A> {
 
 export type AnyLiveFiber = Live<any, any> | Live<never, never> | Live<any, never> | Live<never, any>
 
-export const Live = <E, A>(params: Omit<Live<E, A>, 'tag'>): Live<E, A> => ({
+export const Live = <E, A>(params: Omit<Live<E, A>, 'tag'>): Fiber<E, A> => ({
   tag: 'Live',
   ...params,
 })
@@ -43,7 +43,7 @@ export interface Synthetic<E, A> {
   readonly interruptAs: (id: FiberId) => Of<Exit<E, A>>
 }
 
-export const Synthetic = <E, A>(params: Omit<Synthetic<E, A>, 'tag'>): Synthetic<E, A> => ({
+export const Synthetic = <E, A>(params: Omit<Synthetic<E, A>, 'tag'>): Fiber<E, A> => ({
   tag: 'Synthetic',
   ...params,
 })

@@ -24,7 +24,7 @@ export type Instruction<R, E, A> =
   | EitherFx<R, E, A>
   | FiberRefLocally<any, any, any, R, E, A>
   | FlatMap<R, E, any, R, E, A>
-  | Fork<R, any, A>
+  | Fork<R, E, A>
   | FromCause<E>
   | FromLazy<A>
   | GetFiberContext
@@ -37,6 +37,7 @@ export type Instruction<R, E, A> =
   | ModifyFiberRef<R, E, any, A>
   | Now<A>
   | Provide<any, E, A>
+  | Provide<never, E, A>
   | ProvideService<R, E, A, any>
   | ProvideLayer<R, E, A, R, E, any>
   | SetConcurrencyLevel<R, E, A>
@@ -348,7 +349,7 @@ export class SetConcurrencyLevel<R, E, A> extends Instr<R, E, A> {
 export class GetFiberRef<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'GetFiberRef'
 
-  constructor(readonly fiberRef: FiberRef<R, E, A>, __trace?: string) {
+  constructor(readonly fiberRef: FiberRef<any, any, any>, __trace?: string) {
     super(__trace)
   }
 
@@ -411,11 +412,11 @@ export class FiberRefLocally<R, E, A, R2, E2, B> extends Instr<R2, E2, B> {
   }
 }
 
-export class Fork<R, E, A> extends Instr<R, never, Live<E, A>> {
+export class Fork<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'Fork'
 
   constructor(
-    readonly fx: Fx<R, E, A>,
+    readonly fx: Fx<any, any, any>,
     readonly context: FiberContext<FiberId.Live>,
     readonly __trace?: string,
   ) {
@@ -427,7 +428,7 @@ export class Fork<R, E, A> extends Instr<R, never, Live<E, A>> {
     context: FiberContext<FiberId.Live>,
     __trace?: string,
   ): Fx<R, never, Live<E, A>> {
-    return new Fork(fx, context, __trace) as any
+    return new Fork(fx, context, __trace)
   }
 }
 
