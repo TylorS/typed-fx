@@ -20,7 +20,7 @@ export type OutputOf<T> = [T] extends [Fiber<infer _E, infer A>] ? A : never
 
 export interface Live<E, A> {
   readonly tag: 'Live'
-  readonly id: FiberId
+  readonly id: FiberId.Live
   readonly context: FiberContext
   readonly status: Of<FiberStatus>
   readonly exit: Of<Exit<E, A>>

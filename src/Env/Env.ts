@@ -3,7 +3,7 @@ import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
 import { Of } from '@/Fx/Fx.js'
 import { Service } from '@/Service/Service.js'
 
-export interface Env<R> {
+export interface Env<in R> {
   readonly get: <S extends R>(service: Service<S>) => Of<S>
 }
 

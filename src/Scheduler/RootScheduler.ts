@@ -18,6 +18,7 @@ import { Schedule } from '@/Schedule/Schedule.js'
 import { Delay } from '@/Time/index.js'
 import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer.js'
 import { Timer } from '@/Timer/Timer.js'
+import { FiberId } from '@/index.js'
 
 export function RootScheduler(timer: Timer = SetTimeoutTimer()): Scheduler {
   return new RootSchedulerImpl(timer)
@@ -45,7 +46,7 @@ class RootSchedulerImpl implements Scheduler {
   readonly asap: Scheduler['asap'] = <R, E, A>(
     fx: Fx<R, E, A>,
     env: Env<R>,
-    context: FiberContext,
+    context: FiberContext<FiberId.Live>,
   ): Live<E, A> => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
@@ -61,7 +62,7 @@ class RootSchedulerImpl implements Scheduler {
     fx: Fx<R, E, A>,
     schedule: Schedule,
     env: Env<R>,
-    context: FiberContext,
+    context: FiberContext<FiberId.Live>,
   ) => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
