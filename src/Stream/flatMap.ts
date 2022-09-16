@@ -23,14 +23,12 @@ export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2,
   constructor(readonly stream: Stream<R, E, A>, readonly f: (a: A) => Stream<R2, E2, B>) {}
 
   fork<E3>(sink: Sink<E | E2 | E3, B>, scheduler: Scheduler, context: FiberContext<Live>) {
+    const { stream, f } = this
+
     return pipe(
       Fx.getEnv<R | R2>(),
       Fx.flatMap((env) =>
-        this.stream.fork(
-          new FlatMapSink(sink, scheduler, context, this.f, env),
-          scheduler,
-          context,
-        ),
+        stream.fork(new FlatMapSink(sink, scheduler, context, f, env), scheduler, context),
       ),
     )
   }
@@ -59,7 +57,7 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2 | E3, A> {
     readonly env: Env<R | R2>,
   ) {}
 
-  event(a: A) {
+  event = (a: A) => {
     return pipe(
       this.f(a).fork(this.innerSink(), this.scheduler, this.context.fork()),
       Fx.flatMap(Fx.join),
@@ -67,7 +65,7 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2 | E3, A> {
     )
   }
 
-  error(cause: Cause<E | E2 | E3>) {
+  error = (cause: Cause<E | E2 | E3>) => {
     return lazy(() => {
       this._ended = true
 

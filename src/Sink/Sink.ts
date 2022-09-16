@@ -14,9 +14,9 @@ export interface Sink<E, A> {
 export class Drain<E, A> implements Sink<E, A> {
   constructor(readonly scope: Closeable) {}
 
-  readonly event: Sink<E, A>['event'] = () => unit as IO<E, any>
-  readonly error: Sink<E, A>['error'] = (cause) => this.scope.close(Left(cause)) as IO<E, any>
-  readonly end: Sink<E, A>['end'] = this.scope.close(Right(undefined)) as IO<E, any>
+  readonly event: Sink<E, A>['event'] = () => unit
+  readonly error: Sink<E, A>['error'] = (cause) => this.scope.close(Left(cause))
+  readonly end: Sink<E, A>['end'] = this.scope.close(Right(undefined))
 }
 
 export interface SinkFx<

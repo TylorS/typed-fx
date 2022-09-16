@@ -16,37 +16,42 @@ import { Sink } from '@/Sink/Sink.js'
 import { Exit } from '@/index.js'
 
 export interface CallbackSink<E, A> {
-  readonly event: (a: A) => Fiber<E, any>
-  readonly error: (cause: Cause<E>) => Fiber<E, any>
-  readonly end: () => Fiber<E, any>
+  readonly event: (a: A) => Promise<any>
+  readonly error: (cause: Cause<E>) => Promise<any>
+  readonly end: () => Promise<any>
 }
 
 export function fromCallback<E, A>(
-  f: (sink: CallbackSink<E, A>) => Finalizer,
+  f: <E2>(sink: CallbackSink<E | E2, A>) => Finalizer | void | Promise<Finalizer | void>,
 ): Stream<never, E, A> {
-  return new FromCallback(f)
+  return new FromCallback<E, A>(f)
 }
 
 export class FromCallback<E, A> implements Stream<never, E, A> {
-  constructor(readonly f: (sink: CallbackSink<E, A>) => Finalizer) {}
+  constructor(
+    readonly f: <E2>(sink: CallbackSink<E | E2, A>) => Finalizer | void | Promise<Finalizer | void>,
+  ) {}
 
   fork = <E2>(
     sink: Sink<E | E2, A>,
     _: Scheduler,
     context: FiberContext<FiberId.Live>,
   ): Fx.RIO<never, Fiber<E | E2, any>> =>
-    Fx.fromLazy(() => {
+    Fx.fromPromise(async () => {
       const runtime = Runtime(context)
       const cbSink = {
-        event: flow(sink.event, runtime.runFiber),
-        error: flow(sink.error, runtime.runFiber),
-        end: () => pipe(sink.end, runtime.runFiber),
-      } as CallbackSink<E, A>
+        event: flow(sink.event, runtime.run),
+        error: flow(sink.error, runtime.run),
+        end: () => pipe(sink.end, runtime.run),
+      }
+      const finalizer = await this.f(cbSink)
 
-      context.scope.ensuring(this.f(cbSink))
+      if (finalizer) {
+        context.scope.ensuring(finalizer)
+      }
 
       const synthetic = Synthetic({
-        id: new FiberId.Synthetic([context.id]),
+        id: context.id,
         exit: wait(context.scope),
         inheritFiberRefs: pipe(
           Fx.getFiberRefs,

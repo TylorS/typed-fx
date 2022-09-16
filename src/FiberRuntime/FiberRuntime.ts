@@ -136,7 +136,11 @@ export class FiberRuntime<F extends Fx.AnyFx>
         // Immediately interrupt the Fiber
         this._disposable.dispose()
         this._disposable = settable()
-        this.unwindStack(Cause.interrupted(id))
+        this._current = Maybe.Just(Fx.interrupted(id).instr)
+
+        if (this._status.tag === 'Suspended') {
+          this.setTimer(() => this.loop())
+        }
       } else {
         // Record the interrupting FiberId for if/when the interrupt status becomes true again.
         this._interruptedBy.add(id)
@@ -324,7 +328,16 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processFromCause(instr: Extract<AnyInstruction, { readonly tag: 'FromCause' }>) {
-    this.unwindStack(instr.cause)
+    if (instr.cause.tag === 'Interrupted' && this._children.length > 0) {
+      const fiberId = instr.cause.fiberId
+      const interrupts = this._children.map((c) => c.interruptAs(fiberId))
+
+      this._current = Maybe.Just(
+        Fx.map(() => Fx.fromCause(instr.cause))(Fx.zipAll(interrupts)).instr,
+      )
+    } else {
+      this.unwindStack(instr.cause)
+    }
   }
 
   protected processFromLazy(instr: Extract<AnyInstruction, { readonly tag: 'FromLazy' }>) {

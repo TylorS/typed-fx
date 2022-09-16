@@ -5,8 +5,6 @@ import { Stream } from './Stream.js'
 import { Fiber } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
-import { FiberRef } from '@/FiberRef/FiberRef.js'
-import { update } from '@/FiberRef/operations.js'
 import * as Fx from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Drain, Sink, makeDrain } from '@/Sink/Sink.js'
@@ -47,28 +45,15 @@ export function collect<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
 ): Fx.Fx<R | Scheduler, E, readonly A[]> {
-  return pipe(
-    Fx.fromLazy(() => FiberRef.make(Fx.now<readonly A[]>([]))),
-    Fx.bindTo('fiberRef'),
-    Fx.bind('fiberContext', () => Fx.getFiberContext),
-    Fx.let('context', ({ fiberContext }) => fiberContext.fork()),
-    Fx.bind('sink', ({ context, fiberRef }) =>
-      makeDrain<E, A, R, E>(context.scope, {
-        event: (a) =>
-          pipe(
-            fiberRef,
-            update((as) => [...as, a]),
-          ),
-      }),
-    ),
-    Fx.flatMap(
-      ({ sink, context, fiberRef }) =>
-        pipe(
-          fork(stream, sink, context),
-          Fx.flatMap(Fx.join),
-          Fx.flatMap(() => Fx.getFiberRef(fiberRef)),
-        ),
-      __trace,
-    ),
-  )
+  return Fx.Fx(function* () {
+    const events: A[] = []
+
+    yield* pipe(
+      stream,
+      observe((a) => Fx.fromLazy(() => events.push(a))),
+      Fx.flatMap(Fx.join),
+    )
+
+    return events
+  }, __trace)
 }

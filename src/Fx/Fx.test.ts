@@ -2,15 +2,22 @@ import { deepStrictEqual } from 'assert'
 
 import { pipe } from 'hkt-ts/function'
 
-import { Fx, Of, access, flatMap, map, now } from './Fx.js'
-import { runMain } from './run.js'
+import * as Fx from './Fx.js'
+import { runMain, runMainFiber } from './run.js'
+
+import { FiberId } from '@/FiberId/FiberId.js'
+import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
+import { RootScheduler } from '@/Scheduler/RootScheduler.js'
+import { Scheduler } from '@/Scheduler/Scheduler.js'
+import { Delay } from '@/Time/index.js'
+import { Exit, sleep } from '@/index.js'
 
 describe(new URL(import.meta.url).pathname, () => {
-  describe(Fx.name, () => {
+  describe(Fx.Fx.name, () => {
     describe('Sync', () => {
       it('allows running sync effects', async () => {
         const value = Math.random()
-        const test = now(value)
+        const test = Fx.now(value)
 
         deepStrictEqual(await runMain(test), value)
       })
@@ -18,9 +25,9 @@ describe(new URL(import.meta.url).pathname, () => {
       it('allows using try/catch locally', async () => {
         const error = new Error('foo')
         const value = Math.random()
-        const test = access(() =>
+        const test = Fx.access(() =>
           // eslint-disable-next-line require-yield
-          Fx(function* () {
+          Fx.Fx(function* () {
             try {
               throw new Error('foo')
             } catch (e) {
@@ -37,11 +44,11 @@ describe(new URL(import.meta.url).pathname, () => {
       it('allows using try/catch within nested Fx', async () => {
         const error = new Error('foo')
         const value = Math.random()
-        const test = Fx(function* () {
+        const test = Fx.Fx(function* () {
           try {
-            yield* access(() =>
+            yield* Fx.access(() =>
               // eslint-disable-next-line require-yield
-              Fx(function* () {
+              Fx.Fx(function* () {
                 throw new Error('foo')
               }),
             )
@@ -57,18 +64,41 @@ describe(new URL(import.meta.url).pathname, () => {
     })
   })
 
+  describe('Interruption', () => {
+    it('asynchronous work allows being interrupted', async () => {
+      const fiber = runMainFiber(Fx.never)
+
+      deepStrictEqual(await runMain(fiber.interruptAs(FiberId.None)), Exit.interrupt(FiberId.None))
+    })
+
+    it('allows marking regions as uninterruptable', async () => {
+      const value = Math.random()
+      const test = pipe(
+        sleep(Delay(100)),
+        Fx.flatMap(() => Fx.success(value)),
+        Fx.provideService(Scheduler, RootScheduler()),
+        Fx.uninterruptable,
+      )
+
+      const fiber = new FiberRuntime(test)
+      fiber.startSync()
+
+      deepStrictEqual(await runMain(fiber.interruptAs(FiberId.None)), Exit.success(value))
+    })
+  })
+
   it('runs Fib', async () => {
-    const fib = (n: number): Of<number> => {
+    const fib = (n: number): Fx.Of<number> => {
       if (n < 2) {
-        return now(n)
+        return Fx.now(n)
       }
 
       return pipe(
         fib(n - 1),
-        flatMap((a) =>
+        Fx.flatMap((a) =>
           pipe(
             fib(n - 2),
-            map((b) => a + b),
+            Fx.map((b) => a + b),
           ),
         ),
       )
@@ -85,8 +115,8 @@ describe(new URL(import.meta.url).pathname, () => {
   })
 
   it('runs Fib w/ generators', async () => {
-    const fib = (n: number): Of<number> =>
-      Fx(function* () {
+    const fib = (n: number): Fx.Of<number> =>
+      Fx.Fx(function* () {
         if (n < 2) {
           return n
         }
