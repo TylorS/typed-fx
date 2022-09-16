@@ -123,10 +123,7 @@ export function fork(fiberRefs: FiberRefs): FiberRefs {
     const forked = key.fork(stack.value)
 
     if (Maybe.isJust(forked)) {
-      updated.set(
-        key,
-        stack.replace(() => forked.value),
-      )
+      updated.set(key, new Stack.Stack(forked.value))
     }
   }
 
@@ -140,7 +137,10 @@ export function join(first: FiberRefs, second: FiberRefs): void {
   for (const [key, stack] of incoming) {
     const current = updated.get(key)
 
-    updated.set(key, current ? current.replace((a) => key.join(a, stack.value)) : stack)
+    updated.set(
+      key,
+      current ? current.replace((a) => key.join(a, stack.value)) : new Stack.Stack(stack.value),
+    )
   }
 
   first.locals.set(ImmutableMap(updated))
