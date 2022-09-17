@@ -1,6 +1,6 @@
 import { HKT3, Lazy, Params, Variance, constant, flow, identity, pipe } from 'hkt-ts'
 import * as Either from 'hkt-ts/Either'
-import { Maybe } from 'hkt-ts/Maybe'
+import * as Maybe from 'hkt-ts/Maybe'
 import { ReadonlyRecord } from 'hkt-ts/Record'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
 import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
@@ -16,7 +16,6 @@ import { Unary } from 'hkt-ts/Unary'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import {
-  Access,
   AddTrace,
   BothFx,
   DeleteFiberRef,
@@ -26,6 +25,7 @@ import {
   Fork,
   FromCause,
   FromLazy,
+  GetEnv,
   GetFiberContext,
   GetFiberRef,
   GetTrace,
@@ -112,12 +112,12 @@ export const flatMap =
   <R, E>(fx: Fx<R, E, A>) =>
     FlatMap.make(fx, f, __trace)
 
+export const getEnv = <R>(__trace?: string): RIO<R, Env<R>> => GetEnv.make<R>(__trace)
+
 export const access = <R = never, R2 = never, E = never, A = any>(
   f: (r: Env<R>) => Fx<R2, E, A>,
   __trace?: string,
-): Fx<R | R2, E, A> => Access.make(f, __trace)
-
-export const getEnv = <R>(__trace?: string): RIO<R, Env<R>> => access(now, __trace)
+): Fx<R | R2, E, A> => pipe(getEnv<R>(), flatMap(f, __trace))
 
 export const provide =
   <R>(env: Env<R>, __trace?: string) =>
@@ -246,11 +246,28 @@ export const orElse =
   <R, A>(fx: Fx<R, E, A>): Fx<R | R2, E2, A | B> =>
     Match.make(
       fx,
-      (cause) =>
-        cause.tag === 'Expected' ? onLeft(cause.error) : (fromCause(cause) as Fx<R2, E2, B>),
+      (cause) => pipe(findExpectedCause(cause), Either.match(onLeft, fromCause)),
       now,
       __trace,
     )
+
+function findExpectedCause<E>(cause: Cause.Cause<E>): Either.Either<E, Cause.Cause<never>> {
+  if (cause.tag === 'Expected') {
+    return Either.Left(cause.error)
+  }
+  if (cause.tag === 'Sequential' || cause.tag === 'Parallel') {
+    return pipe(
+      cause.left,
+      findExpectedCause,
+      Either.flatMap(() => findExpectedCause(cause.right)),
+    )
+  }
+  if (cause.tag === 'Traced') {
+    return findExpectedCause(cause.cause)
+  }
+
+  return Either.Right(cause)
+}
 
 export const mapLeft = <E, E2>(f: (e: E) => E2) => orElseCause(flow(Cause.map(f), fromCause))
 
@@ -380,7 +397,7 @@ export const modifyFiberRef =
 export const deleteFiberRef = <R, E, A>(
   ref: FiberRef<R, E, A>,
   __trace?: string,
-): Fx<R, E, Maybe<A>> => DeleteFiberRef.make(ref, __trace)
+): Fx<R, E, Maybe.Maybe<A>> => DeleteFiberRef.make(ref, __trace)
 
 export const fiberRefLocally =
   <R2, E2, B>(ref: FiberRef<R2, E2, B>, value: B) =>

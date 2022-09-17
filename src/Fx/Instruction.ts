@@ -17,7 +17,6 @@ import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
 export type Instruction<R, E, A> =
-  | Access<R, R, E, A>
   | AddTrace<R, E, A>
   | BothFx<R, E, A>
   | DeleteFiberRef<R, E, any, A>
@@ -27,6 +26,7 @@ export type Instruction<R, E, A> =
   | Fork<R, E, A>
   | FromCause<E>
   | FromLazy<A>
+  | GetEnv<R, E, A>
   | GetFiberContext
   | GetFiberRef<R, E, A>
   | GetInterruptStatus
@@ -38,8 +38,8 @@ export type Instruction<R, E, A> =
   | Now<A>
   | Provide<any, E, A>
   | Provide<never, E, A>
-  | ProvideService<R, E, A, any>
   | ProvideLayer<R, E, A, R, E, any>
+  | ProvideService<R, E, A, any>
   | SetConcurrencyLevel<R, E, A>
   | SetInterruptStatus<R, E, A>
   | Wait<R, E, A>
@@ -50,7 +50,7 @@ export type AnyInstruction =
   | Instruction<never, any, any>
   | Instruction<any, never, any>
 
-export abstract class Instr<R, E, A> {
+export abstract class Instr<out R, out E, out A> {
   readonly _R!: () => R
   readonly _E!: () => E
   readonly _A!: () => A
@@ -66,7 +66,7 @@ export abstract class Instr<R, E, A> {
   }
 }
 
-export class Now<A> extends Instr<never, never, A> {
+export class Now<out A> extends Instr<never, never, A> {
   readonly tag = 'Now'
   constructor(readonly value: A, readonly __trace?: string) {
     super(__trace)
@@ -77,7 +77,7 @@ export class Now<A> extends Instr<never, never, A> {
   }
 }
 
-export class FromLazy<A> extends Instr<never, never, A> {
+export class FromLazy<out A> extends Instr<never, never, A> {
   readonly tag = 'FromLazy'
   constructor(readonly f: Lazy<A>, readonly __trace?: string) {
     super(__trace)
@@ -88,7 +88,7 @@ export class FromLazy<A> extends Instr<never, never, A> {
   }
 }
 
-export class FromCause<E> extends Instr<never, E, never> {
+export class FromCause<out E> extends Instr<never, E, never> {
   readonly tag = 'FromCause'
   constructor(readonly cause: Cause<E>, readonly __trace?: string) {
     super(__trace)
@@ -99,7 +99,7 @@ export class FromCause<E> extends Instr<never, E, never> {
   }
 }
 
-export class MapFx<R, E, A, B> extends Instr<R, E, B> {
+export class MapFx<out R, out E, in out A, out B> extends Instr<R, E, B> {
   readonly tag = 'Map'
 
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B, readonly __trace?: string) {
@@ -128,7 +128,11 @@ export class MapFx<R, E, A, B> extends Instr<R, E, B> {
   }
 }
 
-export class FlatMap<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
+export class FlatMap<out R, out E, in out A, out R2, out E2, out B> extends Instr<
+  R | R2,
+  E | E2,
+  B
+> {
   readonly tag = 'FlatMap'
 
   constructor(
@@ -160,7 +164,17 @@ export class FlatMap<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
   }
 }
 
-export class Match<R, E, A, R2, E2, B, R3, E3, C> extends Instr<R | R2 | R3, E2 | E3, B | C> {
+export class Match<
+  out R,
+  in out E,
+  in out A,
+  out R2,
+  out E2,
+  out B,
+  out R3,
+  out E3,
+  out C,
+> extends Instr<R | R2 | R3, E2 | E3, B | C> {
   readonly tag = 'Match'
 
   constructor(
@@ -189,19 +203,15 @@ export class Match<R, E, A, R2, E2, B, R3, E3, C> extends Instr<R | R2 | R3, E2 
   }
 }
 
-export class Access<R, R2, E, A> extends Instr<R | R2, E, A> {
-  readonly tag = 'Access'
+export class GetEnv<out R, out E, out A> extends Instr<R, E, A> {
+  readonly tag = 'GetEnv'
 
-  constructor(readonly f: (r: Env<R>) => Fx<R2, E, A>, readonly __trace?: string) {
-    super(__trace)
-  }
-
-  static make<R, R2, E, A>(f: (r: Env<R>) => Fx<R2, E, A>, __trace?: string): Fx<R | R2, E, A> {
-    return new Access(f, __trace) as Fx<R | R2, E, A>
+  static make<R>(__trace?: string): Fx<R, never, Env<R>> {
+    return new GetEnv<R, never, Env<R>>(__trace)
   }
 }
 
-export class Provide<R, E, A> extends Instr<never, E, A> {
+export class Provide<out R, out E, out A> extends Instr<never, E, A> {
   readonly tag = 'Provide'
 
   constructor(readonly fx: Fx<R, E, A>, readonly env: Env<R>, readonly __trace?: string) {

@@ -3,13 +3,13 @@ import { Endomorphism } from 'hkt-ts/Endomorphism'
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import { Associative, First } from 'hkt-ts/Typeclass/Associative'
 import { Eq } from 'hkt-ts/Typeclass/Eq'
-import { Identity } from 'hkt-ts/Typeclass/Identity'
 
 /**
  * Atomic represents an a mutable reference to immutable data
  * that can be modified and joined back together.
  */
-export interface Atomic<A> extends Identity<A> {
+export interface Atomic<A> extends Associative<A> {
+  readonly initial: A
   readonly get: () => A
   readonly modify: <B>(f: (a: A) => readonly [B, A]) => B
   readonly set: (a: A) => A
@@ -22,7 +22,7 @@ export function Atomic<A>(initial: A, A: Associative<A> = First): Atomic<A> {
   let current = initial
 
   return {
-    id: initial,
+    initial,
     concat: A.concat,
     get: () => current,
     modify: (f) => {

@@ -54,7 +54,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected _frames: Array<Frame> = []
 
   protected _processors: Processors = {
-    Access: this.processAccess.bind(this),
     AddTrace: this.processAddTrace.bind(this),
     Both: this.processBoth.bind(this),
     DeleteFiberRef: this.processDeleteFiberRef.bind(this),
@@ -64,6 +63,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
     Fork: this.processFork.bind(this),
     FromCause: this.processFromCause.bind(this),
     FromLazy: this.processFromLazy.bind(this),
+    GetEnv: this.processGetEnv.bind(this),
     GetFiberContext: () => this.continueWith(this.context),
     GetFiberRef: this.processGetFiberRef.bind(this),
     GetInterruptStatus: this.processGetInterruptStatus.bind(this),
@@ -196,7 +196,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected yieldNow(instr: AnyInstruction) {
-    this._opCountRemaining.set(this._opCountRemaining.id)
+    this._opCountRemaining.set(this._opCountRemaining.initial)
     this._current = Maybe.Nothing
 
     return this.setTimer(() => {
@@ -211,8 +211,9 @@ export class FiberRuntime<F extends Fx.AnyFx>
     }
   }
 
-  protected processAccess(instr: Extract<AnyInstruction, { readonly tag: 'Access' }>) {
-    this.withFiberRef(Builtin.CurrentEnv, (stack) => instr.f(stack.value))
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected processGetEnv(_: Extract<AnyInstruction, { readonly tag: 'GetEnv' }>) {
+    this.withFiberRef(Builtin.CurrentEnv, (stack) => Fx.now(stack.value))
   }
 
   protected processAddTrace(instr: Extract<AnyInstruction, { readonly tag: 'AddTrace' }>) {
@@ -316,8 +317,14 @@ export class FiberRuntime<F extends Fx.AnyFx>
     const runtime = new FiberRuntime(instr.fx, instr.context)
 
     this._children.push(runtime)
-    instr.context.scope.ensuring(() =>
-      Fx.fromLazy(() => this._children.splice(this._children.indexOf(runtime), 1)),
+
+    runtime._disposable.add(
+      Disposable(() => {
+        const i = this._children.indexOf(runtime)
+        if (i > -1) {
+          this._children.splice(i, 1)
+        }
+      }),
     )
 
     // All Child fibers should be started asynchronously to ensure they are capable of
@@ -332,8 +339,9 @@ export class FiberRuntime<F extends Fx.AnyFx>
       const fiberId = instr.cause.fiberId
       const interrupts = this._children.map((c) => c.interruptAs(fiberId))
 
+      // Cancel all Child Fibers and then continue with the Cause
       this._current = Maybe.Just(
-        Fx.map(() => Fx.fromCause(instr.cause))(Fx.zipAll(interrupts)).instr,
+        Fx.flatMap(() => Fx.fromCause(instr.cause))(Fx.fork(Fx.zipAll(interrupts))).instr,
       )
     } else {
       this.unwindStack(instr.cause)
@@ -699,7 +707,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       this.context.fiberRefs,
       FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
       Maybe.match(
-        () => Trace.Trace.runtime(new Error(), this.getCurrentTrace),
+        () => Trace.Trace.runtime(new Error()),
         (stackTrace) => Trace.getTraceUpTo(stackTrace, this.context.platform.maxTraceCount),
       ),
     )
