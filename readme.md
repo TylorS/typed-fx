@@ -23,7 +23,7 @@ bundle size, parse time, memory constraints, etc. are of great concern. There wi
 these metrics, ergonomics, and feature-set. We'll attempt to tread these lines as best we can, but Fx is highly feature-rich
 as it is, and can be used to build many many more abstractions that are not yet available as 3rd party plugins.
 
-The full library, and its dependencies, are about 20kb minified + gzipped. 
+The full library, and its dependencies, are about 30kb minified + gzipped. 
 However, it is provided as ES modules and is highly tree-shakeable. Take only what you need.
 
 ## Come Back Soon
