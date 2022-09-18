@@ -19,8 +19,8 @@ export function bimap<A, B, C, D>(
 export class BimapStream<R, A, B, C, D> implements Stream<R, B, D> {
   constructor(readonly stream: Stream<R, A, C>, readonly f: (a: A) => B, readonly g: (c: C) => D) {}
 
-  fork = <E2>(sink: Sink<B, D, E2>, scheduler: Scheduler, context: FiberContext<Live>) => {
-    return this.stream.fork<E2>(
+  fork = <E>(sink: Sink<B, D, E>, scheduler: Scheduler, context: FiberContext<Live>) => {
+    return this.stream.fork<E>(
       new BimapSink(sink, scheduler, context, this.f, this.g),
       scheduler,
       context,
@@ -53,7 +53,7 @@ class BimapSink<A, B, C, D, E> implements Sink<A, C, E> {
     readonly g: (c: C) => D,
   ) {}
 
-  event = (c: C) => this.sink.event(this.g(c))
-  error = (cause: Cause.Cause<A>) => this.sink.error(Cause.map(this.f)(cause))
+  event = flow(this.g, this.sink.event)
+  error = flow(Cause.map(this.f), this.sink.error)
   end = this.sink.end
 }
