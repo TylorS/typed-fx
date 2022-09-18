@@ -7,7 +7,6 @@ import { Sink } from '@/Sink/Sink.js'
 
 /**
  * TODOS:
- * - Scan
  * - Loop
  * - zipItems
  * - withItems

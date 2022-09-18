@@ -10,7 +10,7 @@ import * as Fx from '@/Fx/index.js'
 import { RootScheduler } from '@/Scheduler/RootScheduler.js'
 import { testSuite } from '@/_internal/suite.js'
 
-testSuite.only(import.meta.url, () => {
+testSuite(import.meta.url, () => {
   describe('Logging Streams', () => {
     it('should log the stream', async () => {
       const stream = pipe(
@@ -18,7 +18,7 @@ testSuite.only(import.meta.url, () => {
         continueWith(() => now(2, 'now2'), 'continueWith'),
         flatMap((n) => now(n + 1, 'now+1'), 'flatMap'),
         tap(
-          flow((n) => String(n), Fx.logTrace),
+          flow((n) => String(n), Fx.log),
           'tap',
         ),
       )
