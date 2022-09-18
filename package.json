@@ -256,6 +256,26 @@
         "types": "./esm/Duration/Duration.d.ts"
       }
     },
+    "./Effect": {
+      "require": {
+        "default": "./cjs/Effect/index.js",
+        "types": "./cjs/Effect/index.js"
+      },
+      "import": {
+        "default": "./esm/Effect/index.js",
+        "types": "./esm/Effect/index.js"
+      }
+    },
+    "./Effect/Effect": {
+      "require": {
+        "default": "./cjs/Effect/Effect.js",
+        "types": "./cjs/Effect/Effect.d.ts"
+      },
+      "import": {
+        "default": "./esm/Effect/Effect.js",
+        "types": "./esm/Effect/Effect.d.ts"
+      }
+    },
     "./Env": {
       "require": {
         "default": "./cjs/Env/index.js",
@@ -326,6 +346,26 @@
         "types": "./esm/Fiber/Fiber.d.ts"
       }
     },
+    "./Fiber/fromExit": {
+      "require": {
+        "default": "./cjs/Fiber/fromExit.js",
+        "types": "./cjs/Fiber/fromExit.d.ts"
+      },
+      "import": {
+        "default": "./esm/Fiber/fromExit.js",
+        "types": "./esm/Fiber/fromExit.d.ts"
+      }
+    },
+    "./Fiber/hkt": {
+      "require": {
+        "default": "./cjs/Fiber/hkt.js",
+        "types": "./cjs/Fiber/hkt.d.ts"
+      },
+      "import": {
+        "default": "./esm/Fiber/hkt.js",
+        "types": "./esm/Fiber/hkt.d.ts"
+      }
+    },
     "./FiberContext": {
       "require": {
         "default": "./cjs/FiberContext/index.js",
@@ -384,6 +424,16 @@
       "import": {
         "default": "./esm/FiberRef/FiberRef.js",
         "types": "./esm/FiberRef/FiberRef.d.ts"
+      }
+    },
+    "./FiberRef/builtins": {
+      "require": {
+        "default": "./cjs/FiberRef/builtins.js",
+        "types": "./cjs/FiberRef/builtins.d.ts"
+      },
+      "import": {
+        "default": "./esm/FiberRef/builtins.js",
+        "types": "./esm/FiberRef/builtins.d.ts"
       }
     },
     "./FiberRef/operations": {
@@ -556,6 +606,16 @@
         "types": "./esm/Fx/Instruction.d.ts"
       }
     },
+    "./Fx/fromLayer": {
+      "require": {
+        "default": "./cjs/Fx/fromLayer.js",
+        "types": "./cjs/Fx/fromLayer.d.ts"
+      },
+      "import": {
+        "default": "./esm/Fx/fromLayer.js",
+        "types": "./esm/Fx/fromLayer.d.ts"
+      }
+    },
     "./Fx/join": {
       "require": {
         "default": "./cjs/Fx/join.js",
@@ -706,6 +766,36 @@
         "types": "./esm/Logger/Logger.d.ts"
       }
     },
+    "./Node": {
+      "require": {
+        "default": "./cjs/Node/index.js",
+        "types": "./cjs/Node/index.d.ts"
+      },
+      "import": {
+        "default": "./esm/Node/index.js",
+        "types": "./esm/Node/index.d.ts"
+      }
+    },
+    "./Node/Runtime": {
+      "require": {
+        "default": "./cjs/Node/Runtime.js",
+        "types": "./cjs/Node/Runtime.d.ts"
+      },
+      "import": {
+        "default": "./esm/Node/Runtime.js",
+        "types": "./esm/Node/Runtime.d.ts"
+      }
+    },
+    "./Node/gracefulShutdown": {
+      "require": {
+        "default": "./cjs/Node/gracefulShutdown.js",
+        "types": "./cjs/Node/gracefulShutdown.d.ts"
+      },
+      "import": {
+        "default": "./esm/Node/gracefulShutdown.js",
+        "types": "./esm/Node/gracefulShutdown.d.ts"
+      }
+    },
     "./Platform": {
       "require": {
         "default": "./cjs/Platform/index.js",
@@ -734,36 +824,6 @@
       "import": {
         "default": "./esm/Platform/TestPlatform.js",
         "types": "./esm/Platform/TestPlatform.d.ts"
-      }
-    },
-    "./Ref": {
-      "require": {
-        "default": "./cjs/Ref/index.js",
-        "types": "./cjs/Ref/index.d.ts"
-      },
-      "import": {
-        "default": "./esm/Ref/index.js",
-        "types": "./esm/Ref/index.d.ts"
-      }
-    },
-    "./Ref/Ref": {
-      "require": {
-        "default": "./cjs/Ref/Ref.js",
-        "types": "./cjs/Ref/Ref.d.ts"
-      },
-      "import": {
-        "default": "./esm/Ref/Ref.js",
-        "types": "./esm/Ref/Ref.d.ts"
-      }
-    },
-    "./Ref/atomic": {
-      "require": {
-        "default": "./cjs/Ref/atomic.js",
-        "types": "./cjs/Ref/atomic.d.ts"
-      },
-      "import": {
-        "default": "./esm/Ref/atomic.js",
-        "types": "./esm/Ref/atomic.d.ts"
       }
     },
     "./Runtime": {
@@ -866,14 +926,14 @@
         "types": "./esm/Scheduler/callbackScheduler.d.ts"
       }
     },
-    "./Scheduler/scheduled": {
+    "./Scheduler/runSchedule": {
       "require": {
-        "default": "./cjs/Scheduler/scheduled.js",
-        "types": "./cjs/Scheduler/scheduled.d.ts"
+        "default": "./cjs/Scheduler/runSchedule.js",
+        "types": "./cjs/Scheduler/runSchedule.d.ts"
       },
       "import": {
-        "default": "./esm/Scheduler/scheduled.js",
-        "types": "./esm/Scheduler/scheduled.d.ts"
+        "default": "./esm/Scheduler/runSchedule.js",
+        "types": "./esm/Scheduler/runSchedule.d.ts"
       }
     },
     "./Scope": {
@@ -996,6 +1056,16 @@
         "types": "./esm/Service/Service.d.ts"
       }
     },
+    "./Service/fn": {
+      "require": {
+        "default": "./cjs/Service/fn.js",
+        "types": "./cjs/Service/fn.d.ts"
+      },
+      "import": {
+        "default": "./esm/Service/fn.js",
+        "types": "./esm/Service/fn.d.ts"
+      }
+    },
     "./Service/tagged": {
       "require": {
         "default": "./cjs/Service/tagged.js",
@@ -1106,6 +1176,26 @@
         "types": "./esm/Stream/Stream.d.ts"
       }
     },
+    "./Stream/bimap": {
+      "require": {
+        "default": "./cjs/Stream/bimap.js",
+        "types": "./cjs/Stream/bimap.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/bimap.js",
+        "types": "./esm/Stream/bimap.d.ts"
+      }
+    },
+    "./Stream/continueWith": {
+      "require": {
+        "default": "./cjs/Stream/continueWith.js",
+        "types": "./cjs/Stream/continueWith.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/continueWith.js",
+        "types": "./esm/Stream/continueWith.d.ts"
+      }
+    },
     "./Stream/drain": {
       "require": {
         "default": "./cjs/Stream/drain.js",
@@ -1116,6 +1206,46 @@
         "types": "./esm/Stream/drain.d.ts"
       }
     },
+    "./Stream/empty": {
+      "require": {
+        "default": "./cjs/Stream/empty.js",
+        "types": "./cjs/Stream/empty.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/empty.js",
+        "types": "./esm/Stream/empty.d.ts"
+      }
+    },
+    "./Stream/flatMap": {
+      "require": {
+        "default": "./cjs/Stream/flatMap.js",
+        "types": "./cjs/Stream/flatMap.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/flatMap.js",
+        "types": "./esm/Stream/flatMap.d.ts"
+      }
+    },
+    "./Stream/flatMapFx": {
+      "require": {
+        "default": "./cjs/Stream/flatMapFx.js",
+        "types": "./cjs/Stream/flatMapFx.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/flatMapFx.js",
+        "types": "./esm/Stream/flatMapFx.d.ts"
+      }
+    },
+    "./Stream/fromCallback": {
+      "require": {
+        "default": "./cjs/Stream/fromCallback.js",
+        "types": "./cjs/Stream/fromCallback.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/fromCallback.js",
+        "types": "./esm/Stream/fromCallback.d.ts"
+      }
+    },
     "./Stream/fromFx": {
       "require": {
         "default": "./cjs/Stream/fromFx.js",
@@ -1124,6 +1254,66 @@
       "import": {
         "default": "./esm/Stream/fromFx.js",
         "types": "./esm/Stream/fromFx.d.ts"
+      }
+    },
+    "./Stream/hkt": {
+      "require": {
+        "default": "./cjs/Stream/hkt.js",
+        "types": "./cjs/Stream/hkt.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/hkt.js",
+        "types": "./esm/Stream/hkt.d.ts"
+      }
+    },
+    "./Stream/map": {
+      "require": {
+        "default": "./cjs/Stream/map.js",
+        "types": "./cjs/Stream/map.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/map.js",
+        "types": "./esm/Stream/map.d.ts"
+      }
+    },
+    "./Stream/periodic": {
+      "require": {
+        "default": "./cjs/Stream/periodic.js",
+        "types": "./cjs/Stream/periodic.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/periodic.js",
+        "types": "./esm/Stream/periodic.d.ts"
+      }
+    },
+    "./Stream/run": {
+      "require": {
+        "default": "./cjs/Stream/run.js",
+        "types": "./cjs/Stream/run.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/run.js",
+        "types": "./esm/Stream/run.d.ts"
+      }
+    },
+    "./Stream/scheduled": {
+      "require": {
+        "default": "./cjs/Stream/scheduled.js",
+        "types": "./cjs/Stream/scheduled.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/scheduled.js",
+        "types": "./esm/Stream/scheduled.d.ts"
+      }
+    },
+    "./Stream/tap": {
+      "require": {
+        "default": "./cjs/Stream/tap.js",
+        "types": "./cjs/Stream/tap.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/tap.js",
+        "types": "./esm/Stream/tap.d.ts"
       }
     },
     "./Supervisor": {
@@ -1144,6 +1334,26 @@
       "import": {
         "default": "./esm/Supervisor/Supervisor.js",
         "types": "./esm/Supervisor/Supervisor.d.ts"
+      }
+    },
+    "./Supervisor/maxFailures": {
+      "require": {
+        "default": "./cjs/Supervisor/maxFailures.js",
+        "types": "./cjs/Supervisor/maxFailures.d.ts"
+      },
+      "import": {
+        "default": "./esm/Supervisor/maxFailures.js",
+        "types": "./esm/Supervisor/maxFailures.d.ts"
+      }
+    },
+    "./Supervisor/trackIn": {
+      "require": {
+        "default": "./cjs/Supervisor/trackIn.js",
+        "types": "./cjs/Supervisor/trackIn.d.ts"
+      },
+      "import": {
+        "default": "./esm/Supervisor/trackIn.js",
+        "types": "./esm/Supervisor/trackIn.d.ts"
       }
     },
     "./Tagged": {
@@ -1264,6 +1474,26 @@
       "import": {
         "default": "./esm/Tracing/vite.js",
         "types": "./esm/Tracing/vite.d.ts"
+      }
+    },
+    "./_internal": {
+      "require": {
+        "default": "./cjs/_internal/index.js",
+        "types": "./cjs/_internal/index.js"
+      },
+      "import": {
+        "default": "./esm/_internal/index.js",
+        "types": "./esm/_internal/index.js"
+      }
+    },
+    "./_internal/suite": {
+      "require": {
+        "default": "./cjs/_internal/suite.js",
+        "types": "./cjs/_internal/suite.d.ts"
+      },
+      "import": {
+        "default": "./esm/_internal/suite.js",
+        "types": "./esm/_internal/suite.d.ts"
       }
     },
     "./test": {
