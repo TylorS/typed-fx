@@ -9,7 +9,7 @@ import { Env } from '@/Env/Env.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { lazy, unit } from '@/Fx/index.js'
+import { lazy, span, unit } from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 
@@ -30,6 +30,7 @@ export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2,
       Fx.flatMap((env) =>
         stream.fork(new FlatMapSink(sink, scheduler, context, f, env), scheduler, context),
       ),
+      span('Stream.flatMap'),
     )
   }
 

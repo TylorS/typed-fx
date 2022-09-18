@@ -36,7 +36,8 @@ import { Sink } from '@/Sink/Sink.js'
  * - reduce
  * - run
  * - Fusion/Commutation
- * - HKTs
+ * - Unique Identification for streams to add to tracing
+ *    - How to build a dynamic stream graph?
  */
 
 export interface Stream<R = never, E = never, A = unknown> {

@@ -12,7 +12,7 @@ import { Drain, Sink, makeDrain } from '@/Sink/Sink.js'
 export function drain<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, Fiber<E, A>> {
+): Fx.Fx<R | Scheduler, never, Fiber<E, any>> {
   return pipe(
     Fx.Do,
     Fx.bind('fiberContext', () => Fx.getFiberContext),

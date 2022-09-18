@@ -10,10 +10,12 @@ export const tap =
   <R, E>(stream: Stream<R, E, A>): Stream<R | R2, E | E2, A> =>
     pipe(
       stream,
-      flatMapFx((a) =>
-        pipe(
-          f(a),
-          map(() => a),
-        ),
+      flatMapFx(
+        (a) =>
+          pipe(
+            f(a),
+            map(() => a),
+          ),
+        'Stream.tap',
       ),
     )

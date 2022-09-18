@@ -54,7 +54,7 @@ export function schedule(schedule: Schedule.Schedule) {
       Fx.bind('env', () => Fx.getEnv<R>()),
       Fx.bind('context', () => Fx.getFiberContext),
       Fx.map(({ scheduler, env, context }) =>
-        scheduler.schedule(fx, schedule, env, context.fork()),
+        scheduler.schedule(fx, env, schedule, context.fork()),
       ),
     )
 }

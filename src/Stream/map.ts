@@ -14,7 +14,7 @@ export function map<A, B>(f: (a: A) => B): <R, E>(stream: Stream<R, E, A>) => St
 export class MapStream<R, E, A, B> implements Stream<R, E, B> {
   constructor(readonly stream: Stream<R, E, A>, readonly f: (a: A) => B) {}
 
-  fork<E2>(sink: Sink<E | E2, B>, scheduler: Scheduler, context: FiberContext<Live>) {
+  fork<E2>(sink: Sink<E, B, E2>, scheduler: Scheduler, context: FiberContext<Live>) {
     return this.stream.fork(
       {
         ...sink,
