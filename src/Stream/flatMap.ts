@@ -9,40 +9,51 @@ import { Env } from '@/Env/Env.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { lazy, span, unit } from '@/Fx/index.js'
+import { lazy, unit } from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
-import { Sink } from '@/Sink/Sink.js'
+import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export function flatMap<A, R2, E2, B>(
   f: (a: A) => Stream<R2, E2, B>,
+  __trace?: string,
 ): <R, E>(stream: Stream<R, E, A>) => Stream<R | R2, E | E2, B> {
-  return (stream) => FlatMapStream.make(stream, f)
+  return (stream) => FlatMapStream.make(stream, f, __trace)
 }
 
 export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, B> {
-  constructor(readonly stream: Stream<R, E, A>, readonly f: (a: A) => Stream<R2, E2, B>) {}
+  constructor(
+    readonly stream: Stream<R, E, A>,
+    readonly f: (a: A) => Stream<R2, E2, B>,
+    readonly __trace?: string,
+  ) {}
 
   fork<E3>(sink: Sink<E | E2, B, E3>, scheduler: Scheduler, context: FiberContext<Live>) {
     const { stream, f } = this
 
     return pipe(
       Fx.getEnv<R | R2>(),
-      Fx.flatMap((env) =>
-        stream.fork(new FlatMapSink(sink, scheduler, context, f, env), scheduler, context),
+      Fx.flatMap(
+        (env) =>
+          stream.fork(
+            addTrace(new FlatMapSink(sink, scheduler, context, f, env, this.__trace), this.__trace),
+            scheduler,
+            context,
+          ),
+        this.__trace,
       ),
-      span('Stream.flatMap'),
     )
   }
 
   static make<R, E, A, R2, E2, B>(
     stream: Stream<R, E, A>,
     f: (a: A) => Stream<R2, E2, B>,
+    __trace?: string,
   ): Stream<R | R2, E | E2, B> {
     if (stream instanceof MapStream) {
-      return FlatMapStream.make(stream.stream, flow(stream.f, f))
+      return FlatMapStream.make(stream.stream, flow(stream.f, f), __trace)
     }
 
-    return new FlatMapStream(stream, f)
+    return new FlatMapStream(stream, f, __trace)
   }
 }
 
@@ -56,11 +67,12 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A, E3> {
     readonly context: FiberContext<Live>,
     readonly f: (a: A) => Stream<R2, E2, B>,
     readonly env: Env<R | R2>,
+    readonly __trace?: string,
   ) {}
 
   event = (a: A) => {
     return pipe(
-      this.f(a).fork(this.innerSink(), this.scheduler, this.context.fork()),
+      this.f(a).fork(addTrace(this.innerSink(), this.__trace), this.scheduler, this.context.fork()),
       Fx.provide(this.env),
     )
   }

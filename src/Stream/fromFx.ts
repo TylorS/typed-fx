@@ -1,45 +1,54 @@
 import { flow, pipe } from 'hkt-ts'
+import { Either } from 'hkt-ts/Either'
 
 import { Stream } from './Stream.js'
 
+import { Cause } from '@/Cause/Cause.js'
 import { Env } from '@/Env/Env.js'
+import { Exit } from '@/Exit/Exit.js'
 import * as Fx from '@/Fx/Fx.js'
-import { span } from '@/index.js'
 
 /**
  * Constructs a Stream from an Fx that runs within a LogSpan enabling
  */
-export function makeFromFx(logSpan: string) {
-  return <R, E, A>(fx: Fx.Fx<R, E, A>, __trace?: string): Stream<R, E, A> => {
-    return Stream((sink, scheduler, context) =>
-      Fx.asksEnv(
-        (env: Env<R>) =>
-          scheduler.asap(
-            pipe(
-              fx,
-              Fx.matchCause(
-                sink.error,
-                flow(
-                  sink.event,
-                  Fx.flatMap(() => sink.end),
-                ),
+export function fromFx<R, E, A>(fx: Fx.Fx<R, E, A>, __trace?: string): Stream<R, E, A> {
+  return Stream((sink, scheduler, context) =>
+    Fx.asksEnv(
+      (env: Env<R>) =>
+        scheduler.asap(
+          pipe(
+            fx,
+            Fx.matchCause(
+              sink.error,
+              flow(
+                sink.event,
+                Fx.flatMap(() => sink.end),
               ),
+              __trace,
             ),
-            env,
-            context,
-            span(logSpan),
           ),
-        __trace,
-      ),
-    )
-  }
+          env,
+          context,
+        ),
+      __trace,
+    ),
+  )
 }
 
-export const fromFx = makeFromFx('Stream.fromFx')
-export const now = flow(Fx.now, makeFromFx('Stream.now'))
-export const fromCause = flow(Fx.fromCause, makeFromFx(`Stream.fromCause`))
-export const fromExit = flow(Fx.fromExit, makeFromFx(`Stream.fromExit`))
-export const fromPromise = flow(Fx.fromPromise, makeFromFx(`Stream.fromPromise`))
-export const fromLazy = flow(Fx.fromLazy, makeFromFx(`Stream.fromLazy`))
-export const fromEither = flow(Fx.fromEither, makeFromFx(`Stream.fromEither`))
-export const never = makeFromFx(`Stream.never`)(Fx.never)
+export const now = <A>(value: A, __trace?: string) => fromFx(Fx.now(value), __trace)
+
+export const fromCause = <E>(cause: Cause<E>, __trace?: string) =>
+  fromFx(Fx.fromCause(cause), __trace)
+
+export const fromExit = <E, A>(exit: Exit<E, A>, __trace?: string) =>
+  fromFx(Fx.fromExit(exit), __trace)
+
+export const fromPromise = <A>(promise: () => Promise<A>, __trace?: string) =>
+  fromFx(Fx.fromPromise(promise), __trace)
+
+export const fromLazy = <A>(lazy: () => A, __trace?: string) => fromFx(Fx.fromLazy(lazy), __trace)
+
+export const fromEither = <E, A>(either: Either<E, A>, __trace?: string) =>
+  fromFx(Fx.fromEither(either), __trace)
+
+export const never = fromFx(Fx.never, 'never')

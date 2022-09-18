@@ -8,23 +8,27 @@ import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
-import { Sink } from '@/Sink/Sink.js'
+import { Sink, addTrace } from '@/Sink/Sink.js'
 
-export function continueWith<R2, E2, B>(f: () => Stream<R2, E2, B>) {
+export function continueWith<R2, E2, B>(f: () => Stream<R2, E2, B>, __trace?: string) {
   return <R, E, A>(stream: Stream<R, E, A>): Stream<R | R2, E | E2, A | B> =>
-    new ContinueWith(stream, f)
+    new ContinueWith(stream, f, __trace)
 }
 
 export const startWith =
-  <B>(value: B) =>
+  <B>(value: B, __trace?: string) =>
   <R, E, A>(stream: Stream<R, E, A>) =>
     pipe(
       now(value),
-      continueWith(() => stream),
+      continueWith(() => stream, __trace),
     )
 
 export class ContinueWith<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A | B> {
-  constructor(readonly stream: Stream<R, E, A>, readonly f: () => Stream<R2, E2, B>) {}
+  constructor(
+    readonly stream: Stream<R, E, A>,
+    readonly f: () => Stream<R2, E2, B>,
+    readonly __trace?: string,
+  ) {}
 
   fork = <E3>(
     sink: Sink<E | E2, A | B, E3>,
@@ -33,7 +37,7 @@ export class ContinueWith<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, 
   ) => {
     return Fx.access((env: Env<R | R2>) =>
       this.stream.fork(
-        new ContinueWithSink(sink, scheduler, context, env, this.f),
+        addTrace(new ContinueWithSink(sink, scheduler, context, env, this.f), this.__trace),
         scheduler,
         context,
       ),

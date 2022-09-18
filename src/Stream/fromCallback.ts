@@ -12,7 +12,7 @@ import * as Fx from '@/Fx/index.js'
 import { Runtime } from '@/Runtime/Runtime.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { closeOrWait, wait } from '@/Scope/Closeable.js'
-import { Sink } from '@/Sink/Sink.js'
+import { Sink, addTrace } from '@/Sink/Sink.js'
 import { Exit } from '@/index.js'
 
 export interface CallbackSink<E, A> {
@@ -23,13 +23,15 @@ export interface CallbackSink<E, A> {
 
 export function fromCallback<E, A>(
   f: <E2>(sink: CallbackSink<E | E2, A>) => Finalizer | void | Promise<Finalizer | void>,
+  __trace?: string,
 ): Stream<never, E, A> {
-  return new FromCallback<E, A>(f)
+  return new FromCallback<E, A>(f, __trace)
 }
 
 export class FromCallback<E, A> implements Stream<never, E, A> {
   constructor(
     readonly f: <E2>(sink: CallbackSink<E | E2, A>) => Finalizer | void | Promise<Finalizer | void>,
+    readonly __trace?: string,
   ) {}
 
   fork = <E2>(
@@ -39,10 +41,11 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
   ): Fx.RIO<never, Fiber<E2, any>> =>
     Fx.fromPromise(async () => {
       const runtime = Runtime(context)
+      const tracedSink = addTrace(sink, this.__trace)
       const cbSink = {
-        event: flow(sink.event, runtime.run),
-        error: flow(sink.error, runtime.run),
-        end: () => pipe(sink.end, runtime.run),
+        event: flow(tracedSink.event, runtime.run),
+        error: flow(tracedSink.error, runtime.run),
+        end: () => pipe(tracedSink.end, runtime.run),
       }
       const finalizer = await this.f(cbSink)
 

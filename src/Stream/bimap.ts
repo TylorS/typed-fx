@@ -12,12 +12,18 @@ import { Sink } from '@/Sink/Sink.js'
 export function bimap<A, B, C, D>(
   f: (a: A) => B,
   g: (c: C) => D,
+  __trace?: string,
 ): <R>(stream: Stream<R, A, C>) => Stream<R, B, D> {
-  return (stream) => BimapStream.make(stream, f, g)
+  return (stream) => BimapStream.make(stream, f, g, __trace)
 }
 
 export class BimapStream<R, A, B, C, D> implements Stream<R, B, D> {
-  constructor(readonly stream: Stream<R, A, C>, readonly f: (a: A) => B, readonly g: (c: C) => D) {}
+  constructor(
+    readonly stream: Stream<R, A, C>,
+    readonly f: (a: A) => B,
+    readonly g: (c: C) => D,
+    readonly __trace?: string,
+  ) {}
 
   fork = <E>(sink: Sink<B, D, E>, scheduler: Scheduler, context: FiberContext<Live>) => {
     return this.stream.fork<E>(
@@ -31,16 +37,17 @@ export class BimapStream<R, A, B, C, D> implements Stream<R, B, D> {
     stream: Stream<R, A, C>,
     f: (a: A) => B,
     g: (c: C) => D,
+    __trace?: string,
   ): Stream<R, B, D> {
     if (stream instanceof MapStream) {
-      return BimapStream.make(stream.stream, f, flow(stream.f, g))
+      return BimapStream.make(stream.stream, f, flow(stream.f, g), __trace)
     }
 
     if (stream instanceof BimapStream) {
-      return BimapStream.make(stream.stream, flow(stream.f, f), flow(stream.g, g))
+      return BimapStream.make(stream.stream, flow(stream.f, f), flow(stream.g, g), __trace)
     }
 
-    return new BimapStream(stream, f, g)
+    return new BimapStream(stream, f, g, __trace)
   }
 }
 

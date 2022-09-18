@@ -2,7 +2,7 @@ import { flow, pipe } from 'hkt-ts'
 import { Left, Right } from 'hkt-ts/Either'
 
 import { Cause } from '@/Cause/Cause.js'
-import { Fx, IO, access, flatMap, fromLazy, provide, unit } from '@/Fx/Fx.js'
+import { Fx, IO, access, addCustomTrace, flatMap, fromLazy, provide, unit } from '@/Fx/Fx.js'
 import { Closeable } from '@/Scope/Closeable.js'
 
 export interface Sink<in E, in A, out E2 = never> {
@@ -76,4 +76,14 @@ export function makeDrain<
       return sink
     }),
   )
+}
+
+export function addTrace<E, A, E2>(sink: Sink<E, A, E2>, trace?: string): Sink<E, A, E2> {
+  if (trace === undefined) return sink
+
+  return {
+    event: flow(sink.event, addCustomTrace(trace)),
+    error: flow(sink.error, addCustomTrace(trace)),
+    end: pipe(sink.end, addCustomTrace(trace)),
+  }
 }
