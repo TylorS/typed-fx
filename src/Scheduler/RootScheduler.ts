@@ -1,5 +1,3 @@
-import { identity } from 'hkt-ts'
-
 import { Scheduler } from './Scheduler.js'
 import { callbackScheduler } from './callbackScheduler.js'
 import { runSchedule } from './runSchedule.js'
@@ -45,15 +43,14 @@ class RootSchedulerImpl implements Scheduler {
     }
   }
 
-  readonly asap: Scheduler['asap'] = <R, E, A, E2 = E, B = A>(
+  readonly asap: Scheduler['asap'] = <R, E, A>(
     fx: Fx<R, E, A>,
     env: Env<R>,
     context: FiberContext<FiberId.Live>,
-    transform: (fx: Fx<R, E, A>) => Fx<R, E2, B> = identity as any,
-  ): Live<E2, B> => {
+  ): Live<E, A> => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
-    const runtime = new FiberRuntime(this.runAt(transform(fx), Delay(0)), context)
+    const runtime = new FiberRuntime(this.runAt(fx, Delay(0)), context)
 
     // Safe to call sync since it will be run by the Timeline.
     runtime.startSync()
@@ -61,19 +58,15 @@ class RootSchedulerImpl implements Scheduler {
     return runtime
   }
 
-  readonly schedule: Scheduler['schedule'] = <R, E, A, E2 = E, B = A>(
+  readonly schedule: Scheduler['schedule'] = <R, E, A>(
     fx: Fx<R, E, A>,
     env: Env<R>,
     schedule: Schedule,
     context: FiberContext<FiberId.Live>,
-    transform: (fx: Fx<R, E, A>) => Fx<R, E2, B> = identity as any,
   ) => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
-    const runtime = new FiberRuntime(
-      runSchedule(transform(fx), schedule, this.timer, this.runAt),
-      context,
-    )
+    const runtime = new FiberRuntime(runSchedule(fx, schedule, this.timer, this.runAt), context)
 
     // Safe to call sync since it will be run by the Timeline.
     runtime.startSync()

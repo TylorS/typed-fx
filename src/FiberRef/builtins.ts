@@ -55,17 +55,26 @@ export const Layers = FiberRef.make(
   },
 )
 
-export const Services = FiberRef.make(Fx.now(ImmutableMap<Service<any>, any>()), {
-  join: identity, // Always keep the parent Fiber's services
-})
+export const Services = FiberRef.make(
+  Fx.fromLazy(() => ImmutableMap<Service<any>, any>()),
+  {
+    join: identity, // Always keep the parent Fiber's services
+  },
+)
 
-export const CurrentLogSpans = FiberRef.make(Fx.now(ImmutableMap<string, LogSpan>()), {
-  join: identity,
-})
+export const CurrentLogSpans = FiberRef.make(
+  Fx.fromLazy(() => ImmutableMap<string, LogSpan>()),
+  {
+    join: identity,
+  },
+)
 
-export const CurrentLogAnnotations = FiberRef.make(Fx.now(ImmutableMap<string, LogAnnotation>()), {
-  join: identity,
-})
+export const CurrentLogAnnotations = FiberRef.make(
+  Fx.fromLazy(() => ImmutableMap<string, LogAnnotation>()),
+  {
+    join: identity,
+  },
+)
 
 export function getServiceFromFiberRefs(fiberRefs: FiberRefs.FiberRefs) {
   return <S>(id: Service<S>): Fx.Of<S> => {

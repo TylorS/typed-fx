@@ -9,20 +9,18 @@ import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Service } from '@/Service/Service.js'
 
 export interface Scheduler extends Disposable {
-  readonly asap: <R, E, A, E2 = E, B = A>(
+  readonly asap: <R, E, A>(
     fx: Fx<R, E, A>,
     env: Env<R>,
     context: FiberContext<FiberId.Live>,
-    transform?: (fx: Fx<R, E, A>) => Fx<R, E2, B>,
-  ) => Live<E2, B>
+  ) => Live<E, A>
 
-  readonly schedule: <R, E, A, E2 = E, B = A>(
+  readonly schedule: <R, E, A>(
     fx: Fx<R, E, A>,
     env: Env<R>,
     schedule: Schedule,
     context: FiberContext<FiberId.Live>,
-    transform?: (fx: Fx<R, E, A>) => Fx<R, E2, B>,
-  ) => Live<E2, ScheduleState>
+  ) => Live<E, ScheduleState>
 }
 
 export const Scheduler = Service<Scheduler>('Scheduler')
