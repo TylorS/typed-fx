@@ -2,13 +2,13 @@ import { flow, pipe } from 'hkt-ts'
 import { Left, Right } from 'hkt-ts/Either'
 
 import { Cause } from '@/Cause/Cause.js'
-import { Fx, IO, flatMap, getEnv, provide, unit } from '@/Fx/Fx.js'
+import { Fx, IO, access, flatMap, fromLazy, provide, unit } from '@/Fx/Fx.js'
 import { Closeable } from '@/Scope/Closeable.js'
 
-export interface Sink<E, A> {
-  readonly event: (a: A) => IO<E, any>
-  readonly error: (cause: Cause<E>) => IO<E, any>
-  readonly end: IO<E, any>
+export interface Sink<in E, in A, out E2 = never> {
+  readonly event: (a: A) => IO<E2, any>
+  readonly error: (cause: Cause<E>) => IO<E2, any>
+  readonly end: IO<E2, any>
 }
 
 export class Drain<E, A> implements Sink<E, A> {
@@ -46,34 +46,34 @@ export function makeDrain<
 >(
   scope: Closeable,
   fx: SinkFx<E, A, R2, E2, R3, E3, R4, E4>,
-): Fx<R2 | R3 | R4, never, Sink<E | E2 | E3 | E4, A>> {
-  return Fx(function* () {
-    const env = yield* getEnv<R2 | R3 | R4>()
-    const drain = new Drain<E | E2 | E3 | E4, A>(scope)
+): Fx<R2 | R3 | R4, never, Sink<E, A, E2 | E3 | E4>> {
+  return access((env) =>
+    fromLazy(() => {
+      const drain = new Drain<E, A>(scope)
 
-    type O = Sink<E | E2 | E3 | E4, A>
+      type O = Sink<E, A, E2 | E3 | E4>
 
-    // TODO: Should drain always be called for error + end?
-    const sink: O = {
-      event: (fx.event ? flow(fx.event, provide(env)) : drain.event) as O['event'],
-      error: (fx.error
-        ? (a) =>
-            pipe(
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              fx.error!(a as any),
+      const sink: O = {
+        event: fx.event ? flow(fx.event, provide(env)) : drain.event,
+        error: fx.error
+          ? (a) =>
+              pipe(
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                fx.error!(a as any),
+                provide(env),
+                flatMap(() => drain.error(a)),
+              )
+          : drain.error,
+        end: fx.end
+          ? pipe(
+              fx.end,
               provide(env),
-              flatMap(() => drain.error(a)),
+              flatMap(() => drain.end),
             )
-        : drain.error) as O['error'],
-      end: (fx.end
-        ? pipe(
-            fx.end,
-            provide(env),
-            flatMap(() => drain.end),
-          )
-        : drain.end) as O['end'],
-    }
+          : drain.end,
+      }
 
-    return sink
-  })
+      return sink
+    }),
+  )
 }

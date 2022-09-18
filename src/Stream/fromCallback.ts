@@ -33,10 +33,10 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
   ) {}
 
   fork = <E2>(
-    sink: Sink<E | E2, A>,
+    sink: Sink<E, A, E2>,
     _: Scheduler,
     context: FiberContext<FiberId.Live>,
-  ): Fx.RIO<never, Fiber<E | E2, any>> =>
+  ): Fx.RIO<never, Fiber<E2, any>> =>
     Fx.fromPromise(async () => {
       const runtime = Runtime(context)
       const cbSink = {
@@ -51,7 +51,7 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
       }
 
       const synthetic = Synthetic({
-        id: context.id,
+        id: new FiberId.Synthetic([context.id]),
         exit: wait(context.scope),
         inheritFiberRefs: pipe(
           Fx.getFiberRefs,
@@ -60,6 +60,6 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
         interruptAs: (id) => closeOrWait(context.scope)(Exit.interrupt(id)),
       })
 
-      return synthetic as Fiber<E | E2, any>
+      return synthetic
     })
 }

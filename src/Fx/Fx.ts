@@ -48,7 +48,7 @@ import * as Cause from '@/Cause/index.js'
 import { timeToDate, timeToUnixTime } from '@/Clock/index.js'
 import { settable } from '@/Disposable/Disposable.js'
 import type { Env } from '@/Env/Env.js'
-import { Exit } from '@/Exit/index.js'
+import * as Exit from '@/Exit/index.js'
 import type * as Fiber from '@/Fiber/Fiber.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
@@ -91,11 +91,7 @@ export interface Of<A> extends IO<never, A> {}
 
 export interface RIO<R, A> extends Fx<R, never, A> {}
 
-export type AnyFx =
-  | Fx<any, any, any>
-  | Fx<never, never, any>
-  | Fx<never, any, any>
-  | Fx<any, never, any>
+export type AnyFx = Fx<any, any, any>
 
 export const now = <A>(a: A, __trace?: string): Of<A> => Now.make(a, __trace)
 export const success = now
@@ -157,7 +153,7 @@ export const asksEnv = <R, A>(f: (env: Env<R>) => A, __trace?: string): Fx<R, ne
   access((e) => now(f(e)), __trace)
 
 export const ensuring =
-  <E, A, R2, E2, B>(ensure: (a: Exit<E, A>) => Fx<R2, E2, B>, __trace?: string) =>
+  <E, A, R2, E2, B>(ensure: (a: Exit.Exit<E, A>) => Fx<R2, E2, B>, __trace?: string) =>
   <R>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, A> =>
     pipe(
       fx,
@@ -182,8 +178,11 @@ export const ensuring =
 export const fromCause = <E>(cause: Cause.Cause<E>, __trace?: string): IO<E, never> =>
   FromCause.make(cause, __trace)
 
-export const fromExit = <E, A>(exit: Exit<E, A>, __trace?: string): IO<E, A> =>
+export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): IO<E, A> =>
   (exit.tag === 'Left' ? fromCause(exit.left, __trace) : now(exit.right, __trace)) as IO<E, A>
+
+export const fromEither = <E, A>(e: Either.Either<E, A>, __trace?: string): IO<E, A> =>
+  fromExit(Exit.fromEither(e), __trace)
 
 export const interrupted = (id: FiberId, __trace?: string) =>
   fromCause(Cause.interrupted(id), __trace)
@@ -271,7 +270,10 @@ function findExpectedCause<E>(cause: Cause.Cause<E>): Either.Either<E, Cause.Cau
 
 export const mapLeft = <E, E2>(f: (e: E) => E2) => orElseCause(flow(Cause.map(f), fromCause))
 
-export const attempt = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Exit<E, A>> =>
+export const attempt = <R, E, A>(
+  fx: Fx<R, E, A>,
+  __trace?: string,
+): Fx<R, never, Exit.Exit<E, A>> =>
   pipe(fx, matchCause(flow(Either.Left, now), flow(Either.Right, now), __trace))
 
 export const bimap =
@@ -473,7 +475,7 @@ export function async<R, E, A, R2 = never, E2 = never>(
         either,
         Either.match(
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          (finalizer) => ensuring((_: Exit<E, A>) => finalizer)(wait(future)),
+          (finalizer) => ensuring((_: Exit.Exit<E, A>) => finalizer)(wait(future)),
           identity,
         ),
       )

@@ -5,18 +5,52 @@ import * as Fx from '@/Fx/Fx.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 
+/**
+ * TODOS:
+ * - Scan
+ * - Loop
+ * - zipItems
+ * - withItems
+ * - switchLatest
+ * - concatMap
+ * - mergeConcurrently
+ * - merge/mergeArray
+ * - combine/combineArray
+ * - zip/zipArray
+ * - sample
+ * - snapshot
+ * - skipRepeats
+ * - slice/take/skip
+ * - takeWhile/skipWhile
+ * - takeUntil/skipUntil
+ * - takeAfter/skipAfter
+ * - since
+ * - during
+ * - until
+ * - delay
+ * - throttle
+ * - debounce
+ * - orElse
+ * - multicast
+ * - hold
+ * - reduce
+ * - run
+ * - Fusion/Commutation
+ * - HKTs
+ */
+
 export interface Stream<R = never, E = never, A = unknown> {
   readonly fork: <E2 = never>(
-    sink: Sink<E | E2, A>,
+    sink: Sink<E, A, E2>,
     scheduler: Scheduler,
     context: FiberContext<FiberId.Live>,
-  ) => Fx.RIO<R, Fiber<E | E2, any>>
+  ) => Fx.RIO<R, Fiber<E2, any>>
 }
 
 export interface RIO<R, A> extends Stream<R, never, A> {}
 export interface IO<E, A> extends Stream<never, E, A> {}
 export interface Of<A> extends Stream<never, never, A> {}
 
-export function Stream<R, E, A>(fork: Stream<R, E, A>['fork']) {
+export function Stream<R, E, A>(fork: Stream<R, E, A>['fork']): Stream<R, E, A> {
   return { fork }
 }

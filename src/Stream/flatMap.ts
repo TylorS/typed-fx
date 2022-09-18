@@ -22,7 +22,7 @@ export function flatMap<A, R2, E2, B>(
 export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, B> {
   constructor(readonly stream: Stream<R, E, A>, readonly f: (a: A) => Stream<R2, E2, B>) {}
 
-  fork<E3>(sink: Sink<E | E2 | E3, B>, scheduler: Scheduler, context: FiberContext<Live>) {
+  fork<E3>(sink: Sink<E | E2, B, E3>, scheduler: Scheduler, context: FiberContext<Live>) {
     const { stream, f } = this
 
     return pipe(
@@ -45,12 +45,12 @@ export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2,
   }
 }
 
-class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2 | E3, A> {
+class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A, E3> {
   protected _running = AtomicCounter()
   protected _ended = false
 
   constructor(
-    readonly sink: Sink<E | E2 | E3, B>,
+    readonly sink: Sink<E | E2, B, E3>,
     readonly scheduler: Scheduler,
     readonly context: FiberContext<Live>,
     readonly f: (a: A) => Stream<R2, E2, B>,
@@ -60,12 +60,11 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2 | E3, A> {
   event = (a: A) => {
     return pipe(
       this.f(a).fork(this.innerSink(), this.scheduler, this.context.fork()),
-      Fx.flatMap(Fx.join),
       Fx.provide(this.env),
     )
   }
 
-  error = (cause: Cause<E | E2 | E3>) => {
+  error = (cause: Cause<E | E2>) => {
     return lazy(() => {
       this._ended = true
 
@@ -89,7 +88,7 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2 | E3, A> {
     })
   }
 
-  protected innerSink(): Sink<E | E2 | E3, B> {
+  protected innerSink(): Sink<E | E2, B, E3> {
     return {
       event: this.sink.event,
       error: this.error,

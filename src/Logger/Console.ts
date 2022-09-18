@@ -1,3 +1,5 @@
+import { pipe } from 'hkt-ts'
+
 import { LogAnnotation } from './LogAnnotation.js'
 import { LogLevel } from './LogLevel.js'
 import { LogSpan } from './LogSpan.js'
@@ -5,34 +7,42 @@ import { Logger } from './Logger.js'
 
 import { Clock, timeToUnixTime } from '@/Clock/index.js'
 import { format, fromTime } from '@/Duration/Duration.js'
-import { Fx, getFiberContext } from '@/Fx/Fx.js'
+import * as Fx from '@/Fx/Fx.js'
 import { Time } from '@/Time/index.js'
 import * as Trace from '@/Trace/index.js'
 
 export const Console: Logger<string, void> = {
   log: (input, level, id, logSpans, logAnnotations, trace) =>
-    Fx(function* () {
+    Fx.lazy(() => {
       if (level === LogLevel.None) {
-        return
+        return Fx.unit
       }
 
-      const { platform } = yield* getFiberContext
-      const now = platform.timer.getCurrentTime()
+      return pipe(
+        Fx.getPlatform,
+        Fx.flatMap((platform) =>
+          Fx.lazy(() => {
+            const now = platform.timer.getCurrentTime()
 
-      const message = [
-        `timestamp=${getIsoString(now, platform.timer)}`,
-        `level=${formatLogLevel(level)}`,
-        `fiber=${id.sequenceNumber}`,
-        ...logSpans.map(formatLogSpan(now)),
-        ...logAnnotations.map(formatlogAnnotation),
-        `message=${input}`,
-      ].join('; ')
+            const message = [
+              `timestamp=${getIsoString(now, platform.timer)}`,
+              `level=${formatLogLevel(level)}`,
+              `fiber=${id.sequenceNumber}`,
+              ...logSpans.map(formatLogSpan(now)),
+              ...logAnnotations.map(formatlogAnnotation),
+              `message=${input}`,
+            ].join('; ')
 
-      logWithLevel(
-        trace.tag !== 'EmptyTrace'
-          ? message + '\n    ' + Trace.debug(trace).replaceAll('\n', '\n    ')
-          : message,
-        level,
+            logWithLevel(
+              trace.tag !== 'EmptyTrace'
+                ? message + '\n    ' + Trace.debug(trace).replaceAll('\n', '\n    ')
+                : message,
+              level,
+            )
+
+            return Fx.unit
+          }),
+        ),
       )
     }),
 }

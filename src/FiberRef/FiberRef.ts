@@ -21,11 +21,7 @@ export type ErrorsOf<T> = T extends FiberRef<infer _R, infer _E, infer _A> ? _E 
 export type OutputOf<T> = T extends FiberRef<infer _R, infer _E, infer _A> ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export type AnyFiberRef =
-  | FiberRef<any, any, any>
-  | FiberRef<never, never, any>
-  | FiberRef<never, any, any>
-  | FiberRef<any, never, any>
+export type AnyFiberRef = FiberRef<any, any, any>
 
 export function make<R, E, A>(initial: Fx<R, E, A>, params: Params<A> = {}): FiberRef<R, E, A> {
   return new FiberRef(initial, params.fork, params.join, params.Eq)

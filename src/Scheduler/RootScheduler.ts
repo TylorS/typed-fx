@@ -1,12 +1,15 @@
+import { identity } from 'hkt-ts'
+
 import { Scheduler } from './Scheduler.js'
 import { callbackScheduler } from './callbackScheduler.js'
-import { scheduled } from './scheduled.js'
+import { runSchedule } from './runSchedule.js'
 
 import { delayToUnixTime } from '@/Clock/index.js'
 import { Disposable } from '@/Disposable/Disposable.js'
 import { Env } from '@/Env/Env.js'
 import { Live } from '@/Fiber/index.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
+import * as FiberId from '@/FiberId/index.js'
 import { CurrentEnv } from '@/FiberRef/builtins.js'
 import { setFiberRef } from '@/FiberRefs/FiberRefs.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
@@ -18,7 +21,6 @@ import { Schedule } from '@/Schedule/Schedule.js'
 import { Delay } from '@/Time/index.js'
 import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer.js'
 import { Timer } from '@/Timer/Timer.js'
-import { FiberId } from '@/index.js'
 
 export function RootScheduler(timer: Timer = SetTimeoutTimer()): Scheduler {
   return new RootSchedulerImpl(timer)
@@ -43,14 +45,15 @@ class RootSchedulerImpl implements Scheduler {
     }
   }
 
-  readonly asap: Scheduler['asap'] = <R, E, A>(
+  readonly asap: Scheduler['asap'] = <R, E, A, E2 = E, B = A>(
     fx: Fx<R, E, A>,
     env: Env<R>,
     context: FiberContext<FiberId.Live>,
-  ): Live<E, A> => {
+    transform: (fx: Fx<R, E, A>) => Fx<R, E2, B> = identity as any,
+  ): Live<E2, B> => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
-    const runtime = new FiberRuntime(this.runAt(fx, Delay(0)), context)
+    const runtime = new FiberRuntime(this.runAt(transform(fx), Delay(0)), context)
 
     // Safe to call sync since it will be run by the Timeline.
     runtime.startSync()
@@ -58,15 +61,19 @@ class RootSchedulerImpl implements Scheduler {
     return runtime
   }
 
-  readonly schedule: Scheduler['schedule'] = <R, E, A>(
+  readonly schedule: Scheduler['schedule'] = <R, E, A, E2 = E, B = A>(
     fx: Fx<R, E, A>,
     schedule: Schedule,
     env: Env<R>,
     context: FiberContext<FiberId.Live>,
+    transform: (fx: Fx<R, E, A>) => Fx<R, E2, B> = identity as any,
   ) => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
-    const runtime = new FiberRuntime(scheduled(fx, schedule, this.timer, this.runAt), context)
+    const runtime = new FiberRuntime(
+      runSchedule(transform(fx), schedule, this.timer, this.runAt),
+      context,
+    )
 
     // Safe to call sync since it will be run by the Timeline.
     runtime.startSync()

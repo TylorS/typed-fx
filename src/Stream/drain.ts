@@ -24,7 +24,7 @@ export function drain<R, E, A>(
 
 export function fork<R, E, A, E2 = never>(
   stream: Stream<R, E, A>,
-  sink: Sink<E | E2, A>,
+  sink: Sink<E, A, E2>,
   context: FiberContext<FiberId.Live>,
 ): Fx.Fx<R | Scheduler, never, Fiber<E | E2, A>> {
   return Fx.asks(Scheduler)((scheduler) => stream.fork(sink, scheduler, context))

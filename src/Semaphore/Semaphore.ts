@@ -1,10 +1,10 @@
-import { constant } from 'hkt-ts/function'
+import { constant, pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
 import { MutableFutureQueue } from '@/Future/MutableFutureQueue.js'
 import { wait } from '@/Future/wait.js'
-import { Fx, Of, fromLazy, unit } from '@/Fx/Fx.js'
+import { Fx, Of, flatMap, fromLazy, tap, unit } from '@/Fx/Fx.js'
 import { fiberScoped, managed, scoped } from '@/Fx/scoped.js'
 
 export class Semaphore {
@@ -37,11 +37,14 @@ export class Semaphore {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this
     const acquisition = new Acquisition(
-      Fx(function* () {
-        yield* wait(future)
-
-        increment(that.running)
-      }),
+      pipe(
+        wait(future),
+        tap(() =>
+          fromLazy(() => {
+            increment(that.running)
+          }),
+        ),
+      ),
       this.release,
     )
 
@@ -75,11 +78,10 @@ export class Lock extends Semaphore {
  * Must be used with Fx.scoped() to release the permit at the desired time.
  */
 export function acquirePermit(semaphore: Semaphore) {
-  return Fx(function* () {
-    const { acquire, release } = yield* semaphore.prepare
-
-    return yield* managed(acquire, constant(release))
-  })
+  return pipe(
+    semaphore.prepare,
+    flatMap(({ acquire, release }) => managed(acquire, constant(release))),
+  )
 }
 
 /**
@@ -87,12 +89,10 @@ export function acquirePermit(semaphore: Semaphore) {
  */
 export function acquire(semaphore: Semaphore) {
   return <R, E, A>(fx: Fx<R, E, A>) =>
-    scoped(
-      Fx(function* () {
-        yield* acquirePermit(semaphore)
-
-        return yield* fx
-      }),
+    pipe(
+      acquirePermit(semaphore),
+      flatMap(() => fx),
+      scoped,
     )
 }
 
@@ -101,11 +101,9 @@ export function acquire(semaphore: Semaphore) {
  */
 export function acquireFiber(semaphore: Semaphore) {
   return <R, E, A>(fx: Fx<R, E, A>) =>
-    fiberScoped(
-      Fx(function* () {
-        yield* acquirePermit(semaphore)
-
-        return yield* fx
-      }),
+    pipe(
+      acquirePermit(semaphore),
+      flatMap(() => fx),
+      fiberScoped,
     )
 }

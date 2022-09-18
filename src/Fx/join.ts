@@ -1,16 +1,30 @@
-import { Either } from 'hkt-ts'
+import { pipe } from 'hkt-ts'
 
-import { Fx, fromExit } from './Fx.js'
+import * as Fx from './Fx.js'
 
 import * as Fiber from '@/Fiber/Fiber.js'
+import { FiberContext } from '@/FiberContext/FiberContext.js'
+import { FiberId } from '@/FiberId/FiberId.js'
+import { Scope } from '@/Scope/Scope.js'
 
 export const join = <E, A>(fiber: Fiber.Fiber<E, A>) =>
-  Fx(function* () {
-    const exit = yield* fiber.exit
+  pipe(
+    fiber.exit,
+    Fx.flatMap((exit) =>
+      pipe(
+        Fiber.inheritFiberRefs(fiber),
+        Fx.flatMap(() => Fx.fromExit(exit)),
+      ),
+    ),
+  )
 
-    if (Either.isRight(exit)) {
-      yield* Fiber.inheritFiberRefs(fiber)
-    }
+export const forkJoinInContext = <R, E, A>(
+  fx: Fx.Fx<R, E, A>,
+  context: FiberContext<FiberId.Live>,
+): Fx.Fx<R, E, A> => pipe(fx, Fx.forkInContext(context), Fx.flatMap(join))
 
-    return yield* fromExit(exit)
-  })
+export const forkJoinIn = <R, E, A>(fx: Fx.Fx<R, E, A>, scope: Scope): Fx.Fx<R, E, A> =>
+  pipe(fx, Fx.forkIn(scope), Fx.flatMap(join))
+
+export const forkJoin = <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> =>
+  pipe(fx, Fx.fork, Fx.flatMap(join))

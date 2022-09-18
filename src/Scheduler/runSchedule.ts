@@ -7,7 +7,7 @@ import { Delay } from '@/Time/index.js'
 /**
  * Runs an Fx on a given Schedule
  */
-export function scheduled<R, E, A>(
+export function runSchedule<R, E, A>(
   fx: Fx<R, E, A>,
   schedule: Schedule,
   clock: Clock.Clock,

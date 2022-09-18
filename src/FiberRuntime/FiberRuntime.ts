@@ -237,8 +237,10 @@ export class FiberRuntime<F extends Fx.AnyFx>
       const [future, onExit] = bothFuture(f, s)
 
       const inner = settable()
-      inner.add(this._disposable.add(f.addObserver((exit) => onExit(exit, 0))))
-      inner.add(this._disposable.add(s.addObserver((exit) => onExit(exit, 1))))
+
+      inner.add(f.addObserver((exit) => onExit(exit, 0)))
+      inner.add(s.addObserver((exit) => onExit(exit, 1)))
+      inner.add(this._disposable.add(inner))
 
       f.startSync()
       s.startSync()
@@ -263,42 +265,40 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processEither(instr: Extract<AnyInstruction, { readonly tag: 'Either' }>) {
-    const f = new FiberRuntime(
-      instr.first,
-      this.context.fork({ fiberRefs: this.context.fiberRefs }),
-    )
-    const s = new FiberRuntime(
-      instr.first,
-      this.context.fork({ fiberRefs: this.context.fiberRefs }),
-    )
-
-    const inner = settable()
-    const future = Pending<never, any, any>()
-    const onExit = (exit: Exit.Exit<Fx.ErrorsOf<F>, any>, index: 0 | 1) => {
-      complete(future)(
-        pipe(
-          Fx.fromExit(exit),
-          Fx.ensuring(() =>
-            index === 0 ? s.interruptAs(f.context.id) : f.interruptAs(s.context.id),
-          ),
-        ),
+    this.withFiberRef(Builtin.CurrentConcurrencyLevel, (semaphore) => {
+      const withConcurrency = acquireFiber(semaphore.value)
+      const f = new FiberRuntime(
+        withConcurrency(instr.first),
+        this.context.fork({ fiberRefs: this.context.fiberRefs }),
       )
-      inner.dispose()
-    }
+      const s = new FiberRuntime(
+        withConcurrency(instr.second),
+        this.context.fork({ fiberRefs: this.context.fiberRefs }),
+      )
 
-    inner.add(
-      this._disposable.add(f.addObserver((exit) => onExit(pipe(exit, Either.map(Either.Left)), 0))),
-    )
-    inner.add(
-      this._disposable.add(
-        s.addObserver((exit) => onExit(pipe(exit, Either.map(Either.Right)), 1)),
-      ),
-    )
+      const inner = settable()
+      const future = Pending<never, any, any>()
+      const onExit = (exit: Exit.Exit<Fx.ErrorsOf<F>, any>, index: 0 | 1) => {
+        complete(future)(
+          pipe(
+            Fx.fromExit(exit),
+            Fx.ensuring(() =>
+              index === 0 ? s.interruptAs(f.context.id) : f.interruptAs(s.context.id),
+            ),
+          ),
+        )
+        inner.dispose()
+      }
 
-    this._current = Maybe.Just(wait(future).instr)
+      inner.add(f.addObserver((exit) => onExit(pipe(exit, Either.map(Either.Left)), 0)))
+      inner.add(s.addObserver((exit) => onExit(pipe(exit, Either.map(Either.Right)), 1)))
+      inner.add(this._disposable.add(inner))
 
-    f.startSync()
-    s.startSync()
+      f.startSync()
+      s.startSync()
+
+      return wait(future)
+    })
   }
 
   protected processFiberRefLocally(
@@ -314,13 +314,13 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processFork(instr: Extract<AnyInstruction, { readonly tag: 'Fork' }>) {
-    const runtime = new FiberRuntime(instr.fx, instr.context)
+    const child = new FiberRuntime(instr.fx, instr.context)
 
-    this._children.push(runtime)
+    this._children.push(child)
 
-    runtime._disposable.add(
+    child._disposable.add(
       Disposable(() => {
-        const i = this._children.indexOf(runtime)
+        const i = this._children.indexOf(child)
         if (i > -1) {
           this._children.splice(i, 1)
         }
@@ -329,15 +329,16 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
     // All Child fibers should be started asynchronously to ensure they are capable of
     // being interrupted *before* any work has been started and could steal the thread.
-    runtime.startAsync()
+    child.startAsync()
 
-    this.continueWith(runtime)
+    this.continueWith(child)
   }
 
   protected processFromCause(instr: Extract<AnyInstruction, { readonly tag: 'FromCause' }>) {
     if (instr.cause.tag === 'Interrupted' && this._children.length > 0) {
       const fiberId = instr.cause.fiberId
       const interrupts = this._children.map((c) => c.interruptAs(fiberId))
+      this._children = []
 
       // Cancel all Child Fibers and then continue with the Cause
       this._current = Maybe.Just(
@@ -366,7 +367,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected processGetTrace(_: Extract<AnyInstruction, { readonly tag: 'GetTrace' }>) {
     this.pushPopFiberRef(Builtin.CurrentTrace, this.getRuntimeTrace())
-
     this.continueWith(this.getCurrentTrace())
   }
 
@@ -375,7 +375,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processMap(instr: Extract<AnyInstruction, { readonly tag: 'Map' }>) {
-    this.pushFrame(ValueFrame((a) => Fx.now(instr.f(a))))
+    this.pushFrame(ValueFrame(flow(instr.f, Fx.now)))
     this._current = Maybe.Just(instr.fx.instr)
   }
 
@@ -470,7 +470,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected processSetInterruptStatus(
     instr: Extract<AnyInstruction, { readonly tag: 'SetInterruptStatus' }>,
   ) {
-    const current = this.getInterruptStatus()
+    const currentlyInterruptable = this.getInterruptStatus()
 
     FiberRefs.setFiberRefLocally(
       Builtin.CurrentInterruptStatus,
@@ -482,10 +482,10 @@ export class FiberRuntime<F extends Fx.AnyFx>
         Fx.lazy(() => {
           FiberRefs.popLocalFiberRef(Builtin.CurrentInterruptStatus)(this.context.fiberRefs)
 
-          if (current && this._interruptedBy.size > 0) {
+          if (currentlyInterruptable && this._interruptedBy.size > 0) {
             return Fx.fromExit(
               Array.from(this._interruptedBy).reduce(
-                (e, id) => concatExitSeq(e, Either.Left(Cause.interrupted(id))),
+                (e, id) => concatExitSeq(e, Exit.interrupt(id)),
                 exit,
               ),
             )
@@ -623,13 +623,13 @@ export class FiberRuntime<F extends Fx.AnyFx>
     const inner = settable()
 
     inner.add(
-      this._disposable.add(
-        this.context.platform.timer.setTimer((time) => {
-          inner.dispose()
-          f(time)
-        }, Delay(0)),
-      ),
+      this.context.platform.timer.setTimer((time) => {
+        inner.dispose()
+        f(time)
+      }, Delay(0)),
     )
+
+    inner.add(this._disposable.add(inner))
 
     return inner
   }
