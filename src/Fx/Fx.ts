@@ -206,6 +206,9 @@ export const tap =
       __trace,
     )
 
+export const tapLazy = <A, B>(f: (a: A) => B, __trace?: string) =>
+  tap((a: A) => fromLazy(() => f(a)), __trace)
+
 export const mapTo =
   <B>(b: B, __trace?: string) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, B> =>

@@ -3,7 +3,7 @@ import { pipe } from 'hkt-ts/function'
 import { Stream } from './Stream.js'
 import { flatMapFx } from './flatMapFx.js'
 
-import { Fx, map } from '@/Fx/Fx.js'
+import { Fx, fromLazy, map } from '@/Fx/Fx.js'
 
 export const tap =
   <A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>, __trace?: string) =>
@@ -19,3 +19,6 @@ export const tap =
         __trace,
       ),
     )
+
+export const tapLazy = <A, B>(f: (a: A) => B, __trace?: string) =>
+  tap((a: A) => fromLazy(() => f(a)), __trace)

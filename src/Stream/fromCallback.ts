@@ -39,9 +39,9 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
     _: Scheduler,
     context: FiberContext<FiberId.Live>,
   ): Fx.RIO<never, Fiber<E2, any>> => {
-    const { f, __trace } = this
-
     return Fx.lazy(() => {
+      const { f, __trace } = this
+
       const runtime = Runtime(context)
       const tracedSink = addTrace(sink, __trace)
       const cbSink = {
@@ -62,7 +62,7 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
 
       return pipe(
         Fx.fromPromise(async () => await f(cbSink)),
-        Fx.tap((finalizer) => Fx.fromLazy(() => finalizer && context.scope.ensuring(finalizer))),
+        Fx.tapLazy((finalizer) => finalizer && context.scope.ensuring(finalizer)),
         Fx.fork,
         Fx.map(() => synthetic),
       )
