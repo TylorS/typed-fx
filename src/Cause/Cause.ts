@@ -85,6 +85,16 @@ export const traced =
   <E>(cause: Cause<E>): Cause<E> =>
     new Traced(cause, trace)
 
+export const isEmpty = <E>(cause: Cause<E>): cause is Empty => cause.tag === Empty.tag
+export const isInterrupted = <E>(cause: Cause<E>): cause is Interrupted =>
+  cause.tag === 'Interrupted'
+export const isUnexpected = <E>(cause: Cause<E>): cause is Unexpected => cause.tag === 'Unexpected'
+export const isExpected = <E>(cause: Cause<E>): cause is Expected<E> => cause.tag === 'Expected'
+export const isSequential = <E>(cause: Cause<E>): cause is Sequential<E, E> =>
+  cause.tag === 'Sequential'
+export const isParallel = <E>(cause: Cause<E>): cause is Parallel<E, E> => cause.tag === 'Parallel'
+export const isTraced = <E>(cause: Cause<E>): cause is Traced<E> => cause.tag === 'Traced'
+
 export const makeParallelAssociative = <E>(): Associative.Associative<Cause<E>> => ({
   concat: (left, right) =>
     left.tag === Empty.tag ? right : right.tag === Empty.tag ? left : new Parallel(left, right),
@@ -423,3 +433,5 @@ export const makeDebug = <E>(renderer: Renderer<E> = defaultRenderer): D.Debug<C
   D.Debug((cause) => prettyPrint(cause, renderer))
 
 export const Debug = makeDebug()
+
+export const findExpected = find(<E>(e: E): e is E => true)

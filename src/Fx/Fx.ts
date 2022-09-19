@@ -230,13 +230,7 @@ export const match =
     __trace?: string,
   ) =>
   <R>(fx: Fx<R, E, A>): Fx<R | R2 | R3, E2 | E3, B | C> =>
-    Match.make(
-      fx,
-      (cause) =>
-        cause.tag === 'Expected' ? onLeft(cause.error) : (fromCause(cause) as Fx<R2, E2, B>),
-      onRight,
-      __trace,
-    )
+    Match.make(fx, flow(findExpectedCause, Either.match(onLeft, fromCause)), onRight, __trace)
 
 export const orElseCause =
   <E, R2, E2, B>(onLeft: (cause: Cause.Cause<E>) => Fx<R2, E2, B>, __trace?: string) =>
