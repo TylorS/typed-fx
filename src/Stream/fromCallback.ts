@@ -41,12 +41,6 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
   ): Fx.RIO<never, Fiber<E2, any>> => {
     const { f, __trace } = this
 
-    const getFinalizer = (cbSink: CallbackSink<E, A>) =>
-      pipe(
-        Fx.fromPromise(async () => await f(cbSink)),
-        Fx.tap((finalizer) => Fx.fromLazy(() => finalizer && context.scope.ensuring(finalizer))),
-      )
-
     return Fx.lazy(() => {
       const runtime = Runtime(context)
       const tracedSink = addTrace(sink, __trace)
@@ -67,7 +61,9 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
       })
 
       return pipe(
-        Fx.fork(getFinalizer(cbSink)),
+        Fx.fromPromise(async () => await f(cbSink)),
+        Fx.tap((finalizer) => Fx.fromLazy(() => finalizer && context.scope.ensuring(finalizer))),
+        Fx.fork,
         Fx.map(() => synthetic),
       )
     })
