@@ -63,7 +63,7 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
       return pipe(
         Fx.fromPromise(async () => await f(cbSink)),
         Fx.tapLazy((finalizer) => finalizer && context.scope.ensuring(finalizer)),
-        Fx.fork,
+        Fx.forkInContext(context.fork()),
         Fx.map(() => synthetic),
       )
     })
