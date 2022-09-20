@@ -33,7 +33,6 @@ testSuite(import.meta.url, () => {
         flatMapConcurrently(
           (a) =>
             fromCallback<never, number>(async ({ event, end }) => {
-              console.log(a)
               event(a + 1)
               await sleep(10)
               event(a + 2)

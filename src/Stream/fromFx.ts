@@ -5,7 +5,8 @@ import { Stream } from './Stream.js'
 
 import { Cause } from '@/Cause/Cause.js'
 import { Env } from '@/Env/Env.js'
-import { Exit } from '@/Exit/Exit.js'
+import * as Exit from '@/Exit/Exit.js'
+import { FiberId } from '@/FiberId/index.js'
 import * as Fx from '@/Fx/Fx.js'
 
 /**
@@ -40,8 +41,15 @@ export const now = <A>(value: A, __trace?: string) => fromFx(Fx.now(value), __tr
 export const fromCause = <E>(cause: Cause<E>, __trace?: string) =>
   fromFx(Fx.fromCause(cause), __trace)
 
-export const fromExit = <E, A>(exit: Exit<E, A>, __trace?: string) =>
+export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string) =>
   fromFx(Fx.fromExit(exit), __trace)
+
+export const interrupt = (id: FiberId, __trace?: string) => fromExit(Exit.interrupt(id), __trace)
+
+export const unexpected = (error: unknown, __trace?: string) =>
+  fromExit(Exit.unexpected(error), __trace)
+
+export const expected = <E>(error: E, __trace?: string) => fromExit(Exit.expected(error), __trace)
 
 export const fromPromise = <A>(promise: () => Promise<A>, __trace?: string) =>
   fromFx(Fx.fromPromise(promise), __trace)

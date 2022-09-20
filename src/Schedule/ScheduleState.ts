@@ -20,6 +20,9 @@ const maxTimeAssociative = Time.makeAssociative({
 })
 const maybeMaxTimeAssociative = makeAssociative(maxTimeAssociative)
 
+/**
+ * TODO: ScheduleState should track Exit values to allow exiting early w/ custom logic
+ */
 export class ScheduleState {
   constructor(
     /**
