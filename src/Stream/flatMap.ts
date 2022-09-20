@@ -1,4 +1,6 @@
 import { flow, pipe } from 'hkt-ts'
+import { isRight } from 'hkt-ts/Either'
+import { isJust } from 'hkt-ts/Maybe'
 
 import { Stream } from './Stream.js'
 import { MapStream } from './map.js'
@@ -8,10 +10,12 @@ import { Cause } from '@/Cause/index.js'
 import { Env } from '@/Env/Env.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
+import { join } from '@/FiberRefs/index.js'
 import * as Fx from '@/Fx/index.js'
-import { lazy, unit } from '@/Fx/index.js'
+import { access, lazy, provideService, unit } from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
-import { Sink, addTrace } from '@/Sink/Sink.js'
+import * as Sink from '@/Sink/Sink.js'
+import { None, and } from '@/Supervisor/Supervisor.js'
 
 export function flatMap<A, R2, E2, B>(
   f: (a: A) => Stream<R2, E2, B>,
@@ -27,19 +31,17 @@ export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2,
     readonly __trace?: string,
   ) {}
 
-  fork<E3>(sink: Sink<E | E2, B, E3>, scheduler: Scheduler, context: FiberContext<Live>) {
+  fork<E3>(sink: Sink.Sink<E | E2, B, E3>, scheduler: Scheduler, context: FiberContext<Live>) {
     const { stream, f } = this
 
-    return pipe(
-      Fx.getEnv<R | R2>(),
-      Fx.flatMap(
-        (env) =>
-          stream.fork(
-            addTrace(new FlatMapSink(sink, scheduler, context, f, env, this.__trace), this.__trace),
-            scheduler,
-            context,
-          ),
-        this.__trace,
+    return access((env: Env<R | R2>) =>
+      pipe(
+        stream.fork(
+          new FlatMapSink(sink, scheduler, context, f, env, this.__trace),
+          scheduler,
+          context,
+        ),
+        provideService(Scheduler, scheduler),
       ),
     )
   }
@@ -57,12 +59,22 @@ export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2,
   }
 }
 
-class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A, E3> {
+class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> {
   protected _running = AtomicCounter()
   protected _ended = false
+  protected supervisor = None.extend({
+    onEnd: () => (fiber, exit) => {
+      const parentContext = fiber.context.parent
+
+      // Merge FiberRefs upon successful completion
+      if (isRight(exit) && isJust(parentContext)) {
+        join(parentContext.value.fiberRefs, fiber.context.fiberRefs)
+      }
+    },
+  })
 
   constructor(
-    readonly sink: Sink<E | E2, B, E3>,
+    readonly sink: Sink.Sink<E | E2, B, E3>,
     readonly scheduler: Scheduler,
     readonly context: FiberContext<Live>,
     readonly f: (a: A) => Stream<R2, E2, B>,
@@ -70,12 +82,17 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A, E3> {
     readonly __trace?: string,
   ) {}
 
-  event = (a: A) => {
-    return pipe(
-      this.f(a).fork(addTrace(this.innerSink(), this.__trace), this.scheduler, this.context.fork()),
-      Fx.provide(this.env),
-    )
-  }
+  event = (a: A) =>
+    Fx.lazy(() => {
+      const forked = this.context.fork({
+        supervisor: and(this.supervisor)(this.context.supervisor),
+      })
+
+      return pipe(
+        this.f(a).fork(Sink.addTrace(this.innerSink(), this.__trace), this.scheduler, forked),
+        Fx.provide(this.env),
+      )
+    })
 
   error = (cause: Cause<E | E2>) => {
     return lazy(() => {
@@ -94,14 +111,14 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A, E3> {
   protected endIfCompleted() {
     return lazy(() => {
       if (this._ended && this._running.get() === 0) {
-        this.sink.end
+        return this.sink.end
       }
 
       return unit
     })
   }
 
-  protected innerSink(): Sink<E | E2, B, E3> {
+  protected innerSink(): Sink.Sink<E | E2, B, E3> {
     return {
       event: this.sink.event,
       error: this.error,
