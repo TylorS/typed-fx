@@ -1,4 +1,5 @@
 import { flow, pipe } from 'hkt-ts'
+import { Left, Right } from 'hkt-ts/Either'
 
 import { Stream } from './Stream.js'
 
@@ -22,7 +23,7 @@ export interface CallbackSink<E, A> {
 }
 
 export function fromCallback<E, A>(
-  f: <E2>(sink: CallbackSink<E | E2, A>) => Finalizer | void | Promise<Finalizer | void>,
+  f: (sink: CallbackSink<E, A>) => Finalizer | void | Promise<Finalizer | void>,
   __trace?: string,
 ): Stream<never, E, A> {
   return new FromCallback<E, A>(f, __trace)
@@ -30,7 +31,7 @@ export function fromCallback<E, A>(
 
 export class FromCallback<E, A> implements Stream<never, E, A> {
   constructor(
-    readonly f: <E2>(sink: CallbackSink<E | E2, A>) => Finalizer | void | Promise<Finalizer | void>,
+    readonly f: (sink: CallbackSink<E, A>) => Finalizer | void | Promise<Finalizer | void>,
     readonly __trace?: string,
   ) {}
 
@@ -44,10 +45,21 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
 
       const runtime = Runtime(context)
       const tracedSink = addTrace(sink, __trace)
-      const cbSink = {
+      const cbSink: CallbackSink<E, A> = {
         event: flow(tracedSink.event, runtime.run),
-        error: flow(tracedSink.error, runtime.run),
-        end: () => pipe(tracedSink.end, runtime.run),
+        error: (cause) =>
+          pipe(
+            cause,
+            tracedSink.error,
+            Fx.tap(() => Fx.fork(context.scope.close(Left(cause)))),
+            runtime.run,
+          ),
+        end: () =>
+          pipe(
+            tracedSink.end,
+            Fx.tap(() => Fx.fork(context.scope.close(Right(undefined)))),
+            runtime.run,
+          ),
       }
 
       const synthetic = Synthetic({
@@ -62,8 +74,15 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
 
       return pipe(
         Fx.fromPromise(async () => await f(cbSink)),
-        Fx.tapLazy((finalizer) => finalizer && context.scope.ensuring(finalizer)),
-        Fx.forkInContext(context.fork()),
+        Fx.tap(
+          (finalizer) =>
+            (finalizer &&
+              (context.scope.state.tag === 'Open'
+                ? Fx.fromLazy(() => context.scope.ensuring(finalizer))
+                : finalizer(context.scope.state.exit))) ??
+            Fx.unit,
+        ),
+        Fx.fork,
         Fx.map(() => synthetic),
       )
     })
