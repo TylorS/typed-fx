@@ -18,10 +18,10 @@ export const join = <E, A>(fiber: Fiber.Fiber<E, A>) =>
     ),
   )
 
-export const forkJoinInContext = <R, E, A>(
-  fx: Fx.Fx<R, E, A>,
-  context: FiberContext<FiberId.Live>,
-): Fx.Fx<R, E, A> => pipe(fx, Fx.forkInContext(context), Fx.flatMap(join))
+export const forkJoinInContext =
+  (context: FiberContext<FiberId.Live>) =>
+  <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> =>
+    pipe(fx, Fx.forkInContext(context), Fx.flatMap(join))
 
 export const forkJoinIn = <R, E, A>(fx: Fx.Fx<R, E, A>, scope: Scope): Fx.Fx<R, E, A> =>
   pipe(fx, Fx.forkIn(scope), Fx.flatMap(join))

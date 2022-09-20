@@ -23,46 +23,71 @@ type Observer<E, A, E2> = {
 
 // TODO: how to create a synthetic fiber around multicasted streams?
 
-class MulticastStream<R, E, A> implements Stream<R, E, A>, Sink<E, A, any> {
+export class MulticastStream<R, E, A> implements Stream<R, E, A>, Sink<E, A, any> {
   protected observers: Array<Observer<E, A, any>> = []
   protected fiber: Fiber.Fiber<any, any> | undefined
 
-  constructor(readonly stream: Stream<R, E, A>) {}
+  constructor(readonly stream: Stream<R, E, A>) {
+    this.event = this.event.bind(this)
+    this.error = this.error.bind(this)
+  }
 
-  fork = <E2>(sink: Sink<E, A, E2>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) =>
-    Fx.lazy(() => {
+  fork<E2>(sink: Sink<E, A, E2>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
+    return Fx.lazy(() => {
       const observer: Observer<E, A, E2> = {
         sink,
         scheduler,
         context,
       }
 
+      const l = this.observers.length
+
       this.observers.push(observer)
 
-      if (this.observers.length === 1) {
+      if (l === 0) {
         return pipe(
           this.stream.fork(this, scheduler, context),
-          Fx.tapLazy((fiber) => this.fiber === fiber),
+          Fx.tapLazy((fiber) => (this.fiber = fiber)),
           Fx.map(() => this.createFiber(observer)),
         )
       }
 
       return Fx.fromLazy(() => this.createFiber(observer))
     })
+  }
 
-  readonly event = (a: A) => Fx.zipAll(this.observers.map(({ sink }) => sink.event(a)))
+  event(a: A) {
+    return Fx.zipAll(
+      this.observers.map(({ sink, context }) =>
+        pipe(sink.event(a), Fx.forkJoinInContext(context.fork())),
+      ),
+    )
+  }
 
-  readonly error = (cause: Cause<E>) =>
-    pipe(
-      Fx.zipAll(this.observers.map(({ sink }) => sink.error(cause))),
+  error(cause: Cause<E>) {
+    return pipe(
+      Fx.zipAll(
+        this.observers.map(({ sink, context }) =>
+          pipe(sink.error(cause), Fx.forkJoinInContext(context.fork())),
+        ),
+      ),
       Fx.tap((): Fx.Of<any> => (this.fiber ? this.fiber.interruptAs(FiberId.None) : Fx.unit)),
       Fx.tapLazy(() => (this.observers = [])),
     )
+  }
 
-  readonly end = pipe(
-    Fx.lazy(() => Fx.zipAll(this.observers.map(({ sink }) => sink.end))),
-    Fx.tapLazy(() => (this.observers = [])),
-  )
+  get end() {
+    return pipe(
+      Fx.lazy(() =>
+        Fx.zipAll(
+          this.observers.map(({ sink, context }) =>
+            pipe(sink.end, Fx.forkJoinInContext(context.fork())),
+          ),
+        ),
+      ),
+      Fx.tapLazy(() => (this.observers = [])),
+    )
+  }
 
   protected createFiber = <E2>(observer: Observer<E, A, E2>) => {
     const { context } = observer
@@ -78,7 +103,7 @@ class MulticastStream<R, E, A> implements Stream<R, E, A>, Sink<E, A, any> {
         Fx.flatMap(
           (): Fx.Of<any> =>
             this.observers.length === 0 && this.fiber
-              ? this.fiber.interruptAs(FiberId.None)
+              ? this.fiber.interruptAs(context.id)
               : Fx.unit,
         ),
       ),

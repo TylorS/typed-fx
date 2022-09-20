@@ -49,13 +49,13 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
           pipe(
             cause,
             tracedSink.error,
-            Fx.tap(() => Fx.fork(context.scope.close(Left(cause)))),
+            Fx.tap(() => context.scope.close(Left(cause))),
             runtime.run,
           ),
         end: () =>
           pipe(
             tracedSink.end,
-            Fx.tap(() => Fx.fork(context.scope.close(Right(undefined)))),
+            Fx.tap(() => context.scope.close(Right(undefined))),
             runtime.run,
           ),
       }

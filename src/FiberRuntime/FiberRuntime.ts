@@ -226,14 +226,8 @@ export class FiberRuntime<F extends Fx.AnyFx>
     this.withFiberRef(Builtin.CurrentConcurrencyLevel, (semaphore) => {
       const withConcurrency = acquireFiber(semaphore.value)
 
-      const f = new FiberRuntime(
-        withConcurrency(instr.first),
-        this.context.fork({ fiberRefs: this.context.fiberRefs }),
-      )
-      const s = new FiberRuntime(
-        withConcurrency(instr.second),
-        this.context.fork({ fiberRefs: this.context.fiberRefs }),
-      )
+      const f = new FiberRuntime(withConcurrency(instr.first), this.context.fork())
+      const s = new FiberRuntime(withConcurrency(instr.second), this.context.fork())
 
       const [future, onExit] = bothFuture(f, s)
 
@@ -248,7 +242,14 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
       return pipe(
         wait(future),
-        Fx.ensuring(() => Fx.fromLazy(() => inner.dispose())),
+        Fx.ensuring(() =>
+          Fx.fromLazy(() => {
+            FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs)
+            FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs)
+
+            inner.dispose()
+          }),
+        ),
       )
     })
   }
@@ -268,14 +269,8 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected processEither(instr: Extract<AnyInstruction, { readonly tag: 'Either' }>) {
     this.withFiberRef(Builtin.CurrentConcurrencyLevel, (semaphore) => {
       const withConcurrency = acquireFiber(semaphore.value)
-      const f = new FiberRuntime(
-        withConcurrency(instr.first),
-        this.context.fork({ fiberRefs: this.context.fiberRefs }),
-      )
-      const s = new FiberRuntime(
-        withConcurrency(instr.second),
-        this.context.fork({ fiberRefs: this.context.fiberRefs }),
-      )
+      const f = new FiberRuntime(withConcurrency(instr.first), this.context.fork())
+      const s = new FiberRuntime(withConcurrency(instr.second), this.context.fork())
 
       const inner = settable()
       const future = Pending<never, any, any>()
@@ -284,10 +279,19 @@ export class FiberRuntime<F extends Fx.AnyFx>
           pipe(
             Fx.fromExit(exit),
             Fx.ensuring(() =>
-              index === 0 ? s.interruptAs(f.context.id) : f.interruptAs(s.context.id),
+              index === 0
+                ? pipe(
+                    s.interruptAs(f.context.id),
+                    Fx.tapLazy(() => FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs)),
+                  )
+                : pipe(
+                    f.interruptAs(s.context.id),
+                    Fx.tapLazy(() => FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs)),
+                  ),
             ),
           ),
         )
+
         inner.dispose()
       }
 

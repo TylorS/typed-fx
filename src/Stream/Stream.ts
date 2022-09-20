@@ -40,11 +40,11 @@ import { Sink } from '@/Sink/Sink.js'
  */
 
 export interface Stream<R = never, E = never, A = unknown> {
-  readonly fork: <E2 = never>(
+  fork<E2 = never>(
     sink: Sink<E, A, E2>,
     scheduler: Scheduler,
     context: FiberContext<FiberId.Live>,
-  ) => Fx.RIO<R, Fiber<E2, any>>
+  ): Fx.RIO<R, Fiber<E2, any>>
 }
 
 export interface RIO<R, A> extends Stream<R, never, A> {}
