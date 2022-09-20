@@ -207,6 +207,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected addCustomTrace(trace?: string) {
     if (trace) {
+      this.pushPopFiberRef(Builtin.CurrentTrace, this.getRuntimeTrace())
       this.pushPopFiberRef(Builtin.CurrentTrace, Trace.Trace.custom(trace))
     }
   }
