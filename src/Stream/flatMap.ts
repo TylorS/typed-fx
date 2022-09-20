@@ -5,12 +5,12 @@ import { isJust } from 'hkt-ts/Maybe'
 import { Stream } from './Stream.js'
 import { MapStream } from './map.js'
 
-import { AtomicCounter, decrement } from '@/Atomic/AtomicCounter.js'
+import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
 import { Cause } from '@/Cause/index.js'
 import { Env } from '@/Env/Env.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
-import { join } from '@/FiberRefs/index.js'
+import * as FiberRefs from '@/FiberRefs/index.js'
 import * as Fx from '@/Fx/index.js'
 import { access, lazy, provideService, unit } from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
@@ -22,6 +22,13 @@ export function flatMap<A, R2, E2, B>(
   __trace?: string,
 ): <R, E>(stream: Stream<R, E, A>) => Stream<R | R2, E | E2, B> {
   return (stream) => FlatMapStream.make(stream, f, __trace)
+}
+
+export function join<R, E, R2, E2, A>(
+  stream: Stream<R, E, Stream<R2, E2, A>>,
+  __trace?: string,
+): Stream<R | R2, E | E2, A> {
+  return flatMap((a: Stream<R2, E2, A>) => a, __trace)(stream)
 }
 
 export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, B> {
@@ -68,7 +75,7 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> {
 
       // Merge FiberRefs upon successful completion
       if (isRight(exit) && isJust(parentContext)) {
-        join(parentContext.value.fiberRefs, fiber.context.fiberRefs)
+        FiberRefs.join(parentContext.value.fiberRefs, fiber.context.fiberRefs)
       }
     },
   })
@@ -87,6 +94,8 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> {
       const forked = this.context.fork({
         supervisor: and(this.supervisor)(this.context.supervisor),
       })
+
+      increment(this._running)
 
       return pipe(
         this.f(a).fork(Sink.addTrace(this.innerSink(), this.__trace), this.scheduler, forked),

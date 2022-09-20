@@ -21,5 +21,10 @@ testSuite(import.meta.url, () => {
       const events = await collectAll(stream)
       deepStrictEqual(events, [value + 1])
     })
+
+    it('should be collectable with multiple subscribers', async () => {
+      const events = await Promise.all([collectAll(stream), collectAll(stream)])
+      deepStrictEqual(events, [[value + 1], [value + 1]])
+    })
   })
 })
