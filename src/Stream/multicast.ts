@@ -65,7 +65,8 @@ class MulticastStream<R, E, A> implements Stream<R, E, A>, Sink<E, A, any> {
   )
 
   protected createFiber = <E2>(observer: Observer<E, A, E2>) => {
-    observer.context.scope.ensuring(() =>
+    const { context } = observer
+    context.scope.ensuring(() =>
       pipe(
         Fx.fromLazy(() => {
           const index = this.observers.indexOf(observer)
@@ -83,10 +84,6 @@ class MulticastStream<R, E, A> implements Stream<R, E, A>, Sink<E, A, any> {
       ),
     )
 
-    return fromScope(
-      new FiberId.Synthetic([observer.context.id]),
-      observer.context.fiberRefs,
-      observer.context.scope,
-    )
+    return fromScope(new FiberId.Synthetic([context.id]), context.fiberRefs, context.scope)
   }
 }
