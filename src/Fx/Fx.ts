@@ -598,8 +598,12 @@ export const CommutativeBoth: CB.CommutativeBoth3<FxHKT> = {
   both,
 }
 
-export const zipLeft = AB.zipLeft<FxHKT>({ ...CommutativeBoth, ...Covariant })
-export const zipRight = AB.zipRight<FxHKT>({ ...CommutativeBoth, ...Covariant })
+export const zipLeft = AB.zipLeft<FxHKT>({ ...CommutativeBoth, ...Covariant }) as <R2, E2, B>(
+  second: Fx<R2, E2, B>,
+) => <R, E, A>(first: Fx<R, E, A>) => Fx<R | R2, E | E2, A>
+export const zipRight = AB.zipRight<FxHKT>({ ...CommutativeBoth, ...Covariant }) as <R2, E2, B>(
+  second: Fx<R2, E2, B>,
+) => <R, E, A>(first: Fx<R, E, A>) => Fx<R | R2, E | E2, B>
 
 export const IdentityBothPar: IB.IdentityBoth3<FxHKT> = {
   ...CommutativeBoth,
