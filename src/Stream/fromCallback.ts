@@ -4,17 +4,15 @@ import { Left, Right } from 'hkt-ts/Either'
 import { Stream } from './Stream.js'
 
 import { Cause } from '@/Cause/index.js'
-import { Fiber, Synthetic } from '@/Fiber/Fiber.js'
+import { Fiber } from '@/Fiber/Fiber.js'
+import { fromScope } from '@/Fiber/fromScope.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
-import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
 import * as Fx from '@/Fx/index.js'
 import { Runtime } from '@/Runtime/Runtime.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
-import { closeOrWait, wait } from '@/Scope/Closeable.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
-import { Exit } from '@/index.js'
 
 export interface CallbackSink<E, A> {
   readonly event: (a: A) => Promise<any>
@@ -62,15 +60,11 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
           ),
       }
 
-      const synthetic = Synthetic({
-        id: new FiberId.Synthetic([context.id]),
-        exit: wait(context.scope),
-        inheritFiberRefs: pipe(
-          Fx.getFiberRefs,
-          Fx.flatMap((refs) => Fx.fromLazy(() => FiberRefs.join(refs, context.fiberRefs))),
-        ),
-        interruptAs: (id) => closeOrWait(context.scope)(Exit.interrupt(id)),
-      })
+      const synthetic = fromScope(
+        new FiberId.Synthetic([context.id]),
+        context.fiberRefs,
+        context.scope,
+      )
 
       return pipe(
         Fx.fromPromise(async () => await f(cbSink)),
