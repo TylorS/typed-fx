@@ -12,13 +12,13 @@ import { Drain, Sink, addTrace, makeDrain } from '@/Sink/Sink.js'
 export function drain<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, Fiber<E, any>> {
+): Fx.Fx<R | Scheduler, never, Fiber<never, any>> {
   return pipe(
     Fx.Do,
     Fx.bind('fiberContext', () => Fx.getFiberContext),
     Fx.let('context', ({ fiberContext }) => fiberContext.fork()),
     Fx.let('sink', ({ context }) => new Drain<E, A>(context.scope)),
-    Fx.flatMap(({ sink, context }) => fork(stream, addTrace(sink, __trace), context), __trace),
+    Fx.flatMap(({ sink, context }) => fork(stream, sink, context, __trace), __trace),
   )
 }
 
@@ -27,7 +27,7 @@ export function fork<R, E, A, E2 = never>(
   sink: Sink<E, A, E2>,
   context: FiberContext<FiberId.Live>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, Fiber<E | E2, A>> {
+): Fx.Fx<R | Scheduler, never, Fiber<E2, A>> {
   return Fx.asks(Scheduler)((scheduler) => stream.fork(addTrace(sink, __trace), scheduler, context))
 }
 
