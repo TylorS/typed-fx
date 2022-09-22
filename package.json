@@ -256,26 +256,6 @@
         "types": "./esm/Duration/Duration.d.ts"
       }
     },
-    "./Effect": {
-      "require": {
-        "default": "./cjs/Effect/index.js",
-        "types": "./cjs/Effect/index.js"
-      },
-      "import": {
-        "default": "./esm/Effect/index.js",
-        "types": "./esm/Effect/index.js"
-      }
-    },
-    "./Effect/Effect": {
-      "require": {
-        "default": "./cjs/Effect/Effect.js",
-        "types": "./cjs/Effect/Effect.d.ts"
-      },
-      "import": {
-        "default": "./esm/Effect/Effect.js",
-        "types": "./esm/Effect/Effect.d.ts"
-      }
-    },
     "./Env": {
       "require": {
         "default": "./cjs/Env/index.js",
@@ -354,6 +334,16 @@
       "import": {
         "default": "./esm/Fiber/fromExit.js",
         "types": "./esm/Fiber/fromExit.d.ts"
+      }
+    },
+    "./Fiber/fromScope": {
+      "require": {
+        "default": "./cjs/Fiber/fromScope.js",
+        "types": "./cjs/Fiber/fromScope.d.ts"
+      },
+      "import": {
+        "default": "./esm/Fiber/fromScope.js",
+        "types": "./esm/Fiber/fromScope.d.ts"
       }
     },
     "./Fiber/hkt": {
@@ -1176,6 +1166,16 @@
         "types": "./esm/Stream/Stream.d.ts"
       }
     },
+    "./Stream/acquirePermit": {
+      "require": {
+        "default": "./cjs/Stream/acquirePermit.js",
+        "types": "./cjs/Stream/acquirePermit.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/acquirePermit.js",
+        "types": "./esm/Stream/acquirePermit.d.ts"
+      }
+    },
     "./Stream/bimap": {
       "require": {
         "default": "./cjs/Stream/bimap.js",
@@ -1226,6 +1226,16 @@
         "types": "./esm/Stream/flatMap.d.ts"
       }
     },
+    "./Stream/flatMapConcurrently": {
+      "require": {
+        "default": "./cjs/Stream/flatMapConcurrently.js",
+        "types": "./cjs/Stream/flatMapConcurrently.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/flatMapConcurrently.js",
+        "types": "./esm/Stream/flatMapConcurrently.d.ts"
+      }
+    },
     "./Stream/flatMapFx": {
       "require": {
         "default": "./cjs/Stream/flatMapFx.js",
@@ -1266,6 +1276,26 @@
         "types": "./esm/Stream/hkt.d.ts"
       }
     },
+    "./Stream/hold": {
+      "require": {
+        "default": "./cjs/Stream/hold.js",
+        "types": "./cjs/Stream/hold.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/hold.js",
+        "types": "./esm/Stream/hold.d.ts"
+      }
+    },
+    "./Stream/lazy": {
+      "require": {
+        "default": "./cjs/Stream/lazy.js",
+        "types": "./cjs/Stream/lazy.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/lazy.js",
+        "types": "./esm/Stream/lazy.d.ts"
+      }
+    },
     "./Stream/map": {
       "require": {
         "default": "./cjs/Stream/map.js",
@@ -1274,6 +1304,36 @@
       "import": {
         "default": "./esm/Stream/map.js",
         "types": "./esm/Stream/map.d.ts"
+      }
+    },
+    "./Stream/merge": {
+      "require": {
+        "default": "./cjs/Stream/merge.js",
+        "types": "./cjs/Stream/merge.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/merge.js",
+        "types": "./esm/Stream/merge.d.ts"
+      }
+    },
+    "./Stream/multicast": {
+      "require": {
+        "default": "./cjs/Stream/multicast.js",
+        "types": "./cjs/Stream/multicast.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/multicast.js",
+        "types": "./esm/Stream/multicast.d.ts"
+      }
+    },
+    "./Stream/orElse": {
+      "require": {
+        "default": "./cjs/Stream/orElse.js",
+        "types": "./cjs/Stream/orElse.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/orElse.js",
+        "types": "./esm/Stream/orElse.d.ts"
       }
     },
     "./Stream/periodic": {
@@ -1296,6 +1356,16 @@
         "types": "./esm/Stream/run.d.ts"
       }
     },
+    "./Stream/scan": {
+      "require": {
+        "default": "./cjs/Stream/scan.js",
+        "types": "./cjs/Stream/scan.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/scan.js",
+        "types": "./esm/Stream/scan.d.ts"
+      }
+    },
     "./Stream/scheduled": {
       "require": {
         "default": "./cjs/Stream/scheduled.js",
@@ -1304,6 +1374,26 @@
       "import": {
         "default": "./esm/Stream/scheduled.js",
         "types": "./esm/Stream/scheduled.d.ts"
+      }
+    },
+    "./Stream/setFiberRefLocally": {
+      "require": {
+        "default": "./cjs/Stream/setFiberRefLocally.js",
+        "types": "./cjs/Stream/setFiberRefLocally.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/setFiberRefLocally.js",
+        "types": "./esm/Stream/setFiberRefLocally.d.ts"
+      }
+    },
+    "./Stream/switchMap": {
+      "require": {
+        "default": "./cjs/Stream/switchMap.js",
+        "types": "./cjs/Stream/switchMap.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/switchMap.js",
+        "types": "./esm/Stream/switchMap.d.ts"
       }
     },
     "./Stream/tap": {
