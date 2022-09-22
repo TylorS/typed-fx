@@ -15,7 +15,6 @@ import { Sink } from '@/Sink/Sink.js'
  * - zip/zipArray
  * - sample
  * - snapshot
- * - skipRepeats
  * - slice/take/skip
  * - takeWhile/skipWhile
  * - takeUntil/skipUntil
@@ -26,7 +25,6 @@ import { Sink } from '@/Sink/Sink.js'
  * - delay
  * - throttle
  * - debounce
- * - reduce
  * - Fusion/Commutation
  * - Unique Identification for streams to add to tracing
  *    - How to build a dynamic stream graph?

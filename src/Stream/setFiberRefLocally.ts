@@ -23,22 +23,16 @@ export class SetFiberRefLocallyStream<R, E, A, R2, E2, A2> implements Stream<R2,
 
   fork<E3>(sink: Sink<E2, A2, E3>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
     return pipe(
-      fromLazy(() => FiberRefs.setFiberRefLocally(this.fiberRef, this.value())(context.fiberRefs)),
-      flatMap(() =>
-        this.stream.fork(
-          {
-            ...sink,
-            end: pipe(
-              sink.end,
-              flatMap(() =>
-                fromLazy(() => FiberRefs.popLocalFiberRef(this.fiberRef)(context.fiberRefs)),
-              ),
-            ),
-          },
-          scheduler,
-          context,
-        ),
-      ),
+      fromLazy(() => {
+        // SetFiberRef
+        FiberRefs.setFiberRefLocally(this.fiberRef, this.value())(context.fiberRefs)
+
+        // Ensure it is popped off when the stream ends
+        context.scope.ensuring(() =>
+          fromLazy(() => FiberRefs.popLocalFiberRef(this.fiberRef)(context.fiberRefs)),
+        )
+      }),
+      flatMap(() => this.stream.fork(sink, scheduler, context)),
     )
   }
 }
