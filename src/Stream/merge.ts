@@ -1,6 +1,7 @@
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { Stream } from './Stream.js'
+import { ErrorsOf, OutputOf, ResourcesOf, Stream } from './Stream.js'
+import { empty } from './empty.js'
 
 import { AtomicCounter, decrement } from '@/Atomic/AtomicCounter.js'
 import { Fiber } from '@/Fiber/Fiber.js'
@@ -14,6 +15,19 @@ import { Sink, addTrace } from '@/Sink/Sink.js'
 export function merge<R2, E2, B>(second: Stream<R2, E2, B>, __trace?: string) {
   return <R, E, A>(first: Stream<R, E, A>): Stream<R | R2, E | E2, A | B> =>
     MergeStream.make(first, second, __trace)
+}
+
+export function mergeArray<Streams extends ReadonlyArray<Stream<any, any, any>>>(
+  streams: readonly [...Streams],
+  __trace?: string,
+): Stream<ResourcesOf<Streams[number]>, ErrorsOf<Streams[number]>, OutputOf<Streams[number]>> {
+  if (streams.length === 0) {
+    return empty
+  }
+
+  const [first, ...rest] = streams
+
+  return rest.reduce((acc, stream) => merge(stream, __trace)(acc), first)
 }
 
 export class MergeStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A | B> {
