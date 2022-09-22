@@ -28,3 +28,7 @@ export function mergeConcurrently(concurrencyLevel: NonNegativeInteger, __trace?
       flatMapConcurrently((a) => a, concurrencyLevel, __trace),
     )
 }
+
+export function concatMap<A, R2, E2, B>(f: (a: A) => Stream<R2, E2, B>, __trace?: string) {
+  return flow(flatMapConcurrently(f, NonNegativeInteger(1), __trace))
+}
