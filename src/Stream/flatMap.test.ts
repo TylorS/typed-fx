@@ -17,12 +17,12 @@ testSuite(import.meta.url, () => {
       flatMap((a) => fromFx(Fx.success(a + 1))),
     )
 
-    it('should be collectable', async () => {
+    it('is collectable', async () => {
       const events = await collectAll(stream)
       deepStrictEqual(events, [value + 1])
     })
 
-    it('should be collectable with multiple subscribers', async () => {
+    it('is collectable with multiple subscribers', async () => {
       const events = await Promise.all([collectAll(stream), collectAll(stream)])
       deepStrictEqual(events, [[value + 1], [value + 1]])
     })

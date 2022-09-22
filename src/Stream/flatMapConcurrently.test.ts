@@ -42,7 +42,7 @@ testSuite(import.meta.url, () => {
         ),
       )
 
-    it('should be collectable', async () => {
+    it('it should control concurrency', async () => {
       const noConcurrency = await collectAll(stream(Infinity))
 
       deepStrictEqual(noConcurrency, [

@@ -15,7 +15,7 @@ testSuite(import.meta.url, () => {
       await end()
     })
 
-    it('should be collectable', async () => {
+    it('is collectable', async () => {
       deepStrictEqual(await collectAll(stream), [value, value + 1, value + 2])
     })
   })

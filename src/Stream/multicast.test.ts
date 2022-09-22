@@ -8,7 +8,7 @@ import { testSuite } from '@/_internal/suite.js'
 
 testSuite(import.meta.url, () => {
   describe(multicast.name, () => {
-    it('should be collectable', async () => {
+    it('effeciently shares underlying stream', async () => {
       let started = 0
       const value = Math.random()
       const stream = multicast(

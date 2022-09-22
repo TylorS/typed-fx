@@ -25,7 +25,7 @@ testSuite(import.meta.url, () => {
     ),
   )
 
-  it('should be collectable', async () => {
+  it('merges together 2 streams concurrenctly', async () => {
     deepStrictEqual(await collectAll(stream), [1, 4, 2, 5, 3])
   })
 })

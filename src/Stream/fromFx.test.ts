@@ -10,7 +10,7 @@ describe(new URL(import.meta.url).pathname, () => {
     const value = Math.random()
     const stream = fromFx(Fx.success(value))
 
-    it('should be collectable', async () => {
+    it('is collectable', async () => {
       deepStrictEqual(await collectAll(stream), [value])
     })
   })

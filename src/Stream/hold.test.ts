@@ -18,7 +18,7 @@ testSuite(import.meta.url, () => {
     const collectAll = <E, A>(stream: Stream<never, E, A>) =>
       pipe(stream, collect, provideService(Scheduler, scheduler), runMain)
 
-    it('should be collectable', async () => {
+    it('emits previous event to late subscribers', async () => {
       let started = 0
       const value = Math.random()
       const stream = hold(
