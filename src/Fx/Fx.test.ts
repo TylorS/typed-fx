@@ -107,14 +107,14 @@ describe(new URL(import.meta.url).pathname, () => {
     console.time('Fx: Fib25 Construction')
     const program = fib(25)
     console.timeEnd('Fx: Fib25 Construction')
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       console.time('Fib25')
       await runMain(program)
       console.timeEnd('Fib25')
     }
   })
 
-  it('runs Fib w/ generators', async () => {
+  it.skip('runs Fib w/ generators', async () => {
     const fib = (n: number): Fx.Of<number> =>
       Fx.Fx(function* () {
         if (n < 2) {
