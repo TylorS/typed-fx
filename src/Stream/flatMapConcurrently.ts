@@ -1,4 +1,4 @@
-import { pipe } from 'hkt-ts/function'
+import { flow, pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Stream } from './Stream.js'
@@ -17,10 +17,7 @@ export function flatMapConcurrently<A, R2, E2, B>(
     lazy(() => {
       const semaphore = new Semaphore(concurrencyLevel)
 
-      return pipe(
-        stream,
-        flatMap((a) => pipe(a, f, acquirePermit(semaphore)), __trace),
-      )
+      return pipe(stream, flatMap(flow(f, acquirePermit(semaphore)), __trace))
     })
 }
 

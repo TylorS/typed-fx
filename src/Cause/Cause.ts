@@ -435,3 +435,53 @@ export const makeDebug = <E>(renderer: Renderer<E> = defaultRenderer): D.Debug<C
 export const Debug = makeDebug()
 
 export const findExpected = find(<E>(e: E): e is E => true)
+
+export function findType<T extends Cause<any>['tag']>(tag: T) {
+  return <E>(cause: Cause<E>): Maybe.Maybe<Cause<E>> => {
+    if (cause.tag === tag) {
+      return Maybe.Just(cause)
+    }
+
+    if (cause.tag === 'Sequential') {
+      return pipe(
+        findType(tag)(cause.left),
+        Maybe.match(
+          () => findType(tag)(cause.right),
+          (a) =>
+            pipe(
+              findType(tag)(cause.right),
+              Maybe.match(
+                () => Maybe.Just(a),
+                (b) => Maybe.Just(sequential(a, b)),
+              ),
+            ),
+        ),
+      )
+    }
+
+    if (cause.tag === 'Parallel') {
+      return pipe(
+        findType(tag)(cause.left),
+        Maybe.match(
+          () => findType(tag)(cause.right),
+          (a) =>
+            pipe(
+              findType(tag)(cause.right),
+              Maybe.match(
+                () => Maybe.Just(a),
+                (b) => Maybe.Just(parallel(a, b)),
+              ),
+            ),
+        ),
+      )
+    }
+
+    if (cause.tag === 'Traced') {
+      return findType(tag)(cause.cause)
+    }
+
+    return Maybe.Nothing
+  }
+}
+
+export const findInterrupted = findType('Interrupted')

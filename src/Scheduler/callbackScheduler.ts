@@ -34,6 +34,7 @@ export function callbackScheduler(
   }
 
   function runReadyTasks() {
+    nextArrival = null
     timeline.getReadyTasks(Clock.timeToUnixTime(timer.getCurrentTime())(timer)).forEach((f) => f())
 
     scheduleNextRun()

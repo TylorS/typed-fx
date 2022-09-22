@@ -51,6 +51,7 @@ class TimelineImpl<A> implements Timeline<A> {
 
   readonly add = (time: UnixTime, a: A): Disposable => {
     insertByTime(time, a, this.timeSlots)
+
     this.onUpdated?.()
 
     return Disposable(() => this.remove(time, a))

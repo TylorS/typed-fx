@@ -119,6 +119,11 @@ export class FiberRuntime<F extends Fx.AnyFx>
   readonly addObserver = (
     observer: (exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) => void,
   ): Disposable => {
+    if (this._status.tag === 'Done') {
+      const exit = this._status.exit
+      return this.setTimer(() => observer(exit))
+    }
+
     this._observers.push(observer)
 
     return Disposable(() => {
@@ -137,10 +142,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
         this._disposable.dispose()
         this._disposable = settable()
         this._current = Maybe.Just(Fx.interrupted(id).instr)
-
-        if (this._status.tag === 'Suspended') {
-          this.setTimer(() => this.loop())
-        }
+        this.loop()
       } else {
         // Record the interrupting FiberId for if/when the interrupt status becomes true again.
         this._interruptedBy.add(id)
@@ -340,9 +342,9 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processFromCause(instr: Extract<AnyInstruction, { readonly tag: 'FromCause' }>) {
-    if (instr.cause.tag === 'Interrupted' && this._children.length > 0) {
-      const fiberId = instr.cause.fiberId
-      const interrupts = this._children.map((c) => c.interruptAs(fiberId))
+    const interruptedCause = Cause.findInterrupted(instr.cause)
+    if (Maybe.isJust(interruptedCause) && this._children.length > 0) {
+      const interrupts = this._children.map((c) => c.interruptAs(this.id))
       this._children = []
 
       // Cancel all Child Fibers and then continue with the Cause

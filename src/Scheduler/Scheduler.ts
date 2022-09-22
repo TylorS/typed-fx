@@ -15,11 +15,12 @@ export interface Scheduler extends Disposable {
     context: FiberContext<FiberId.Live>,
   ) => Live<E, A>
 
-  readonly schedule: <R, E, A>(
+  readonly schedule: <R, E, A, B>(
     fx: Fx<R, E, A>,
     env: Env<R>,
     schedule: Schedule,
     context: FiberContext<FiberId.Live>,
+    onEnd?: (state: ScheduleState) => Fx<R, E, B>,
   ) => Live<E, ScheduleState>
 }
 

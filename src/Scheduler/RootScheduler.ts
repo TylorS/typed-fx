@@ -16,6 +16,7 @@ import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
 import { Fx } from '@/Fx/Fx.js'
 import { Schedule } from '@/Schedule/Schedule.js'
+import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Delay } from '@/Time/index.js'
 import { SetTimeoutTimer } from '@/Timer/SetTimeoutTimer.js'
 import { Timer } from '@/Timer/Timer.js'
@@ -58,15 +59,19 @@ class RootSchedulerImpl implements Scheduler {
     return runtime
   }
 
-  readonly schedule: Scheduler['schedule'] = <R, E, A>(
+  readonly schedule: Scheduler['schedule'] = <R, E, A, B>(
     fx: Fx<R, E, A>,
     env: Env<R>,
     schedule: Schedule,
     context: FiberContext<FiberId.Live>,
+    onEnd?: (state: ScheduleState) => Fx<R, E, B>,
   ) => {
     setFiberRef(CurrentEnv, env)(context.fiberRefs)
 
-    const runtime = new FiberRuntime(runSchedule(fx, schedule, this.timer, this.runAt), context)
+    const runtime = new FiberRuntime(
+      runSchedule(fx, schedule, this.timer, this.runAt, onEnd),
+      context,
+    )
 
     // Safe to call sync since it will be run by the Timeline.
     runtime.startSync()

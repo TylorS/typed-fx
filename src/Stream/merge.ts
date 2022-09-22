@@ -1,10 +1,13 @@
+import { NonNegativeInteger } from 'hkt-ts/number'
+
 import { Stream } from './Stream.js'
 
+import { AtomicCounter, decrement } from '@/Atomic/AtomicCounter.js'
 import { Fiber } from '@/Fiber/Fiber.js'
 import { both } from '@/Fiber/hkt.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
-import { Fx, lazy, unit } from '@/Fx/Fx.js'
+import * as Fx from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
 
@@ -22,19 +25,14 @@ export class MergeStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A
 
   fork = <E3>(sink: Sink<E | E2, A | B, E3>, scheduler: Scheduler, context: FiberContext<Live>) => {
     const { first, second, __trace } = this
+    const mergeSink = addTrace(
+      new MergeSink<E | E2, A | B, E3>(sink, AtomicCounter(NonNegativeInteger(2))),
+      __trace,
+    )
 
-    return Fx(function* () {
-      const mergeSink = addTrace(new MergeSink<E | E2, A | B, E3>(sink, 2), __trace)
-      const firstFiber: Fiber<E3, any> = yield* first.fork(
-        mergeSink,
-        scheduler,
-        context.fork({ fiberRefs: context.fiberRefs }),
-      )
-      const secondFiber: Fiber<E3, any> = yield* second.fork(
-        mergeSink,
-        scheduler,
-        context.fork({ fiberRefs: context.fiberRefs }),
-      )
+    return Fx.Fx(function* () {
+      const firstFiber: Fiber<E3, any> = yield* first.fork(mergeSink, scheduler, context)
+      const secondFiber: Fiber<E3, any> = yield* second.fork(mergeSink, scheduler, context.fork())
 
       return both(secondFiber)(firstFiber)
     })
@@ -50,17 +48,15 @@ export class MergeStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A
 }
 
 class MergeSink<E, A, E2> implements Sink<E, A, E2> {
-  protected completed = 0
-
-  constructor(readonly sink: Sink<E, A, E2>, readonly expected: number) {}
+  constructor(readonly sink: Sink<E, A, E2>, readonly refCount: AtomicCounter) {}
 
   event = this.sink.event
   error = this.sink.error
-  end = lazy(() => {
-    if (++this.completed === this.expected) {
+  end = Fx.lazy(() => {
+    if (decrement(this.refCount) === 0) {
       return this.sink.end
     }
 
-    return unit
+    return Fx.unit
   })
 }

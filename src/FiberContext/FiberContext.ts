@@ -61,7 +61,7 @@ export function fork<Id extends FiberId.FiberId = FiberId.Live, Id2 extends Fibe
     platform: overrides?.platform ?? context.platform.fork(),
     fiberRefs: overrides?.fiberRefs ?? context.fiberRefs.fork(),
     scope: overrides?.scope ?? context.scope.fork(),
-    supervisor: overrides?.supervisor ?? None,
+    supervisor: overrides?.supervisor ?? context.supervisor,
     logger: overrides?.logger ?? context.logger,
     parent: overrides?.parent ?? Just(context),
   })

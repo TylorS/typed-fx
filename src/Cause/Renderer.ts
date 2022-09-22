@@ -67,7 +67,7 @@ export function renderInterrupted<E>(
 ): Sequential {
   return Sequential([
     Failure([
-      `Interrupted by Fiber ${FiberIdDebug.debug(cause.fiberId)}.`,
+      `Interrupted by ${FiberIdDebug.debug(cause.fiberId)}.`,
       '',
       ...renderTrace(trace, renderer),
     ]),

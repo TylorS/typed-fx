@@ -2,7 +2,6 @@ import { mapTo } from 'hkt-ts/Either'
 import * as Maybe from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Associative'
 import { pipe } from 'hkt-ts/function'
-import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Closeable } from './Closeable.js'
 import { ReleaseMap } from './ReleaseMap.js'
@@ -18,7 +17,7 @@ const { concat: concatExits } = makeSequentialAssociative<any, any>(First)
 export class LocalScope implements Closeable {
   protected _state: ScopeState = Open
   protected _releaseMap = new ReleaseMap(this.strategy)
-  protected _refCount = AtomicCounter(NonNegativeInteger(1))
+  protected _refCount = AtomicCounter()
   protected _exit: Maybe.Maybe<Exit<any, any>> = Maybe.Nothing
 
   constructor(readonly strategy: FinalizationStrategy) {}
@@ -44,9 +43,12 @@ export class LocalScope implements Closeable {
 
     const extended = new LocalScope(strategy)
 
-    // Mutually track resources
-    extended.ensuring(() => this.release)
-    extended.ensuring(this.ensuring(() => extended.release))
+    extended.ensuring(() => {
+      decrement(this._refCount)
+
+      return this.release
+    })
+
     increment(this._refCount)
 
     return extended
@@ -64,7 +66,7 @@ export class LocalScope implements Closeable {
   // Internals
 
   protected release = lazy(() => {
-    if (decrement(this._refCount) > 0 || Maybe.isNothing(this._exit) || this.isClosed) {
+    if (this._refCount.get() > 0 || Maybe.isNothing(this._exit) || this.isClosed) {
       return success(false)
     }
 

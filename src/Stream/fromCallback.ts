@@ -20,7 +20,7 @@ export interface CallbackSink<E, A> {
   readonly end: () => Promise<any>
 }
 
-export function fromCallback<E, A>(
+export function fromCallback<E = never, A = unknown>(
   f: (sink: CallbackSink<E, A>) => Finalizer | void | Promise<Finalizer | void>,
   __trace?: string,
 ): Stream<never, E, A> {

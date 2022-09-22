@@ -3,7 +3,7 @@ import { deepStrictEqual } from 'assert'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { collectAll } from './_internal.test.js'
-import { scheduled } from './scheduled.js'
+import { at, scheduled } from './scheduled.js'
 
 import * as Fx from '@/Fx/index.js'
 import * as Schedule from '@/Schedule/index.js'
@@ -29,6 +29,14 @@ testSuite(import.meta.url, () => {
         ),
         [value, value],
       )
+    })
+  })
+
+  describe(at.name, () => {
+    it('runs Fx at a given time', async () => {
+      const value = Math.random()
+
+      deepStrictEqual(await collectAll(at(Delay(5))(value)), [value])
     })
   })
 })
