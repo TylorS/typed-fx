@@ -10,7 +10,6 @@ import { Sink } from '@/Sink/Sink.js'
  * - Loop
  * - zipItems
  * - withItems
- * - concatMap
  * - combine/combineArray
  * - zip/zipArray
  * - sample

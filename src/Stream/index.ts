@@ -1,6 +1,7 @@
 export * from './acquirePermit.js'
 export * from './bimap.js'
 export * from './continueWith.js'
+export * from './delay.js'
 export * from './drain.js'
 export * from './empty.js'
 export * from './flatMap.js'
