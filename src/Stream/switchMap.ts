@@ -1,9 +1,7 @@
 import { flow, pipe } from 'hkt-ts'
-import { isRight } from 'hkt-ts/Either'
-import { isJust } from 'hkt-ts/Maybe'
 
 import { Stream } from './Stream.js'
-import { MapStream } from './map.js'
+import { MapStream } from './bimap.js'
 
 import { Cause } from '@/Cause/index.js'
 import { Disposable, Settable, settable } from '@/Disposable/Disposable.js'
@@ -11,13 +9,12 @@ import { Env } from '@/Env/Env.js'
 import { Fiber } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
-import * as FiberRefs from '@/FiberRefs/index.js'
 import * as Fx from '@/Fx/index.js'
 import { access, lazy, unit } from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Lock } from '@/Semaphore/Semaphore.js'
 import * as Sink from '@/Sink/Sink.js'
-import { None, and } from '@/Supervisor/Supervisor.js'
+import * as Supervisor from '@/Supervisor/index.js'
 
 export function switchMap<A, R2, E2, B>(
   f: (a: A) => Stream<R2, E2, B>,
@@ -70,17 +67,6 @@ class SwitchMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> 
   protected _fibers: Array<Fiber<E3, any>> = []
   protected _lock = new Lock()
 
-  protected _supervisor = None.extend({
-    onEnd: () => (fiber, exit) => {
-      const parentContext = fiber.context.parent
-
-      // Merge FiberRefs upon successful completion
-      if (isRight(exit) && isJust(parentContext)) {
-        FiberRefs.join(parentContext.value.fiberRefs, fiber.context.fiberRefs)
-      }
-    },
-  })
-
   constructor(
     readonly sink: Sink.Sink<E | E2, B, E3>,
     readonly scheduler: Scheduler,
@@ -93,7 +79,7 @@ class SwitchMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> 
   event = (a: A): Fx.IO<E3, unknown> =>
     Fx.lazy(() => {
       const forked = this.context.fork({
-        supervisor: and(this._supervisor)(this.context.supervisor),
+        supervisor: Supervisor.and(Supervisor.inheritFiberRefs)(this.context.supervisor),
       })
 
       const cleanup: Fx.Of<unknown> = Fx.zipAll(this._fibers.map((f) => f.interruptAs(forked.id)))

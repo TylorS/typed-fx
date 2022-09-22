@@ -527,7 +527,7 @@ export const Top: T.Top3REC<FxHKT, never, never> = {
   top: now<unknown>([]),
 }
 
-export const top = T.top
+export const top = Top.top
 
 export const never = async<never, never, never>(() => Either.Left(unit))
 
