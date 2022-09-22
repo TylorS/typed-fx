@@ -135,24 +135,22 @@ const getLayerFromFiberRefs = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs
 
 export function addServiceFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R>['addService'] {
   return (id, impl) => {
-    return Fx.fromLazy(() => {
-      const forked = fiberRefs.fork()
+    const forked = fiberRefs.fork()
 
-      // AddService
-      FiberRefs.setFiberRef(
-        Services,
-        pipe(
-          forked,
-          FiberRefs.maybeGetFiberRefValue(Services),
-          Maybe.match(
-            () => ImmutableMap<Service<any>, any>().set(id, impl),
-            (s) => s.set(id, impl),
-          ),
+    // AddService
+    FiberRefs.setFiberRef(
+      Services,
+      pipe(
+        forked,
+        FiberRefs.maybeGetFiberRefValue(Services),
+        Maybe.match(
+          () => ImmutableMap<Service<any>, any>().set(id, impl),
+          (s) => s.set(id, impl),
         ),
-      )(forked)
+      ),
+    )(forked)
 
-      return makeEnvFromFiberRefs(forked)
-    })
+    return makeEnvFromFiberRefs(forked)
   }
 }
 

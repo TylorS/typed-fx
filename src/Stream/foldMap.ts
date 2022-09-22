@@ -1,32 +1,78 @@
-import { flow, pipe } from 'hkt-ts'
+import { Maybe, flow, pipe } from 'hkt-ts'
 import * as Endo from 'hkt-ts/Endomorphism'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 import * as B from 'hkt-ts/boolean'
 
 import { Stream } from './Stream.js'
+import { FilterMapStream, MapStream } from './bimap.js'
 import { observe } from './drain.js'
+import { FromFxStream } from './fromFx.js'
 
 import * as Fx from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 
+export const filterFoldMap = <A>(I: Identity<A>) => {
+  const foldMap_ =
+    <B>(f: (b: B) => Maybe.Maybe<A>, __trace?: string) =>
+    <R, E>(stream: Stream<R, E, B>): Fx.Fx<R | Scheduler, E, A> => {
+      if (stream instanceof FromFxStream) {
+        return pipe(
+          stream.fx,
+          Fx.map(
+            flow(
+              f,
+              Maybe.match(
+                () => I.id,
+                (a) => I.concat(I.id, a),
+              ),
+            ),
+          ),
+        )
+      }
+
+      if (stream instanceof MapStream) {
+        return foldMap_(flow(stream.f, f), __trace)(stream.stream)
+      }
+
+      if (stream instanceof FilterMapStream) {
+        return foldMap_(flow(stream.f, Maybe.flatMap(f)), __trace)(stream.stream)
+      }
+
+      return filterFoldMapStream(I, f, stream, __trace)
+    }
+
+  return foldMap_
+}
+
 export const foldMap =
   <A>(I: Identity<A>) =>
   <B>(f: (b: B) => A) =>
-  <R, E>(stream: Stream<R, E, B>): Fx.Fx<R | Scheduler, E, A> =>
-    Fx.lazy(() => {
-      let acc = I.id
+    filterFoldMap(I)(flow(f, Maybe.Just))
 
-      return pipe(
-        stream,
-        observe((b) =>
-          Fx.fromLazy(() => {
-            acc = I.concat(acc, f(b))
-          }),
-        ),
-        Fx.flatMap(Fx.join),
-        Fx.map(() => acc),
-      )
-    })
+const filterFoldMapStream = <A, B, R, E>(
+  I: Identity<A>,
+  f: (b: B) => Maybe.Maybe<A>,
+  stream: Stream<R, E, B>,
+  __trace?: string,
+) =>
+  Fx.lazy(() => {
+    let acc = I.id
+
+    return pipe(
+      stream,
+      observe((b) =>
+        Fx.fromLazy(() => {
+          const maybe = f(b)
+
+          if (Maybe.isJust(maybe)) {
+            acc = I.concat(acc, maybe.value)
+          }
+        }),
+      ),
+      Fx.flatMap(Fx.join),
+      Fx.map(() => acc, __trace),
+    )
+  })
 
 export const reduce = <A, B>(f: (a: A, b: B) => A, seed: A) => {
   return flow(

@@ -5,7 +5,7 @@ import { Stream } from './Stream.js'
 import { MulticastStream } from './multicast.js'
 
 import { Cause } from '@/Cause/index.js'
-import { Env } from '@/Env/Env.js'
+import { fromFiberRefs } from '@/Env/Env.js'
 import { Fiber } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
@@ -100,7 +100,7 @@ export class HoldStream<R, E, A> extends MulticastStream<R, E, A> implements Str
 
     this.scheduledFiber = scheduler.asap(
       this.flushPending(),
-      Env(context.fiberRefs),
+      fromFiberRefs(context.fiberRefs),
       context.fork(),
     )
 

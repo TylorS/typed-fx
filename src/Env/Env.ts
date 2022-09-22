@@ -9,10 +9,16 @@ import { Service } from '@/Service/Service.js'
 export interface Env<R> {
   readonly fiberRefs: FiberRefs.FiberRefs
   readonly get: <S extends R>(service: Service<S>) => Of<S>
-  readonly addService: <S, I extends S>(service: Service<S>, impl: I) => Of<Env<R | S>>
+  readonly addService: <S, I extends S>(service: Service<S>, impl: I) => Env<R | S>
   readonly join: <S>(other: Env<S>) => Env<R | S>
 }
 
-export function Env<R>(fiberRefs: FiberRefs.FiberRefs): Env<R> {
+export const Empty = makeEnvFromFiberRefs<never>(FiberRefs.FiberRefs())
+
+export function Env<S, I extends S>(service: Service<S>, impl: I): Env<S> {
+  return Empty.addService(service, impl)
+}
+
+export function fromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R> {
   return makeEnvFromFiberRefs(fiberRefs)
 }

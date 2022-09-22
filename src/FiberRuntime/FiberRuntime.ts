@@ -456,12 +456,12 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected processProvideService(
     instr: Extract<AnyInstruction, { readonly tag: 'ProvideService' }>,
   ) {
-    this.withFiberRef(Builtin.Services, (services) =>
+    this.withFiberRef(Builtin.CurrentEnv, (env) =>
       pipe(
         instr.fx,
         Fx.fiberRefLocally(
-          Builtin.Services,
-          services.value.set(instr.service, instr.implementation),
+          Builtin.CurrentEnv,
+          env.value.addService(instr.service, instr.implementation),
         ),
       ),
     )
