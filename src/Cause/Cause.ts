@@ -434,7 +434,8 @@ export const makeDebug = <E>(renderer: Renderer<E> = defaultRenderer): D.Debug<C
 
 export const Debug = makeDebug()
 
-export const findExpected = find(<E>(e: E): e is E => true)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const findExpected = find(<E>(_e: E): _e is E => true)
 
 export function findType<T extends Cause<any>['tag']>(tag: T) {
   return <E>(cause: Cause<E>): Maybe.Maybe<Cause<E>> => {
