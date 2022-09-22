@@ -21,7 +21,6 @@ import { Sink } from '@/Sink/Sink.js'
  * - since
  * - during
  * - until
- * - delay
  * - throttle
  * - debounce
  * - Fusion/Commutation

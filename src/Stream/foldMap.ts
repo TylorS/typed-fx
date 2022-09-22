@@ -74,7 +74,10 @@ const filterFoldMapStream = <A, B, R, E>(
     )
   })
 
-export const reduce = <A, B>(f: (a: A, b: B) => A, seed: A) => {
+export const reduce = <A, B>(
+  f: (a: A, b: B) => A,
+  seed: A,
+): (<R, E>(stream: Stream<R, E, B>) => Fx.Fx<Scheduler | R, E, A>) => {
   return flow(
     foldMap(Endo.makeIdentity<A>())((a: B) => (b: A) => f(b, a)),
     Fx.flap(seed),
