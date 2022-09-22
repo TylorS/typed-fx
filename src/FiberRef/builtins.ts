@@ -19,14 +19,25 @@ import { Trace } from '@/Trace/Trace.js'
 export const CurrentEnv = make(
   pipe(
     Fx.getFiberContext,
-    // Always use a snapshot of the FiberRefs to avoid mutability problems.
-    Fx.map((c): Env<any> => ({ get: getServiceFromFiberRefs(c.fiberRefs.fork()) })),
+    Fx.map((c) => makeEnvFromFiberRefs(c.fiberRefs)),
   ),
   {
     fork: constant(Nothing), // Always create a new Env for each Fiber.
     join: identity, // Always keep the parent Fiber's Env
   },
 )
+
+export function makeEnvFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R> {
+  // Always use a snapshot of the FiberRefs to avoid mutability problems.
+  const forked = FiberRefs.fork(fiberRefs)
+
+  return {
+    fiberRefs: forked,
+    get: getServiceFromFiberRefs(forked),
+    addService: addServiceFromFiberRefs(forked),
+    join: joinEnvFromFiberRefs(forked),
+  }
+}
 
 export const CurrentConcurrencyLevel = make(
   Fx.fromLazy(() => new Semaphore(NonNegativeInteger(Infinity))),
@@ -121,3 +132,37 @@ const getLayerFromFiberRefs = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs
 
     return join(fiber)
   })
+
+export function addServiceFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R>['addService'] {
+  return (id, impl) => {
+    return Fx.fromLazy(() => {
+      const forked = fiberRefs.fork()
+
+      // AddService
+      FiberRefs.setFiberRef(
+        Services,
+        pipe(
+          forked,
+          FiberRefs.maybeGetFiberRefValue(Services),
+          Maybe.match(
+            () => ImmutableMap<Service<any>, any>().set(id, impl),
+            (s) => s.set(id, impl),
+          ),
+        ),
+      )(forked)
+
+      return makeEnvFromFiberRefs(forked)
+    })
+  }
+}
+
+export function joinEnvFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R>['join'] {
+  return (other) => {
+    const forked = other.fiberRefs.fork()
+
+    // Reverse the order to ensure incoming values take precedence for Services + Layers
+    FiberRefs.join(forked, fiberRefs)
+
+    return makeEnvFromFiberRefs(forked)
+  }
+}
