@@ -9,6 +9,6 @@ export interface Env<R> {
 
 export function Env<R>(fiberRefs: FiberRefs.FiberRefs): Env<R> {
   return {
-    get: getServiceFromFiberRefs(fiberRefs),
+    get: getServiceFromFiberRefs(fiberRefs.fork()),
   }
 }

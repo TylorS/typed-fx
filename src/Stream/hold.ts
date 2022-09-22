@@ -100,7 +100,7 @@ export class HoldStream<R, E, A> extends MulticastStream<R, E, A> implements Str
 
     this.scheduledFiber = scheduler.asap(
       this.flushPending(),
-      { get: getServiceFromFiberRefs(context.fiberRefs) },
+      { get: getServiceFromFiberRefs(context.fiberRefs.fork()) },
       context.fork(),
     )
 

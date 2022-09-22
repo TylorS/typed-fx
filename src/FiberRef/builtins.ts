@@ -20,7 +20,7 @@ export const CurrentEnv = make(
   pipe(
     Fx.getFiberContext,
     // Always use a snapshot of the FiberRefs to avoid mutability problems.
-    Fx.map((c): Env<any> => ({ get: getServiceFromFiberRefs(c.fiberRefs) })),
+    Fx.map((c): Env<any> => ({ get: getServiceFromFiberRefs(c.fiberRefs.fork()) })),
   ),
   {
     fork: constant(Nothing), // Always create a new Env for each Fiber.
