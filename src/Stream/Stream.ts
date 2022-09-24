@@ -15,9 +15,6 @@ import { Sink } from '@/Sink/Sink.js'
  * - sample
  * - snapshot
  * - slice/take/skip
- * - takeWhile/skipWhile
- * - takeUntil/skipUntil
- * - takeAfter/skipAfter
  * - since
  * - during
  * - until
