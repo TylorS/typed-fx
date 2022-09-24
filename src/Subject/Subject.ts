@@ -7,10 +7,7 @@ import { Sink } from '@/Sink/Sink.js'
 import { Stream } from '@/Stream/Stream.js'
 import { MulticastSink } from '@/Stream/multicast.js'
 
-export class Subject<R, E, A>
-  extends MulticastSink<E, A>
-  implements Stream<R, E, A>, Sink<E, A, unknown>
-{
+export class Subject<R, E, A> extends MulticastSink<E, A, unknown> implements Stream<R, E, A> {
   fork<E3>(sink: Sink<E, A, E3>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
     return fromLazy(() => {
       const observer = {

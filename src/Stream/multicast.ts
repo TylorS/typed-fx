@@ -21,8 +21,8 @@ export type Observer<E, A, E2> = {
   context: FiberContext<FiberId.Live>
 }
 
-export class MulticastSink<E, A> implements Sink<E, A, any> {
-  protected observers: Array<Observer<E, A, any>> = []
+export class MulticastSink<E, A, E2> implements Sink<E, A, E2> {
+  protected observers: Array<Observer<E, A, E2>> = []
 
   constructor() {
     this.event = this.event.bind(this)
@@ -62,7 +62,10 @@ export class MulticastSink<E, A> implements Sink<E, A, any> {
   }
 }
 
-export class MulticastStream<R, E, A> extends MulticastSink<E, A> implements Stream<R, E, A> {
+export class MulticastStream<R, E, A>
+  extends MulticastSink<E, A, unknown>
+  implements Stream<R, E, A>
+{
   protected observers: Array<Observer<E, A, any>> = []
   protected fiber: Fiber.Fiber<any, any> | undefined
 
