@@ -2,11 +2,12 @@ import { Maybe } from 'hkt-ts'
 import { flow, pipe } from 'hkt-ts/function'
 
 import { Stream } from './Stream.js'
+import { FromFxStream } from './fromFx.js'
 
 import * as Cause from '@/Cause/index.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
-import { unit } from '@/Fx/Fx.js'
+import * as Fx from '@/Fx/Fx.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
 
@@ -40,6 +41,10 @@ export class BimapStream<R, A, B, C, D> implements Stream<R, B, D> {
     g: (c: C) => D,
     __trace?: string,
   ): Stream<R, B, D> {
+    if (stream instanceof FromFxStream) {
+      return new FromFxStream(pipe(stream.fx, Fx.bimap(f, g)), __trace)
+    }
+
     if (stream instanceof MapStream) {
       return BimapStream.make(stream.stream, f, flow(stream.f, g), __trace)
     }
@@ -99,6 +104,10 @@ export class MapStream<R, E, A, B> implements Stream<R, E, B> {
     f: (a: A) => B,
     __trace?: string,
   ): Stream<R, E, B> {
+    if (stream instanceof FromFxStream) {
+      return new FromFxStream(pipe(stream.fx, Fx.map(f)), __trace)
+    }
+
     if (stream instanceof MapStream) {
       return MapStream.make(stream.stream, flow(stream.f, f), __trace)
     }
@@ -148,6 +157,10 @@ export class MapLeftStream<R, E1, A, E2> implements Stream<R, E2, A> {
     f: (e: E1) => E2,
     __trace?: string,
   ): Stream<R, E2, A> {
+    if (stream instanceof FromFxStream) {
+      return new FromFxStream(pipe(stream.fx, Fx.mapLeft(f)), __trace)
+    }
+
     if (stream instanceof MapLeftStream) {
       return MapLeftStream.make(stream.stream, flow(stream.f, f), __trace)
     }
@@ -183,7 +196,7 @@ export class FilterMapStream<R, E, A, B> implements Stream<R, E, B> {
             pipe(
               a,
               this.f,
-              Maybe.match(() => unit, sink.event),
+              Maybe.match(() => Fx.unit, sink.event),
             ),
         },
         this.__trace,
