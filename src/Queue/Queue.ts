@@ -9,9 +9,9 @@ import { MutableFutureQueue } from '@/Future/MutableFutureQueue.js'
 import * as Future from '@/Future/index.js'
 import * as Fx from '@/Fx/Fx.js'
 
-export interface Queue<out RI, out EI, in I, out RO, out RE, out O>
+export interface Queue<out RI, out EI, in I, out RO, out EO, out O>
   extends Enqueue<RI, EI, I>,
-    Dequeue<RO, RE, O> {}
+    Dequeue<RO, EO, O> {}
 
 export namespace Queue {
   export interface Of<A> extends Queue<never, never, A, never, never, A> {}
