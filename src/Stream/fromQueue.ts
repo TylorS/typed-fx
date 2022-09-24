@@ -10,11 +10,11 @@ import * as Queue from '@/Queue/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 
+export function fromQueue<R2, E2, O>(queue: Queue.Dequeue<R2, E2, O>): Stream<R2, E2, O>
+
 export function fromQueue<R, E, I, R2, E2, O>(
   queue: Queue.Queue<R, E, I, R2, E2, O>,
 ): Stream<R2, E2, O>
-
-export function fromQueue<R2, E2, O>(queue: Queue.Dequeue<R2, E2, O>): Stream<R2, E2, O>
 
 export function fromQueue<R2, E2, O>(queue: Queue.Dequeue<R2, E2, O>): Stream<R2, E2, O> {
   return Stream(
