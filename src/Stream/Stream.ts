@@ -8,8 +8,6 @@ import { Sink } from '@/Sink/Sink.js'
 /**
  * TODOS:
  * - Loop
- * - zipItems
- * - withItems
  * - combine/combineArray
  * - zip/zipArray
  * - sample
