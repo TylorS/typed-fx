@@ -4,11 +4,10 @@ import benchmark from 'benchmark'
 import { pipe } from 'hkt-ts'
 import * as rxjs from 'rxjs'
 
-import * as Stream from './index.js'
-
 import * as Fx from '@/Fx/index.js'
 import { RootScheduler } from '@/Scheduler/RootScheduler.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
+import * as Stream from '@/Stream/index.js'
 
 const filterEvens = (x: number) => x % 2 === 0
 const addOne = (x: number) => x + 1
