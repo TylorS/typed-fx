@@ -1,8 +1,13 @@
+import * as EffectStream from '@effect/core/Stream/Stream'
+import * as Effect from '@effect/core/io/Effect'
 import * as M from '@most/core'
 import * as MS from '@most/scheduler'
+import * as Chunk from '@tsplus/stdlib/collections/Chunk'
 import benchmark from 'benchmark'
 import { pipe } from 'hkt-ts'
 import * as rxjs from 'rxjs'
+
+import { runSuite, timeConstruction } from './_internal.js'
 
 import * as Fx from '@/Fx/index.js'
 import { RootScheduler } from '@/Scheduler/RootScheduler.js'
@@ -16,6 +21,7 @@ const sum = (x: number, y: number) => x + y
 const iterations = 1000000
 const array = Array.from({ length: iterations }, (_, i) => i)
 
+const timeFx = timeConstruction('Fx')
 const fxStream = pipe(
   Stream.fromArray(array),
   Stream.filter(filterEvens),
@@ -23,7 +29,9 @@ const fxStream = pipe(
   Stream.reduce(sum, 0),
   Fx.provideService(Scheduler, RootScheduler()),
 )
+timeFx()
 
+const timeMost = timeConstruction('Most')
 const mostStream = pipe(
   M.periodic(0),
   M.withItems(array),
@@ -31,15 +39,28 @@ const mostStream = pipe(
   M.map(addOne),
   M.scan(sum, 0),
 )
+timeMost()
 
 const mostScheduler = MS.newDefaultScheduler()
 
+const timeRxjs = timeConstruction('RxJS')
 const rxjsStream = pipe(
   rxjs.from(array),
   rxjs.filter(filterEvens),
   rxjs.map(addOne),
   rxjs.scan(sum, 0),
 )
+timeRxjs()
+
+const timeEffect = timeConstruction('Effect')
+const effectStream = pipe(
+  EffectStream.fromChunk(Chunk.from(array)),
+  EffectStream.filter(filterEvens),
+  EffectStream.map(addOne),
+  EffectStream.scan(0, sum),
+  EffectStream.runDrain,
+)
+timeEffect()
 
 // eslint-disable-next-line import/no-named-as-default-member
 const suite = new benchmark.Suite('filter -> map -> reduce ' + iterations + ' integers')
@@ -56,48 +77,8 @@ suite
       complete: () => deferred.resolve(),
     })
   })
-  .on('start', logStart)
-  .on('cycle', logResults)
-  .on('complete', logComplete)
-  .run()
+  .add('@effect/core', function (deferred: benchmark.Deferred) {
+    Effect.unsafeRunAsyncWith(effectStream, () => deferred.resolve())
+  })
 
-function logResults(e: any) {
-  const t = e.target
-
-  if (t.failure) {
-    console.error(padl(10, t.name) + 'FAILED: ' + e.target.failure)
-  } else {
-    const result =
-      padl(18, t.name) +
-      padr(13, t.hz.toFixed(2) + ' op/s') +
-      ' \xb1' +
-      padr(7, t.stats.rme.toFixed(2) + '%') +
-      padr(15, ' (' + t.stats.sample.length + ' samples)')
-
-    console.log(result)
-  }
-}
-
-function logStart(this: any) {
-  console.log(this.name)
-  console.log('-------------------------------------------------------')
-}
-
-function logComplete() {
-  console.log('-------------------------------------------------------')
-  process.exit(0)
-}
-
-function padl(n: number, s: string) {
-  while (s.length < n) {
-    s += ' '
-  }
-  return s
-}
-
-function padr(n: number, s: string) {
-  while (s.length < n) {
-    s = ' ' + s
-  }
-  return s
-}
+runSuite(suite)
