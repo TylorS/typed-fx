@@ -12,7 +12,7 @@ import { Drain, Sink, addTrace, makeDrain } from '@/Sink/Sink.js'
 export function drain<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, Fiber<never, any>> {
+): Fx.Fx<R | Scheduler, never, Fiber<never, unknown>> {
   return pipe(
     Fx.Do,
     Fx.bind('fiberContext', () => Fx.getFiberContext),
@@ -27,12 +27,14 @@ export function fork<R, E, A, E2 = never>(
   sink: Sink<E, A, E2>,
   context: FiberContext<FiberId.Live>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, Fiber<E2, A>> {
+): Fx.Fx<R | Scheduler, never, Fiber<E2, unknown>> {
   return Fx.asks(Scheduler)((scheduler) => stream.fork(addTrace(sink, __trace), scheduler, context))
 }
 
 export function observe<A, R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>, __trace?: string) {
-  return <R, E>(stream: Stream<R, E, A>): Fx.Fx<R | R2 | Scheduler, never, Fiber<E | E2, A>> =>
+  return <R, E>(
+    stream: Stream<R, E, A>,
+  ): Fx.Fx<R | R2 | Scheduler, never, Fiber<E | E2, unknown>> =>
     pipe(
       Fx.Do,
       Fx.bind('fiberContext', () => Fx.getFiberContext),
