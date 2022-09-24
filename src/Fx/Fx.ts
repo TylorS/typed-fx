@@ -86,12 +86,21 @@ export type ErrorsOf<T> = [T] extends [never]
 export type OutputOf<T> = [T] extends [Fx<infer _R, infer _E, infer _A>] ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export interface IO<E, A> extends Fx<never, E, A> {}
-export interface Of<A> extends IO<never, A> {}
+export interface IO<E, A> extends Fx.IO<E, A> {}
+export interface Of<A> extends Fx.Of<A> {}
 
-export interface RIO<R, A> extends Fx<R, never, A> {}
+export interface RIO<R, A> extends Fx.RIO<R, A> {}
 
-export type AnyFx = Fx<any, any, any>
+export type AnyFx = Fx.Any
+
+export namespace Fx {
+  export interface IO<E, A> extends Fx<never, E, A> {}
+  export interface Of<A> extends IO<never, A> {}
+
+  export interface RIO<R, A> extends Fx<R, never, A> {}
+
+  export type Any = Fx<any, any, any>
+}
 
 export const now = <A>(a: A, __trace?: string): Of<A> => Now.make(a, __trace)
 export const success = now
