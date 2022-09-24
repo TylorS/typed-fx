@@ -57,13 +57,6 @@ export class ContinueWithSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A 
   event = this.sink.event
   error = this.sink.error
   end = Fx.lazy(() =>
-    pipe(
-      this.f().fork(
-        this.sink,
-        this.scheduler,
-        this.context.fork({ fiberRefs: this.context.fiberRefs }),
-      ),
-      Fx.provide(this.env),
-    ),
+    pipe(this.f().fork(this.sink, this.scheduler, this.context.fork()), Fx.provide(this.env)),
   )
 }
