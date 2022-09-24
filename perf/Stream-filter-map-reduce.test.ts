@@ -85,6 +85,7 @@ function logStart(this: any) {
 
 function logComplete() {
   console.log('-------------------------------------------------------')
+  process.exit(0)
 }
 
 function padl(n: number, s: string) {

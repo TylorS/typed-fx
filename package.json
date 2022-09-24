@@ -1202,6 +1202,16 @@
         "types": "./esm/Stream/continueWith.d.ts"
       }
     },
+    "./Stream/delay": {
+      "require": {
+        "default": "./cjs/Stream/delay.js",
+        "types": "./cjs/Stream/delay.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/delay.js",
+        "types": "./esm/Stream/delay.d.ts"
+      }
+    },
     "./Stream/drain": {
       "require": {
         "default": "./cjs/Stream/drain.js",
@@ -1250,6 +1260,26 @@
       "import": {
         "default": "./esm/Stream/flatMapFx.js",
         "types": "./esm/Stream/flatMapFx.d.ts"
+      }
+    },
+    "./Stream/foldMap": {
+      "require": {
+        "default": "./cjs/Stream/foldMap.js",
+        "types": "./cjs/Stream/foldMap.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/foldMap.js",
+        "types": "./esm/Stream/foldMap.d.ts"
+      }
+    },
+    "./Stream/fromArray": {
+      "require": {
+        "default": "./cjs/Stream/fromArray.js",
+        "types": "./cjs/Stream/fromArray.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/fromArray.js",
+        "types": "./esm/Stream/fromArray.d.ts"
       }
     },
     "./Stream/fromCallback": {
@@ -1302,16 +1332,6 @@
         "types": "./esm/Stream/lazy.d.ts"
       }
     },
-    "./Stream/map": {
-      "require": {
-        "default": "./cjs/Stream/map.js",
-        "types": "./cjs/Stream/map.d.ts"
-      },
-      "import": {
-        "default": "./esm/Stream/map.js",
-        "types": "./esm/Stream/map.d.ts"
-      }
-    },
     "./Stream/merge": {
       "require": {
         "default": "./cjs/Stream/merge.js",
@@ -1350,6 +1370,16 @@
       "import": {
         "default": "./esm/Stream/periodic.js",
         "types": "./esm/Stream/periodic.d.ts"
+      }
+    },
+    "./Stream/provide": {
+      "require": {
+        "default": "./cjs/Stream/provide.js",
+        "types": "./cjs/Stream/provide.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/provide.js",
+        "types": "./esm/Stream/provide.d.ts"
       }
     },
     "./Stream/run": {
@@ -1392,6 +1422,16 @@
         "types": "./esm/Stream/setFiberRefLocally.d.ts"
       }
     },
+    "./Stream/skipRepeats": {
+      "require": {
+        "default": "./cjs/Stream/skipRepeats.js",
+        "types": "./cjs/Stream/skipRepeats.d.ts"
+      },
+      "import": {
+        "default": "./esm/Stream/skipRepeats.js",
+        "types": "./esm/Stream/skipRepeats.d.ts"
+      }
+    },
     "./Stream/switchMap": {
       "require": {
         "default": "./cjs/Stream/switchMap.js",
@@ -1430,6 +1470,16 @@
       "import": {
         "default": "./esm/Supervisor/Supervisor.js",
         "types": "./esm/Supervisor/Supervisor.d.ts"
+      }
+    },
+    "./Supervisor/inheritFiberRefs": {
+      "require": {
+        "default": "./cjs/Supervisor/inheritFiberRefs.js",
+        "types": "./cjs/Supervisor/inheritFiberRefs.d.ts"
+      },
+      "import": {
+        "default": "./esm/Supervisor/inheritFiberRefs.js",
+        "types": "./esm/Supervisor/inheritFiberRefs.d.ts"
       }
     },
     "./Supervisor/maxFailures": {
@@ -1590,16 +1640,6 @@
       "import": {
         "default": "./esm/_internal/suite.js",
         "types": "./esm/_internal/suite.d.ts"
-      }
-    },
-    "./test": {
-      "require": {
-        "default": "./cjs/test.js",
-        "types": "./cjs/test.d.ts"
-      },
-      "import": {
-        "default": "./esm/test.js",
-        "types": "./esm/test.d.ts"
       }
     }
   }

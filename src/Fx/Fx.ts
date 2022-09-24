@@ -101,7 +101,7 @@ export const unit = now<void>(undefined)
 export const fromLazy = <A>(a: Lazy<A>, __trace?: string): Of<A> => FromLazy.make(a, __trace)
 
 export const lazy = <T extends AnyFx>(a: Lazy<T>, __trace?: string): T =>
-  LazyFx.make(a as any, __trace) as T
+  LazyFx.make(a, __trace) as T
 
 export const flatMap =
   <A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>, __trace?: string) =>
@@ -179,7 +179,7 @@ export const fromCause = <E>(cause: Cause.Cause<E>, __trace?: string): IO<E, nev
   FromCause.make(cause, __trace)
 
 export const fromExit = <E, A>(exit: Exit.Exit<E, A>, __trace?: string): IO<E, A> =>
-  (exit.tag === 'Left' ? fromCause(exit.left, __trace) : now(exit.right, __trace)) as IO<E, A>
+  exit.tag === 'Left' ? fromCause(exit.left, __trace) : now(exit.right, __trace)
 
 export const fromEither = <E, A>(e: Either.Either<E, A>, __trace?: string): IO<E, A> =>
   fromExit(Exit.fromEither(e), __trace)
@@ -359,12 +359,12 @@ export const getSupervisor = pipe(
 export const both =
   <R2, E2, B>(second: Fx<R2, E2, B>, __trace?: string) =>
   <R, E, A>(first: Fx<R2, E, A>): Fx<R | R2, E | E2, readonly [A, B]> =>
-    BothFx.make(first, second, __trace) as Fx<R | R2, E | E2, readonly [A, B]>
+    BothFx.make(first, second, __trace)
 
 export const either =
   <R2, E2, B>(second: Fx<R2, E2, B>, __trace?: string) =>
   <R, E, A>(first: Fx<R2, E, A>): Fx<R | R2, E | E2, Either.Either<A, B>> =>
-    EitherFx.make(first, second, __trace) as Fx<R | R2, E | E2, Either.Either<A, B>>
+    EitherFx.make(first, second, __trace)
 
 export const forkInContext =
   (context: FiberContext<FiberId.Live>, __trace?: string) =>
@@ -427,19 +427,17 @@ export function Fx<G extends AnyGenerator>(
       orElseCause((cause) => {
         const error = getCauseError(cause)
 
-        return (
-          Cause.shouldRethrow(cause)
-            ? pipe(
-                lazy(() => runFxGenerator(gen, gen.throw(error))),
-                orElseCause((inner) =>
-                  // Ensure the the most useful error is continued up the stack
-                  DeepEquals.equals(getCauseError(inner), error)
-                    ? fromCause(cause)
-                    : fromCause(Cause.sequential(cause, inner)),
-                ),
-              )
-            : fromCause(cause)
-        ) as Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>>
+        return Cause.shouldRethrow(cause)
+          ? pipe(
+              lazy(() => runFxGenerator(gen, gen.throw(error))),
+              orElseCause((inner) =>
+                // Ensure the the most useful error is continued up the stack
+                DeepEquals.equals(getCauseError(inner), error)
+                  ? fromCause(cause)
+                  : fromCause(Cause.sequential(cause, inner)),
+              ),
+            )
+          : fromCause(cause)
       }),
     )
   }, __trace) as Fx<ResourcesOf<YieldOf<G>>, ErrorsOf<YieldOf<G>>, ReturnOf<G>>
@@ -496,7 +494,7 @@ export const fromPromise = <A>(f: () => Promise<A>, __trace?: string): Of<A> =>
       },
       (e) => {
         if (!d.isDisposed()) {
-          cb(fromCause(Cause.unexpected(e)) as Of<A>)
+          cb(fromCause(Cause.unexpected(e)))
         }
       },
     )

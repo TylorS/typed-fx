@@ -296,7 +296,7 @@ export class Wait<R, E, A> extends Instr<R, E, A> {
 export class AddTrace<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'AddTrace'
 
-  constructor(readonly fx: Fx<R, E, A>, readonly trace: Trace) {
+  constructor(readonly fx: Fx<any, any, any>, readonly trace: Trace) {
     super()
   }
 
@@ -314,7 +314,7 @@ export class GetTrace extends Instr<never, never, Trace> {
 export class SetInterruptStatus<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'SetInterruptStatus'
 
-  constructor(readonly fx: Fx<R, E, A>, readonly interruptStatus: boolean, __trace?: string) {
+  constructor(readonly fx: Fx<any, any, any>, readonly interruptStatus: boolean, __trace?: string) {
     super(__trace)
   }
 
@@ -340,7 +340,7 @@ export class SetConcurrencyLevel<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'SetConcurrencyLevel'
 
   constructor(
-    readonly fx: Fx<R, E, A>,
+    readonly fx: Fx<any, any, any>,
     readonly concurrencyLevel: NonNegativeInteger,
     __trace?: string,
   ) {
@@ -372,7 +372,7 @@ export class ModifyFiberRef<R, E, A, B> extends Instr<R, E, B> {
   readonly tag = 'ModifyFiberRef'
 
   constructor(
-    readonly fiberRef: FiberRef<R, E, A>,
+    readonly fiberRef: FiberRef<any, any, any>,
     readonly modify: (a: A) => readonly [B, A],
     __trace?: string,
   ) {
@@ -391,7 +391,7 @@ export class ModifyFiberRef<R, E, A, B> extends Instr<R, E, B> {
 export class DeleteFiberRef<R, E, A, B> extends Instr<R, E, B> {
   readonly tag = 'DeleteFiberRef'
 
-  constructor(readonly fiberRef: FiberRef<R, E, A>, __trace?: string) {
+  constructor(readonly fiberRef: FiberRef<any, any, A>, __trace?: string) {
     super(__trace)
   }
 
@@ -406,7 +406,7 @@ export class FiberRefLocally<R, E, A, R2, E2, B> extends Instr<R2, E2, B> {
   constructor(
     readonly fiberRef: FiberRef<R, E, A>,
     readonly value: A,
-    readonly fx: Fx<R2, E2, B>,
+    readonly fx: Fx<any, any, any>,
     __trace?: string,
   ) {
     super(__trace)
