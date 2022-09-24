@@ -15,21 +15,59 @@ export function multicast<R, E, A>(stream: Stream<R, E, A>) {
   return new MulticastStream(stream)
 }
 
-type Observer<E, A, E2> = {
+export type Observer<E, A, E2> = {
   sink: Sink<E, A, E2>
   scheduler: Scheduler
   context: FiberContext<FiberId.Live>
 }
 
-// TODO: how to create a synthetic fiber around multicasted streams?
+export class MulticastSink<E, A> implements Sink<E, A, any> {
+  protected observers: Array<Observer<E, A, any>> = []
 
-export class MulticastStream<R, E, A> implements Stream<R, E, A>, Sink<E, A, any> {
+  constructor() {
+    this.event = this.event.bind(this)
+    this.error = this.error.bind(this)
+  }
+
+  event(a: A) {
+    return Fx.zipAll(
+      this.observers.map(({ sink, context }) =>
+        pipe(sink.event(a), Fx.forkJoinInContext(context.fork())),
+      ),
+    )
+  }
+
+  error(cause: Cause<E>) {
+    return pipe(
+      Fx.zipAll(
+        this.observers.map(({ sink, context }) =>
+          pipe(sink.error(cause), Fx.forkJoinInContext(context.fork())),
+        ),
+      ),
+      Fx.tapLazy(() => (this.observers = [])),
+    )
+  }
+
+  get end() {
+    return pipe(
+      Fx.lazy(() =>
+        Fx.zipAll(
+          this.observers.map(({ sink, context }) =>
+            pipe(sink.end, Fx.forkJoinInContext(context.fork())),
+          ),
+        ),
+      ),
+      Fx.tapLazy(() => (this.observers = [])),
+    )
+  }
+}
+
+export class MulticastStream<R, E, A> extends MulticastSink<E, A> implements Stream<R, E, A> {
   protected observers: Array<Observer<E, A, any>> = []
   protected fiber: Fiber.Fiber<any, any> | undefined
 
   constructor(readonly stream: Stream<R, E, A>) {
-    this.event = this.event.bind(this)
-    this.error = this.error.bind(this)
+    super()
   }
 
   fork<E2>(sink: Sink<E, A, E2>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
@@ -56,36 +94,10 @@ export class MulticastStream<R, E, A> implements Stream<R, E, A>, Sink<E, A, any
     })
   }
 
-  event(a: A) {
-    return Fx.zipAll(
-      this.observers.map(({ sink, context }) =>
-        pipe(sink.event(a), Fx.forkJoinInContext(context.fork())),
-      ),
-    )
-  }
-
   error(cause: Cause<E>) {
     return pipe(
-      Fx.zipAll(
-        this.observers.map(({ sink, context }) =>
-          pipe(sink.error(cause), Fx.forkJoinInContext(context.fork())),
-        ),
-      ),
+      super.error(cause),
       Fx.tap((): Fx.Of<any> => (this.fiber ? this.fiber.interruptAs(FiberId.None) : Fx.unit)),
-      Fx.tapLazy(() => (this.observers = [])),
-    )
-  }
-
-  get end() {
-    return pipe(
-      Fx.lazy(() =>
-        Fx.zipAll(
-          this.observers.map(({ sink, context }) =>
-            pipe(sink.end, Fx.forkJoinInContext(context.fork())),
-          ),
-        ),
-      ),
-      Fx.tapLazy(() => (this.observers = [])),
     )
   }
 
