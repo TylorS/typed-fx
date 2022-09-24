@@ -20,6 +20,9 @@ import { Sink } from '@/Sink/Sink.js'
  * - until
  * - throttle
  * - debounce
+ * - exhaustMap
+ * - exhaustMapLatest
+ * - race
  * - Fusion/Commutation
  * - Unique Identification for streams to add to tracing
  *    - How to build a dynamic stream graph?
