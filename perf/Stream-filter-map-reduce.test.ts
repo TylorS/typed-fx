@@ -48,6 +48,9 @@ runPerformanceTest({
         rxjs.scan(N.IdentitySum.concat, 0),
       ),
     ),
+    // Effect-ts is pull-based, while all other Streams a push-based.
+    // This means this isn't really a fair test, but since there are no other
+    // streams with superpowers, like Effect, its added here anyways.
     effectTsStreamTest(() =>
       pipe(
         EffectStream.fromChunk(Chunk.from(array)),
