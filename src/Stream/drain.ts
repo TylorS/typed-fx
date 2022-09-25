@@ -44,6 +44,10 @@ export function observe<A, R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>, __trace?: s
     )
 }
 
+export function observeLazy<A, B>(f: (a: A) => B, __trace?: string) {
+  return observe((a: A) => Fx.fromLazy(() => f(a)), __trace)
+}
+
 export function collect<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
@@ -53,9 +57,8 @@ export function collect<R, E, A>(
 
     return pipe(
       stream,
-      observe((a) => Fx.fromLazy(() => events.push(a)), __trace),
-      Fx.flatMap(Fx.join),
-      Fx.map(() => events),
+      observeLazy((a) => events.push(a)),
+      Fx.flatJoinTo(() => events),
     )
   }, __trace)
 }

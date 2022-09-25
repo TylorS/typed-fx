@@ -5,7 +5,7 @@ import * as B from 'hkt-ts/boolean'
 
 import { Stream } from './Stream.js'
 import { FilterMapStream, MapStream } from './bimap.js'
-import { observe } from './drain.js'
+import { observeLazy } from './drain.js'
 import { FromFxStream } from './fromFx.js'
 
 import * as Fx from '@/Fx/index.js'
@@ -60,17 +60,14 @@ const filterFoldMapStream = <A, B, R, E>(
 
     return pipe(
       stream,
-      observe((b) =>
-        Fx.fromLazy(() => {
-          const maybe = f(b)
+      observeLazy((b) => {
+        const maybe = f(b)
 
-          if (Maybe.isJust(maybe)) {
-            acc = I.concat(acc, maybe.value)
-          }
-        }),
-      ),
-      Fx.flatMap(Fx.join),
-      Fx.map(() => acc, __trace),
+        if (Maybe.isJust(maybe)) {
+          acc = I.concat(acc, maybe.value)
+        }
+      }),
+      Fx.flatJoinTo(() => acc, __trace),
     )
   })
 

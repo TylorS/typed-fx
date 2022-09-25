@@ -18,13 +18,26 @@ export const join = <E, A>(fiber: Fiber.Fiber<E, A>) =>
     ),
   )
 
+export const flatJoin: <R, E, E2, B>(
+  fx: Fx.Fx<R, E, Fiber.Fiber<E2, B>>,
+  __trace?: string,
+) => Fx.Fx<R, E | E2, B> = Fx.flatMap(join)
+
 export const forkJoinInContext =
   (context: FiberContext<FiberId.Live>) =>
   <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> =>
-    pipe(fx, Fx.forkInContext(context), Fx.flatMap(join))
+    pipe(fx, Fx.forkInContext(context), flatJoin)
 
 export const forkJoinIn = <R, E, A>(fx: Fx.Fx<R, E, A>, scope: Scope): Fx.Fx<R, E, A> =>
-  pipe(fx, Fx.forkIn(scope), Fx.flatMap(join))
+  pipe(fx, Fx.forkIn(scope), flatJoin)
 
-export const forkJoin = <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> =>
-  pipe(fx, Fx.fork, Fx.flatMap(join))
+export const forkJoin = <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> => pipe(fx, Fx.fork, flatJoin)
+
+export const flatJoinTo =
+  <C>(c: () => C, __trace?: string) =>
+  <R, E, E2, B>(fx: Fx.Fx<R, E, Fiber.Fiber<E2, B>>) =>
+    pipe(
+      fx,
+      Fx.flatMap(join),
+      Fx.map(() => c(), __trace),
+    )
