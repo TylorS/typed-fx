@@ -1,3 +1,4 @@
+import { isRight } from 'hkt-ts/Either'
 import { Just, match } from 'hkt-ts/Maybe'
 import { makeAssociative } from 'hkt-ts/Tuple'
 import * as Associative from 'hkt-ts/Typeclass/Associative'
@@ -18,6 +19,7 @@ import {
   ScheduleStateUnionAssociative,
 } from './ScheduleState.js'
 
+import { AnyExit } from '@/Exit/Exit.js'
 import { Delay, Time } from '@/Time/index.js'
 
 const asap = Delay(0)
@@ -34,7 +36,11 @@ const stateDecisionIntersectionAssociative = makeAssociative(
 )
 
 export interface Schedule {
-  readonly step: (now: Time, state: ScheduleState) => readonly [ScheduleState, Decision]
+  readonly step: (
+    now: Time,
+    exit: AnyExit,
+    state: ScheduleState,
+  ) => readonly [ScheduleState, Decision]
   readonly and: (schedule: Schedule) => Schedule
   readonly or: (schedule: Schedule) => Schedule
 }
@@ -49,19 +55,22 @@ export function Schedule(step: Schedule['step']): Schedule {
   return schedule
 }
 
-export const never: Schedule = Schedule((now, state) => [state.step(now), Done])
+export const never: Schedule = Schedule((now, exit, state) => [state.step(now, exit), Done])
 
-export const forever: Schedule = Schedule((now, state) => [
-  state.step(now, Just(asap)),
+export const forever: Schedule = Schedule((now, exit, state) => [
+  state.step(now, exit, Just(asap)),
   new Continue(asap),
 ])
 
 export const recurring = (amount: NonNegativeInteger): Schedule =>
-  Schedule((now, state) => [state.step(now), state.iteration < amount ? new Continue(asap) : Done])
+  Schedule((now, exit, state) => [
+    state.step(now, exit),
+    state.iteration < amount ? new Continue(asap) : Done,
+  ])
 
 export const periodic = (delay: Delay): Schedule =>
-  Schedule((now, state) => [
-    state.step(now, Just(delay)),
+  Schedule((now, exit, state) => [
+    state.step(now, exit, Just(delay)),
     new Continue(
       pipe(
         state.time,
@@ -83,7 +92,7 @@ const accountForTimeDrift = (previous: Time, now: Time, delay: Delay): Delay => 
 export const delayed = (delay: Delay): Schedule => periodic(delay).and(once)
 
 export const spaced = (delay: Delay): Schedule =>
-  Schedule((now, state) => {
+  Schedule((now, exit, state) => {
     const spacedDelay = pipe(
       state.previousDelay,
       match(
@@ -92,18 +101,22 @@ export const spaced = (delay: Delay): Schedule =>
       ),
     )
 
-    return [state.step(now, Just(spacedDelay)), new Continue(spacedDelay)]
+    return [state.step(now, exit, Just(spacedDelay)), new Continue(spacedDelay)]
   })
 
 export const exponential = (delay: Delay): Schedule =>
-  Schedule((now, state) => {
-    const exponentialDelay = Delay(delay ** (state.iteration + 1))
+  Schedule((now, exit, state) => {
+    const exponentialDelay: Delay = Delay(delay ** (state.iteration + 1))
 
-    return [state.step(now, Just(exponentialDelay)), new Continue(exponentialDelay)]
+    return [state.step(now, exit, Just(exponentialDelay)), new Continue(exponentialDelay)]
   })
 
 export const retries = (retries: NonNegativeInteger): Schedule =>
-  recurring(NonNegativeInteger(retries + 1))
+  Schedule((time, exit, state) => {
+    const next = state.step(time, exit)
+
+    return [next, isRight(exit) ? Done : state.iteration < retries ? new Continue(asap) : Done]
+  })
 
 export const once = recurring(NonNegativeInteger(1))
 
@@ -125,20 +138,23 @@ export const intersect = (...schedules: ReadonlyArray<Schedule>): Schedule =>
 
 export const UnionAssociative: Associative.Associative<Schedule> = {
   concat: (f, s) =>
-    Schedule((now, state) =>
-      stateDecisionUnionAssociative.concat(f.step(now, state), s.step(now, state)),
+    Schedule((now, exit, state) =>
+      stateDecisionUnionAssociative.concat(f.step(now, exit, state), s.step(now, exit, state)),
     ),
 }
 
 export const UnionIdentity: Identity<Schedule> = {
   ...UnionAssociative,
-  id: Schedule((now, state) => [state.step(now, Just(max)), new Continue(max)]),
+  id: Schedule((now, exit, state) => [state.step(now, exit, Just(max)), new Continue(max)]),
 }
 
 export const IntersectionAssociative: Associative.Associative<Schedule> = {
   concat: (f, s) =>
-    Schedule((now, state) =>
-      stateDecisionIntersectionAssociative.concat(f.step(now, state), s.step(now, state)),
+    Schedule((now, exit, state) =>
+      stateDecisionIntersectionAssociative.concat(
+        f.step(now, exit, state),
+        s.step(now, exit, state),
+      ),
     ),
 }
 

@@ -1,5 +1,5 @@
 import { pipe } from 'hkt-ts'
-import { isRight } from 'hkt-ts/Either'
+import { Right, isRight } from 'hkt-ts/Either'
 
 import { join } from './join.js'
 
@@ -19,7 +19,11 @@ export function retry(schedule: Schedule.Schedule) {
   return <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R | Scheduler, E, A> => {
     return Fx.Fx(function* () {
       const timer = yield* Fx.getTimer
-      let [state, decision] = schedule.step(timer.getCurrentTime(), new ScheduleState())
+      let [state, decision] = schedule.step(
+        timer.getCurrentTime(),
+        Right(undefined),
+        new ScheduleState(),
+      )
 
       const errors: Array<Cause.Cause<E>> = []
 
@@ -34,7 +38,7 @@ export function retry(schedule: Schedule.Schedule) {
         errors.push(exit.left)
 
         // Calculate if we should continue or not
-        const [nextState, nextDecision] = schedule.step(timer.getCurrentTime(), state)
+        const [nextState, nextDecision] = schedule.step(timer.getCurrentTime(), exit, state)
         state = nextState
         decision = nextDecision
       }

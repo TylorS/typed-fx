@@ -1,34 +1,36 @@
-import { Just, Maybe, Nothing, makeAssociative, match } from 'hkt-ts/Maybe'
-import { Associative } from 'hkt-ts/Typeclass/Associative'
+import * as Maybe from 'hkt-ts/Maybe'
+import { Associative, First } from 'hkt-ts/Typeclass/Associative'
 import { pipe } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
+import { AnyExit, makeParallelAssociative } from '@/Exit/Exit.js'
 import { Delay, Time } from '@/Time/index.js'
 
 const minDelayAssociative = Delay.makeAssociative({
   concat: Math.min,
 })
-const maybeMinDelayAssociative = makeAssociative(minDelayAssociative)
+const maybeMinDelayAssociative = Maybe.makeAssociative(minDelayAssociative)
 
 const maxDelayAssociative = Delay.makeAssociative({
   concat: Math.max,
 })
-const maybeMaxDelayAssociative = makeAssociative(maxDelayAssociative)
+const maybeMaxDelayAssociative = Maybe.makeAssociative(maxDelayAssociative)
 
 const maxTimeAssociative = Time.makeAssociative({
   concat: Math.max,
 })
-const maybeMaxTimeAssociative = makeAssociative(maxTimeAssociative)
+const maybeMaxTimeAssociative = Maybe.makeAssociative(maxTimeAssociative)
 
-/**
- * TODO: ScheduleState should track Exit values to allow exiting early w/ custom logic
- */
 export class ScheduleState {
   constructor(
     /**
      * The Time at which the Schedule was last run
      */
-    readonly time: Maybe<Time> = Nothing,
+    readonly time: Maybe.Maybe<Time> = Maybe.Nothing,
+    /**
+     * The previous Exit value, if any.
+     */
+    readonly exit: Maybe.Maybe<AnyExit> = Maybe.Nothing,
     /**
      * The number of iterations this Schedule has been through
      */
@@ -36,21 +38,26 @@ export class ScheduleState {
     /**
      * The previousDelay of this Schedule, if any
      */
-    readonly previousDelay: Maybe<Delay> = Nothing,
+    readonly previousDelay: Maybe.Maybe<Delay> = Maybe.Nothing,
     /**
      * The cumulative delay of this Schedule, will remain 0 if no delay is applied.
      */
     readonly cumulativeDelay: Delay = Delay(0),
   ) {}
 
-  readonly step = (now: Time, delay: Maybe<Delay> = Nothing): ScheduleState =>
+  readonly step = (
+    now: Time,
+    exit: AnyExit,
+    delay: Maybe.Maybe<Delay> = Maybe.Nothing,
+  ): ScheduleState =>
     new ScheduleState(
-      Just(now),
+      Maybe.Just(now),
+      Maybe.Just(exit),
       NonNegativeInteger(this.iteration + 1),
       delay,
       pipe(
         delay,
-        match(
+        Maybe.match(
           () => this.cumulativeDelay,
           (d) => Delay(this.cumulativeDelay + d),
         ),
@@ -60,6 +67,7 @@ export class ScheduleState {
   readonly or = (state: ScheduleState): ScheduleState =>
     new ScheduleState(
       maybeMaxTimeAssociative.concat(this.time, state.time),
+      Maybe.orElse(() => state.exit)(this.exit),
       NonNegativeInteger(Math.max(this.iteration, state.iteration)),
       maybeMinDelayAssociative.concat(this.previousDelay, state.previousDelay),
       minDelayAssociative.concat(this.cumulativeDelay, state.cumulativeDelay),
@@ -68,6 +76,11 @@ export class ScheduleState {
   readonly and = (state: ScheduleState): ScheduleState =>
     new ScheduleState(
       maybeMaxTimeAssociative.concat(this.time, state.time),
+      pipe(
+        this.exit,
+        Maybe.AssociativeBoth.both(state.exit),
+        Maybe.map(([a, b]) => makeParallelAssociative<any, any>(First).concat(a, b)),
+      ),
       NonNegativeInteger(Math.max(this.iteration, state.iteration)),
       maybeMaxDelayAssociative.concat(this.previousDelay, state.previousDelay),
       maxDelayAssociative.concat(this.cumulativeDelay, state.cumulativeDelay),

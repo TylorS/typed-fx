@@ -23,7 +23,7 @@ testSuite(import.meta.url, () => {
 
       deepStrictEqual(
         await collectAll(
-          scheduled(Schedule.periodic(Delay(1)).and(Schedule.retries(NonNegativeInteger(1))))(
+          scheduled(Schedule.periodic(Delay(1)).and(Schedule.recurring(NonNegativeInteger(2))))(
             Fx.now(value),
           ),
         ),

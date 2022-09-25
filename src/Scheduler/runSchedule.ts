@@ -1,5 +1,7 @@
+import { Right } from 'hkt-ts/Either'
+
 import * as Clock from '@/Clock/Clock.js'
-import { Fx, unit } from '@/Fx/Fx.js'
+import { Fx, attempt, unit } from '@/Fx/Fx.js'
 import { Schedule } from '@/Schedule/Schedule.js'
 import { ScheduleState } from '@/Schedule/ScheduleState.js'
 import { Delay } from '@/Time/index.js'
@@ -15,14 +17,18 @@ export function runSchedule<R, E, A, B>(
   onEnd?: (state: ScheduleState) => Fx<R, E, B>,
 ): Fx<R, E, ScheduleState> {
   return Fx(function* () {
-    let [state, decision] = schedule.step(clock.getCurrentTime(), new ScheduleState())
+    let [state, decision] = schedule.step(
+      clock.getCurrentTime(),
+      Right(undefined),
+      new ScheduleState(),
+    )
 
     while (decision.tag === 'Continue') {
       // Schedule a Task to run the next iteration of this Fx
-      yield* runAt(fx, decision.delay)
+      const exit = yield* attempt(runAt(fx, decision.delay))
 
       // Calculate if we should continue or not
-      const [nextState, nextDecision] = schedule.step(clock.getCurrentTime(), state)
+      const [nextState, nextDecision] = schedule.step(clock.getCurrentTime(), exit, state)
       state = nextState
       decision = nextDecision
     }
