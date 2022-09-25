@@ -58,7 +58,7 @@ export function collect<R, E, A>(
     return pipe(
       stream,
       observeLazy((a) => events.push(a)),
-      Fx.flatJoinTo(() => events),
+      Fx.flatJoinMap(() => events),
     )
   }, __trace)
 }

@@ -33,11 +33,7 @@ export const forkJoinIn = <R, E, A>(fx: Fx.Fx<R, E, A>, scope: Scope): Fx.Fx<R, 
 
 export const forkJoin = <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> => pipe(fx, Fx.fork, flatJoin)
 
-export const flatJoinTo =
-  <C>(c: () => C, __trace?: string) =>
-  <R, E, E2, B>(fx: Fx.Fx<R, E, Fiber.Fiber<E2, B>>) =>
-    pipe(
-      fx,
-      Fx.flatMap(join),
-      Fx.map(() => c(), __trace),
-    )
+export const flatJoinMap =
+  <B, C>(f: (b: B) => C, __trace?: string) =>
+  <R, E, E2>(fx: Fx.Fx<R, E, Fiber.Fiber<E2, B>>): Fx.Fx<R, E | E2, C> =>
+    pipe(fx, Fx.flatMap(join), Fx.map(f, __trace))

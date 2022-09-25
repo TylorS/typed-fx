@@ -67,7 +67,7 @@ const filterFoldMapStream = <A, B, R, E>(
           acc = I.concat(acc, maybe.value)
         }
       }),
-      Fx.flatJoinTo(() => acc, __trace),
+      Fx.flatJoinMap(() => acc, __trace),
     )
   })
 
