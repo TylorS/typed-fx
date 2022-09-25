@@ -2,6 +2,7 @@ import { pipe } from 'hkt-ts/function'
 
 import * as Fx from './Fx.js'
 
+import { Exit } from '@/Exit/Exit.js'
 import { ConcurrentStrategy, FinalizationStrategy } from '@/Finalizer/Finalizer.js'
 import { Scope } from '@/Scope/Scope.js'
 
@@ -63,4 +64,29 @@ export function fiberScoped<R, E, A>(
     Fx.getFiberContext,
     Fx.flatMap(({ scope }) => pipe(scoped, Fx.provideService(Scope, scope))),
   )
+}
+
+/**
+ * A Reservation is the representation of a resource that
+ * has an aquisition and release phase.
+ */
+export interface Reservation<R, E, A> {
+  readonly acquire: Fx.Fx<R, never, Exit<E, A>>
+  readonly release: (exit: Exit<E, A>) => Fx.Of<void>
+}
+
+export function reserve<R, E, A>(
+  scoped: Fx.Fx<R | Scope, E, A>,
+): Fx.Fx<never, never, Reservation<Exclude<R, Scope>, E, A>> {
+  return Fx.Fx(function* () {
+    const fiberScope = yield* Fx.getFiberScope
+    const scope = fiberScope.fork()
+    const acquire = pipe(scoped, Fx.provideService(Scope, scope), Fx.attempt, Fx.uninterruptable)
+    const reservation: Reservation<Exclude<R, Scope>, E, A> = {
+      acquire,
+      release: scope.close as any as Reservation<Exclude<R, Scope>, E, A>['release'],
+    }
+
+    return reservation
+  })
 }

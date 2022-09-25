@@ -4,12 +4,12 @@ import { Stream } from './Stream.js'
 
 import { Cause } from '@/Cause/Cause.js'
 import { fromScope } from '@/Fiber/fromScope.js'
+import * as Fiber from '@/Fiber/index.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/index.js'
 import * as Fx from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/index.js'
 import { Sink } from '@/Sink/Sink.js'
-import { Fiber } from '@/index.js'
 
 export function multicast<R, E, A>(stream: Stream<R, E, A>) {
   return new MulticastStream(stream)
