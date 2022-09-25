@@ -7,7 +7,6 @@ import { runMain } from './run.js'
 import { tap } from './tap.js'
 
 import * as Fx from '@/Fx/index.js'
-import { RootScheduler } from '@/Scheduler/RootScheduler.js'
 import { testSuite } from '@/_internal/suite.js'
 
 testSuite(import.meta.url, () => {
@@ -23,7 +22,7 @@ testSuite(import.meta.url, () => {
         ),
       )
 
-      await runMain(RootScheduler())(stream)
+      await runMain(stream)
     })
   })
 })

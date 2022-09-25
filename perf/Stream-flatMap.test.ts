@@ -17,42 +17,33 @@ import {
 
 import * as Stream from '@/Stream/index.js'
 
-const filterEvens = (x: number) => x % 2 === 0
-const addOne = (x: number) => x + 1
+const nestedArray = array.map((x) => Array.from({ length: x }, (_, i) => x * 1000 + i))
 
 runPerformanceTest({
-  name: 'filter -> map -> reduce ' + iterations + ' integers',
+  name: 'flatMap ' + iterations + ' integers',
   cases: [
     fxTest(() =>
       pipe(
-        Stream.fromArray(array),
-        Stream.filter(filterEvens),
-        Stream.map(addOne),
+        Stream.fromArray(nestedArray),
+        Stream.flatMap(Stream.fromArray),
         Stream.foldLeft(N.IdentitySum),
       ),
     ),
     mostStreamTest(() =>
       pipe(
         M.periodic(0),
-        M.withItems(array),
-        M.filter(filterEvens),
-        M.map(addOne),
+        M.withItems(nestedArray),
+        M.chain((ns) => pipe(M.periodic(0), M.withItems(ns))),
         M.scan(N.IdentitySum.concat, 0),
       ),
     ),
     rxjsObservableTest(() =>
-      pipe(
-        rxjs.from(array),
-        rxjs.filter(filterEvens),
-        rxjs.map(addOne),
-        rxjs.scan(N.IdentitySum.concat, 0),
-      ),
+      pipe(rxjs.from(nestedArray), rxjs.flatMap(rxjs.from), rxjs.scan(N.IdentitySum.concat, 0)),
     ),
     effectTsStreamTest(() =>
       pipe(
-        EffectStream.fromChunk(Chunk.from(array)),
-        EffectStream.filter(filterEvens),
-        EffectStream.map(addOne),
+        EffectStream.fromChunk(Chunk.from(nestedArray)),
+        EffectStream.flatMap((ns) => EffectStream.fromChunk(Chunk.from(ns))),
         EffectStream.scan(0, N.IdentitySum.concat),
       ),
     ),
