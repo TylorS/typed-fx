@@ -4,10 +4,10 @@ import { Id, InstanceOf } from './Id.js'
 import { Service } from './Service.js'
 import { tagged } from './tagged.js'
 
-import type { AnyFx, ErrorsOf, Fx, OutputOf, ResourcesOf } from '@/Fx/Fx.js'
+import * as Fx from '@/Fx/Fx.js'
 
 export const fn =
-  <F extends (...args: any) => AnyFx>() =>
+  <F extends (...args: any) => Fx.AnyFx>() =>
   <ServiceName extends string>(name: ServiceName) =>
     class Fn extends tagged(name) {
       constructor(readonly f: F) {
@@ -17,25 +17,25 @@ export const fn =
       static apply<
         T extends {
           readonly id: () => Service<any>
-          new (...args: any): { readonly f: F }
+          new (f: F, ...args: any): { readonly f: F }
         } & { readonly with: typeof Id['with'] },
       >(
         this: T,
         ...args: ArgsOf<F>
-      ): Fx<
-        InstanceOf<T> | ResourcesOf<ReturnType<F>>,
-        ErrorsOf<ReturnType<F>>,
-        OutputOf<ReturnType<F>>
+      ): Fx.Fx<
+        InstanceOf<T> | Fx.ResourcesOf<ReturnType<F>>,
+        Fx.ErrorsOf<ReturnType<F>>,
+        Fx.OutputOf<ReturnType<F>>
       > {
-        return this.with((s) => s.f(...(args as any)))
+        return this.with((s) => s.f(...Array.from(args)))
       }
 
       static make<
         T extends {
           readonly id: () => Service<any>
-          new (...args: any): { readonly f: F }
+          new (f: F, ...args: any): { readonly f: F }
         },
-      >(this: T, fn: F): InstanceOf<T> {
-        return new this(fn) as InstanceOf<T>
+      >(this: T, f: F, ...args: ConstructorParameters<T>): InstanceOf<T> {
+        return new this(f, ...Array.from(args)) as InstanceOf<T>
       }
     }

@@ -66,10 +66,7 @@ export class Id {
     },
     R,
     E,
-  >(
-    this: S,
-    provider: Fx<R, E, InstanceOf<S>> | Fx<R | Scope, E, InstanceOf<S>>,
-  ): Layer.Layer<R, E, InstanceOf<S>> {
+  >(this: S, provider: Fx<R | Scope, E, InstanceOf<S>>): Layer.Layer<R, E, InstanceOf<S>> {
     return Layer.fromFx(this.id(), provider)
   }
 
