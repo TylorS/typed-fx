@@ -1,5 +1,6 @@
 import { pipe } from 'hkt-ts'
 import { Right, isRight } from 'hkt-ts/Either'
+import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { join } from './join.js'
 
@@ -50,15 +51,16 @@ export function retry(schedule: Schedule.Schedule) {
   }
 }
 
-export function schedule(schedule: Schedule.Schedule) {
+export function scheduled(schedule: Schedule.Schedule, __trace?: string) {
   return <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R | Scheduler, never, Live<E, ScheduleState>> =>
     pipe(
       Fx.ask(Scheduler),
       Fx.bindTo('scheduler'),
       Fx.bind('env', () => Fx.getEnv<R>()),
       Fx.bind('context', () => Fx.getFiberContext),
-      Fx.map(({ scheduler, env, context }) =>
-        scheduler.schedule(fx, env, schedule, context.fork()),
+      Fx.map(
+        ({ scheduler, env, context }) => scheduler.schedule(fx, env, schedule, context.fork()),
+        __trace,
       ),
     )
 }
@@ -74,7 +76,24 @@ export const delayed =
 export const sleep = (delay: Delay): Fx.RIO<Scheduler, Time> =>
   pipe(
     Fx.unit,
-    schedule(Schedule.delayed(delay)),
+    scheduled(Schedule.delayed(delay)),
     Fx.flatMap(join),
     Fx.flatMap(() => Fx.getCurrentTime),
   )
+
+export function repeated(period: Delay, __trace?: string) {
+  return <A>(value: A) => pipe(value, Fx.now, scheduled(Schedule.periodic(period), __trace))
+}
+
+export const exponential = (delay: Delay, __trace?: string) =>
+  scheduled(Schedule.exponential(delay), __trace)
+
+export const forever = scheduled(Schedule.forever, 'Scheduled.forever')
+
+export const recurring = (amount: NonNegativeInteger, __trace?: string) =>
+  scheduled(Schedule.recurring(amount), __trace)
+
+export const retries = (amount: NonNegativeInteger, __trace?: string) =>
+  scheduled(Schedule.retries(amount), __trace)
+
+export const spaced = (delay: Delay, __trace?: string) => scheduled(Schedule.spaced(delay), __trace)
