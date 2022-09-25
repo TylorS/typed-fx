@@ -99,7 +99,6 @@ class SwitchMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> 
             Fx.tapLazy(() => disposable.dispose()),
           ),
         ),
-        (x) => x,
         Fx.provide(this.env),
       )
     })
