@@ -1,7 +1,8 @@
-import { HKT2, Params, pipe } from 'hkt-ts'
+import { HKT2, Params, flow, pipe } from 'hkt-ts'
 import { Either } from 'hkt-ts/Either'
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import * as C from 'hkt-ts/Typeclass/Covariant'
+import { Debug } from 'hkt-ts/Typeclass/Debug'
 import * as D from 'hkt-ts/Typeclass/Divariant'
 import { Unary } from 'hkt-ts/Unary'
 
@@ -12,9 +13,6 @@ import { LogSpan } from './LogSpan.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/Fx.js'
 import { Trace } from '@/Trace/Trace.js'
-
-// TODO: Console as a Logger
-// TODO: Build into Fx runtime
 
 export interface Logger<A, B> {
   readonly log: (
@@ -83,3 +81,29 @@ export const filterLogLevel =
         return Fx.now<Maybe<B>>(Nothing)
       }),
   })
+
+export const makeDebugLogger = <A>({ debug }: Debug<A>) => Logger<A, string>(flow(debug, Fx.now))
+
+export const getFiberLogger = pipe(
+  Fx.getFiberContext,
+  Fx.map((ctx) => ctx.logger),
+)
+
+export function composeFiberLogger<B>(
+  logger: Logger<B, string>,
+  __trace?: string,
+): Fx.Of<Logger<B, any>> {
+  return pipe(
+    getFiberLogger,
+    Fx.map(
+      (l) =>
+        Logger((b, ...rest) =>
+          pipe(
+            logger.log(b, ...rest),
+            Fx.flatMap((s) => l.log(s, ...rest)),
+          ),
+        ),
+      __trace,
+    ),
+  )
+}
