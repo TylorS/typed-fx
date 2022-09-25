@@ -15,11 +15,6 @@ export interface PoolRange {
   readonly max: NonNegativeInteger
 }
 
-interface PoolState {
-  size: number
-  free: number
-}
-
 export interface Pool<E, A> {
   readonly excess: Fx.Of<NonNegativeInteger>
   readonly size: Fx.Of<NonNegativeInteger>
@@ -32,80 +27,136 @@ export interface Pool<E, A> {
   readonly shutdown: Fx.Of<void>
 }
 
+// Shared MUTABLE state
+interface PoolState<E, A> {
+  range: PoolRange
+  isShutdown: boolean
+  isShuttingDown: boolean
+  size: number
+  free: number
+  items: Queue.Queue.Of<Attempted<E, A>>
+  invalidated: Set<A>
+}
+
 export function Pool<E, A>(
   create: Fx.Fx<Scope, E, A>,
   range: PoolRange,
   track: (exit: Exit.Exit<E, A>) => Fx.Of<void>,
 ): Pool<E, A> {
-  let down = false
-  let isShuttingDown = false
-  const items = Queue.dropping<Attempted<E, A>>(range.max)
-  const state: PoolState = {
+  const state: PoolState<E, A> = {
+    range,
+    isShutdown: false,
+    isShuttingDown: false,
     size: 0,
     free: 0,
+    items: Queue.dropping<Attempted<E, A>>(range.max),
+    invalidated: new Set<A>(),
   }
-  const invalidated = new Set<A>()
 
-  const allocate = Fx.Fx(function* () {
-    const { acquire, release }: Fx.Reservation<never, E, A> = yield* Fx.reserve(create)
-    const exit: Exit.Exit<E, A> = yield* acquire
-    const attempted = new Attempted(exit, release(exit))
-    yield* items.enqueue(attempted)
-    yield* track(exit)
+  const allocate = allocateResource(create, track, state)
+  const managed = Fx.managed(acquireResource(state, allocate), release(state, track, allocate))
 
-    // If a concurrent shutdown occurs, ensure we clean up this resource as well
-    if (isShuttingDown) {
-      yield* shutdown
-    }
+  const pool: Pool<E, A> = {
+    excess: excess(state),
+    size: size(state),
+    free: free(state),
+    isShutdown: isShutdown(state),
+    invalidate: invalidate(state),
+    initialize: initialize(state, allocate),
+    acquire: acquire(state, managed),
+    shrink: shrink(state),
+    shutdown: shutdown(state),
+  }
 
-    return attempted
-  })
+  return pool
+}
 
-  const acquireAttempted: Fx.RIO<Scope, Attempted<E, A>> = Fx.Fx(function* () {
-    if (isShuttingDown) {
-      return yield* Fx.interrupted(FiberId.None)
-    }
+const excess = <E, A>(state: PoolState<E, A>) =>
+  Fx.fromLazy(() => NonNegativeInteger(state.size - Math.min(state.range.min, state.free)))
 
-    if (state.free > 0 || state.size >= range.max) {
-      // Track acquired resource
-      state.free--
+const size = <E, A>(state: PoolState<E, A>) => Fx.fromLazy(() => NonNegativeInteger(state.size))
 
-      const attempted = yield* items.dequeue
+const free = <E, A>(state: PoolState<E, A>) => Fx.fromLazy(() => NonNegativeInteger(state.free))
 
-      // Allocate a new resource if the current has been invalidated
-      if (isRight(attempted.exit) && invalidated.has(attempted.exit.right)) {
-        state.free++
+const isShutdown = <E, A>(state: PoolState<E, A>) => Fx.fromLazy(() => state.isShutdown)
 
-        yield* allocate
+const invalidate =
+  <E, A>(state: PoolState<E, A>) =>
+  (a: A) =>
+    Fx.fromLazy(() => {
+      state.invalidated.add(a)
+    })
 
-        return yield* acquireAttempted
-      }
-
-      return attempted
-    }
-
-    if (state.size >= 0) {
-      state.size++
-      state.free++
-
+const initialize = <E, A>(
+  state: PoolState<E, A>,
+  allocate: Fx.Of<Attempted<E, A>>,
+): Fx.RIO<Scope, void> =>
+  Fx.Fx(function* () {
+    while (state.size < state.range.min) {
       yield* allocate
 
-      return yield* acquireAttempted
+      state.size++
+      state.free++
+    }
+  })
+
+const shutdown = <E, A>(state: PoolState<E, A>): Pool<E, A>['shutdown'] =>
+  Fx.Fx(function* () {
+    if (state.isShutdown) {
+      return
     }
 
-    return yield* Fx.interrupted(FiberId.None)
+    state.isShuttingDown = true
+
+    if (state.free > 0) {
+      yield* deallocateResource(state)
+      state.free--
+
+      // Recursively call shutdown to cleanup all free resources
+      yield* shutdown(state)
+    }
+
+    // If there's still capacity bail out
+    if (state.size > 0) {
+      return
+    }
+
+    if (!(yield* state.items.isShutdown)) {
+      yield* state.items.shutdown
+      state.isShutdown = true
+    }
   })
 
-  const deallocate = Fx.Fx(function* () {
-    const attempted = yield* items.dequeue
-    yield* attempted.with((a) => Fx.fromLazy(() => invalidated.delete(a)))
-    yield* attempted.release
-  })
+const interruptIfShutdown = <E, A>(state: PoolState<E, A>) =>
+  Fx.lazy(() => (state.isShuttingDown ? Fx.interrupted(FiberId.None) : Fx.unit))
 
-  const release = (attempted: Attempted<E, A>) =>
+const acquire = <E, A>(
+  state: PoolState<E, A>,
+  managed: Fx.Fx<Scope, never, Attempted<E, A>>,
+): Fx.Fx<Scope, E, A> =>
+  pipe(
+    interruptIfShutdown(state),
+    Fx.flatMap(() => managed),
+    Fx.flatMap((attempted) => Fx.fromExit(attempted.exit)),
+  )
+
+const deallocateResource = <E, A>(state: PoolState<E, A>) =>
+  pipe(
+    state.items.dequeue,
+    Fx.tap((attempted) => attempted.with((a) => Fx.fromLazy(() => state.invalidated.delete(a)))),
+    Fx.tap((attempted) => attempted.release),
+  )
+
+const release =
+  <E, A>(
+    state: PoolState<E, A>,
+    track: (exit: Exit.Exit<E, A>) => Fx.Of<void>,
+    allocate: Fx.Of<Attempted<E, A>>,
+  ) =>
+  (attempted: Attempted<E, A>) =>
     Fx.Fx(function* () {
       if (attempted.failed) {
-        if (state.size <= range.min) {
+        if (state.size <= state.range.min) {
           state.free++
 
           yield* allocate
@@ -119,45 +170,101 @@ export function Pool<E, A>(
       state.free++
 
       // Add back into the pool for use
-      yield* items.enqueue(attempted)
+      yield* state.items.enqueue(attempted)
       yield* track(attempted.exit)
 
-      if (isShuttingDown) {
-        yield* shutdown
+      if (state.isShuttingDown) {
+        yield* shutdown(state)
       }
     })
 
-  const excess = Fx.fromLazy(() => NonNegativeInteger(state.size - Math.min(range.min, state.free)))
-  const size = Fx.fromLazy(() => NonNegativeInteger(state.size))
-  const free = Fx.fromLazy(() => NonNegativeInteger(state.free))
-  const isShutdown = Fx.fromLazy(() => down)
+function acquireResource<E, A>(
+  state: PoolState<E, A>,
+  allocate: Fx.Of<Attempted<E, A>>,
+): Fx.Fx<Scope, never, Attempted<E, A>> {
+  const canAllocateExistingResource = () => state.free > 0 || state.size >= state.range.max
+  const shouldAllocateResource = () => state.size >= 0
 
-  const initialize: Fx.RIO<Scope, void> = Fx.Fx(function* () {
-    while (state.size < range.min) {
-      yield* allocate
+  return pipe(
+    interruptIfShutdown(state),
+    Fx.flatMap(() =>
+      canAllocateExistingResource()
+        ? acquireExistingResource(state, allocate)
+        : shouldAllocateResource()
+        ? allocateAndAquire(state, allocate)
+        : Fx.interrupted(FiberId.None),
+    ),
+  )
+}
 
-      state.size++
-      state.free++
-    }
+const acquireExistingResource = <E, A>(state: PoolState<E, A>, allocate: Fx.Of<Attempted<E, A>>) =>
+  Fx.lazy(() => {
+    // Track acquired resource
+    state.free--
+
+    const hasBeenInvalidated = (attempted: Attempted<E, A>) =>
+      isRight(attempted.exit) && state.invalidated.has(attempted.exit.right)
+
+    return pipe(
+      state.items.dequeue,
+      Fx.flatMap((attempted) =>
+        hasBeenInvalidated(attempted)
+          ? reacquireInvalidatedResource(state, allocate)
+          : Fx.now(attempted),
+      ),
+    )
   })
 
-  const invalidate = (a: A) =>
-    Fx.fromLazy(() => {
-      invalidated.add(a)
-    })
+const reacquireInvalidatedResource = <E, A>(
+  state: PoolState<E, A>,
+  allocate: Fx.Of<Attempted<E, A>>,
+) =>
+  Fx.lazy(() => {
+    // Release the resource
+    state.free++
 
-  const acquire: Fx.Fx<Scope, E, A> = pipe(
-    Fx.managed(acquireAttempted, release),
-    Fx.flatMap((attempted) => Fx.fromExit(attempted.exit)),
+    return pipe(
+      allocate,
+      Fx.flatMap(() => acquireResource(state, allocate)),
+    )
+  })
+
+const allocateAndAquire = <E, A>(state: PoolState<E, A>, allocate: Fx.Of<Attempted<E, A>>) =>
+  Fx.lazy(() => {
+    state.size++
+    state.free++
+
+    return pipe(
+      allocate,
+      Fx.flatMap(() => acquireResource(state, allocate)),
+    )
+  })
+
+function allocateResource<E, A>(
+  create: Fx.Fx<Scope, E, A>,
+  track: (exit: Exit.Exit<E, A>) => Fx.Of<void>,
+  state: PoolState<E, A>,
+) {
+  return pipe(
+    Fx.reserve(create),
+    Fx.bindTo('reservation'),
+    Fx.bind('exit', ({ reservation }) => reservation.acquire),
+    Fx.let('attempted', ({ exit, reservation }) => new Attempted(exit, reservation.release(exit))),
+    Fx.tap(({ attempted }) => state.items.enqueue(attempted)),
+    Fx.tap(({ attempted }) => track(attempted.exit)),
+    Fx.tap(() => (state.isShuttingDown ? shutdown(state) : Fx.unit)),
+    Fx.map(({ attempted }) => attempted),
   )
+}
 
-  const shrink: Fx.Of<boolean> = Fx.Fx(function* () {
-    const canShrink = state.size > range.min
+const shrink = <E, A>(state: PoolState<E, A>) =>
+  Fx.Fx(function* () {
+    const canShrink = state.size > state.range.min
     const shouldShrink = state.free > 0
 
     if (canShrink && shouldShrink) {
       state.free--
-      yield* deallocate
+      yield* deallocateResource(state)
       state.size--
 
       return true
@@ -165,44 +272,3 @@ export function Pool<E, A>(
 
     return false
   })
-
-  const shutdown: Fx.Of<void> = Fx.Fx(function* () {
-    if (down) {
-      return
-    }
-
-    isShuttingDown = true
-
-    if (state.free > 0) {
-      yield* deallocate
-      state.free--
-
-      // Recursively call shutdown to cleanup all free resources
-      yield* shutdown
-    }
-
-    // If there's still capacity bail out
-    if (state.size > 0) {
-      return
-    }
-
-    if (!(yield* items.isShutdown)) {
-      yield* items.shutdown
-      down = true
-    }
-  })
-
-  const pool: Pool<E, A> = {
-    excess,
-    size,
-    free,
-    initialize,
-    acquire,
-    invalidate,
-    shrink,
-    isShutdown,
-    shutdown,
-  }
-
-  return pool
-}

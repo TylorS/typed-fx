@@ -48,15 +48,14 @@ export function collect<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
 ): Fx.Fx<R | Scheduler, E, readonly A[]> {
-  return Fx.Fx(function* () {
+  return Fx.lazy(() => {
     const events: A[] = []
 
-    yield* pipe(
+    return pipe(
       stream,
       observe((a) => Fx.fromLazy(() => events.push(a)), __trace),
       Fx.flatMap(Fx.join),
+      Fx.map(() => events),
     )
-
-    return events
   }, __trace)
 }
