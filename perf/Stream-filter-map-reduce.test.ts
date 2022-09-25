@@ -18,7 +18,7 @@ const filterEvens = (x: number) => x % 2 === 0
 const addOne = (x: number) => x + 1
 const sum = (x: number, y: number) => x + y
 
-const iterations = 1000000
+const iterations = 100000
 const array = Array.from({ length: iterations }, (_, i) => i)
 
 const timeFx = timeConstruction('Fx')
@@ -78,7 +78,7 @@ suite
     })
   })
   .add('@effect/core', function (deferred: benchmark.Deferred) {
-    Effect.unsafeRunAsyncWith(effectStream, () => deferred.resolve())
+    Effect.unsafeRunPromise(effectStream).then(() => deferred.resolve())
   })
 
 runSuite(suite)

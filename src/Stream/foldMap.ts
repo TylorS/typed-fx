@@ -71,14 +71,18 @@ const filterFoldMapStream = <A, B, R, E>(
     )
   })
 
+const foldMap_ = foldMap(Endo.makeIdentity<any>())
+const curry2Flip =
+  <A, B, C>(f: (a: A, b: B) => C) =>
+  (b: B) =>
+  (a: A) =>
+    f(a, b)
+
 export const reduce = <A, B>(
   f: (a: A, b: B) => A,
   seed: A,
 ): (<R, E>(stream: Stream<R, E, B>) => Fx.Fx<Scheduler | R, E, A>) => {
-  return flow(
-    foldMap(Endo.makeIdentity<A>())((a: B) => (b: A) => f(b, a)),
-    Fx.flap(seed),
-  )
+  return flow(foldMap_(curry2Flip(f)), Fx.flap(seed))
 }
 
 export const every = foldMap(B.All)
