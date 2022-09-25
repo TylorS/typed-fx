@@ -23,8 +23,8 @@ export class AcquirePermitStream<R, E, A> implements Stream<R, E, A> {
       Fx.flatMap(({ acquire, release }) =>
         pipe(
           acquire,
-          Fx.uninterruptable,
           Fx.tapLazy(() => context.scope.ensuring(() => release)),
+          Fx.uninterruptable,
           Fx.flatMap(() => this.stream.fork(sink, scheduler, context)),
         ),
       ),
