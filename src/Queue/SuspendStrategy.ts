@@ -1,6 +1,6 @@
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { QueueStrategy, runRemaining } from './QueueStrategy.js'
+import { QueueStrategy, disposeAllOnShutdown, runRemaining } from './QueueStrategy.js'
 
 import { wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/index.js'
@@ -47,10 +47,6 @@ export function makeSuspendStrategy<A>(capacity: NonNegativeInteger): QueueStrat
 
         return true
       }),
-    onShutdown: (_, fiberId, offers, takers) =>
-      Fx.fromLazy(() => {
-        offers.next(Fx.interrupted(fiberId))
-        takers.next(Fx.interrupted(fiberId))
-      }),
+    onShutdown: disposeAllOnShutdown,
   }
 }

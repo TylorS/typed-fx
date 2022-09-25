@@ -1,4 +1,4 @@
-import { Maybe, pipe } from 'hkt-ts'
+import { Maybe, flow, pipe } from 'hkt-ts'
 import { isNonEmpty } from 'hkt-ts/NonEmptyArray'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
@@ -15,27 +15,24 @@ export interface Queue<out RI, out EI, in I, out RO, out EO, out O>
 
 export namespace Queue {
   export interface Of<A> extends Queue<never, never, A, never, never, A> {}
+
+  export interface Shared {
+    readonly capacity: NonNegativeInteger
+    readonly size: Fx.Of<NonNegativeInteger>
+    readonly isShutdown: Fx.Of<boolean>
+    readonly shutdown: Fx.Of<void>
+  }
 }
 
-export interface Enqueue<out RI, out EI, in I> {
+export interface Enqueue<out RI, out EI, in I> extends Queue.Shared {
   readonly enqueue: (...inputs: readonly I[]) => Fx.Fx<RI, EI, boolean>
-
-  readonly capacity: NonNegativeInteger
-  readonly size: Fx.Of<NonNegativeInteger>
-  readonly isShutdown: Fx.Of<boolean>
-  readonly shutdown: Fx.Of<void>
 }
 
-export interface Dequeue<out RO, out RE, out O> {
+export interface Dequeue<out RO, out RE, out O> extends Queue.Shared {
   readonly poll: Fx.Fx<RO, RE, Maybe.Maybe<O>>
   readonly dequeue: Fx.Fx<RO, RE, O>
   readonly dequeueAll: Fx.Fx<RO, RE, ReadonlyArray<O>>
   readonly dequeueUpTo: (n: NonNegativeInteger) => Fx.Fx<RO, RE, ReadonlyArray<O>>
-
-  readonly capacity: NonNegativeInteger
-  readonly size: Fx.Of<NonNegativeInteger>
-  readonly isShutdown: Fx.Of<boolean>
-  readonly shutdown: Fx.Of<void>
 }
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -75,9 +72,9 @@ export function Queue<A>(strategy: QueueStrategy<A>): Queue.Of<A> {
   const shutdown = Fx.lazy(() =>
     pipe(
       disposeIfShutdown(),
-      Fx.flatMap(() => Fx.getFiberId),
+      Fx.zipRightSeq(Fx.getFiberId),
       Fx.tap((id) => strategy.onShutdown(mutableQueue, id, offers, takers)),
-      Fx.tapLazy((id) => Future.complete(shutdownBy)(Fx.now(id))),
+      Fx.tapLazy(flow(Fx.now, Future.complete(shutdownBy))),
       Fx.mapTo(undefined),
     ),
   )
@@ -89,11 +86,7 @@ export function Queue<A>(strategy: QueueStrategy<A>): Queue.Of<A> {
         // If there are takers waiting to dequeue a value push to them first
         runRemaining(values.splice(0, takers.size()), takers),
       ),
-      Fx.flatMap(() =>
-        values.length > 0
-          ? strategy.offer(values, mutableQueue, offers)
-          : Fx.now(values.length === 0),
-      ),
+      Fx.flatMap(() => strategy.offer(values, mutableQueue, offers)),
     )
 
   const poll = Fx.lazy(() =>
@@ -141,7 +134,7 @@ export function Queue<A>(strategy: QueueStrategy<A>): Queue.Of<A> {
         const values = mutableQueue
         mutableQueue = []
 
-        runRemaining(values.splice(0, offers.size()), offers)
+        runRemaining(values, offers)
 
         return Fx.now(values)
       }),

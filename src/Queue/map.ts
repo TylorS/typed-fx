@@ -8,12 +8,12 @@ import * as Fx from '@/Fx/Fx.js'
 export function map<A, B>(
   f: (a: A) => B,
 ): {
-  <R, E, I, R2, E2>(queue: Queue<R, E, I, R2, E2, A>): Queue<R, E, I, R2, E2, B>
   <R, E>(queue: Dequeue<R, E, A>): Dequeue<R, E, B>
+  <R, E, I, R2, E2>(queue: Queue<R, E, I, R2, E2, A>): Queue<R, E, I, R2, E2, B>
 }
 
 export function map<A, B>(f: (a: A) => B) {
-  return <R, E, I, R2, E2>(queue: Queue<R, E, I, R2, E2, A>): Queue<R, E, I, R2, E2, B> => {
+  return <R, E>(queue: Dequeue<R, E, A>): Dequeue<R, E, B> => {
     return {
       ...queue,
       poll: pipe(queue.poll, Fx.map(O.map(f))),

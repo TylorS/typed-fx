@@ -1,3 +1,4 @@
+export * from './dimap.js'
 export * from './DroppingStrategy.js'
 export * from './forEach.js'
 export * from './local.js'
@@ -10,5 +11,3 @@ export * from './QueueStrategy.js'
 export * from './SlidingStrategy.js'
 export * from './SuspendStrategy.js'
 export * from './UnboundedStrategy.js'
-
-// TODO: dimap/dimapFx

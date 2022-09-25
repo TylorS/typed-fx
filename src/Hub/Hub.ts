@@ -111,3 +111,45 @@ export const sliding = <A>(capacity: NonNegativeInteger): Hub.Of<A> =>
 
 export const suspend = <A>(capacity: NonNegativeInteger): Hub.Of<A> =>
   Hub<A>(Queue.makeSuspendStrategy(capacity))
+
+export const localFx =
+  <B, R3, E3, A>(f: (b: B) => Fx.Fx<R3, E3, A>) =>
+  <R, E, R2, E2, O>(hub: Hub<R, E, A, R2, E2, O>): Hub<R | R3, E | E3, B, R2, E2, O> => ({
+    ...hub,
+    enqueue: (...values: readonly B[]) =>
+      pipe(
+        Fx.zipAll(values.map(f)),
+        Fx.flatMap((as) => hub.enqueue(...as)),
+      ),
+  })
+
+export const local =
+  <B, A>(f: (b: B) => A) =>
+  <R, E, R2, E2, O>(hub: Hub<R, E, A, R2, E2, O>): Hub<R, E, B, R2, E2, O> => ({
+    ...hub,
+    enqueue: (...values: readonly B[]) => hub.enqueue(...values.map(f)),
+  })
+
+export const map =
+  <A, B>(f: (a: A) => B) =>
+  <R, E, I, R2, E2>(hub: Hub<R, E, I, R2, E2, A>): Hub<R, E, I, R2, E2, B> => ({
+    ...hub,
+    subscribe: pipe(hub.subscribe, Fx.map(Queue.map(f)<R2, E2>)),
+  })
+
+export const mapFx =
+  <A, R3, E3, B>(f: (a: A) => Fx.Fx<R3, E3, B>) =>
+  <R, E, I, R2, E2>(hub: Hub<R, E, I, R2, E2, A>): Hub<R, E, I, R2 | R3, E2 | E3, B> => ({
+    ...hub,
+    subscribe: pipe(hub.subscribe, Fx.map(Queue.mapFx(f)<R2, E2>)),
+  })
+
+export const dimap =
+  <A, B, C, D>(f: (a: A) => B, g: (c: C) => D) =>
+  <R, E, R2, E2>(hub: Hub<R, E, B, R2, E2, C>): Hub<R, E, A, R2, E2, D> =>
+    pipe(hub, map(g), local(f))
+
+export const dimapFx =
+  <A, B, R3, E3, C, R4, E4, D>(f: (a: A) => Fx.Fx<R3, E3, B>, g: (c: C) => Fx.Fx<R4, E4, D>) =>
+  <R, E, R2, E2>(hub: Hub<R, E, B, R2, E2, C>): Hub<R | R3, E | E3, A, R2 | R4, E2 | E4, D> =>
+    pipe(hub, mapFx(g), localFx(f))
