@@ -6,9 +6,7 @@ import { Sink } from '@/Sink/Sink.js'
 
 export function zipItems<A, B, C>(f: (a: A, b: B) => C, array: ReadonlyArray<B>) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, C> => {
-    return Stream((sink, scheduler, context) =>
-      stream.fork(new ZipItemSink(sink, f, array), scheduler, context),
-    )
+    return Stream((sink, context) => stream.fork(new ZipItemSink(sink, f, array), context))
   }
 }
 

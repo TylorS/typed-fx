@@ -8,7 +8,6 @@ import * as Fiber from '@/Fiber/index.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/index.js'
 import * as Fx from '@/Fx/index.js'
-import { Scheduler } from '@/Scheduler/index.js'
 import { Sink } from '@/Sink/Sink.js'
 
 export function multicast<R, E, A>(stream: Stream<R, E, A>) {
@@ -17,7 +16,6 @@ export function multicast<R, E, A>(stream: Stream<R, E, A>) {
 
 export type Observer<E, A, E2> = {
   sink: Sink<E, A, E2>
-  scheduler: Scheduler
   context: FiberContext<FiberId.Live>
 }
 
@@ -73,11 +71,10 @@ export class MulticastStream<R, E, A>
     super()
   }
 
-  fork<E2>(sink: Sink<E, A, E2>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
+  fork<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) {
     return Fx.lazy(() => {
       const observer: Observer<E, A, E2> = {
         sink,
-        scheduler,
         context,
       }
 
@@ -87,7 +84,7 @@ export class MulticastStream<R, E, A>
 
       if (l === 0) {
         return pipe(
-          this.stream.fork(this, scheduler, context),
+          this.stream.fork(this, context),
           Fx.tapLazy((fiber) => (this.fiber = fiber)),
           Fx.map(() => this.createFiber(observer)),
         )

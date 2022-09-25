@@ -7,7 +7,6 @@ import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberRef } from '@/FiberRef/FiberRef.js'
 import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
 import { flatMap, fromLazy } from '@/Fx/Fx.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 
 export function setFiberRefLocally<R, E, A>(fiberRef: FiberRef<R, E, A>, value: () => A) {
@@ -21,7 +20,7 @@ export class SetFiberRefLocallyStream<R, E, A, R2, E2, A2> implements Stream<R2,
     readonly value: () => A,
   ) {}
 
-  fork<E3>(sink: Sink<E2, A2, E3>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
+  fork<E3>(sink: Sink<E2, A2, E3>, context: FiberContext<FiberId.Live>) {
     return pipe(
       fromLazy(() => {
         // SetFiberRef
@@ -32,7 +31,7 @@ export class SetFiberRefLocallyStream<R, E, A, R2, E2, A2> implements Stream<R2,
           fromLazy(() => FiberRefs.popLocalFiberRef(this.fiberRef)(context.fiberRefs)),
         )
       }),
-      flatMap(() => this.stream.fork(sink, scheduler, context)),
+      flatMap(() => this.stream.fork(sink, context)),
     )
   }
 }

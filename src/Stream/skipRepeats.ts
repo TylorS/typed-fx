@@ -11,9 +11,7 @@ export function skipRepeatsWith<A>(
   __trace?: string,
 ): <R, E>(stream: Stream<R, E, A>) => Stream<R, E, A> {
   return (stream) =>
-    Stream((sink, scheduler, context) =>
-      stream.fork(addTrace(new SkipRepeatsSink(sink, E), __trace), scheduler, context),
-    )
+    Stream((sink, context) => stream.fork(addTrace(new SkipRepeatsSink(sink, E), __trace), context))
 }
 
 export function skipRepeats<R, E, A>(stream: Stream<R, E, A>, __trace?: string): Stream<R, E, A> {

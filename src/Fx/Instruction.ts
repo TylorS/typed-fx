@@ -428,6 +428,7 @@ export class Fork<R, E, A> extends Instr<R, E, A> {
   constructor(
     readonly fx: Fx<any, any, any>,
     readonly context: FiberContext<FiberId.Live>,
+    readonly async: boolean = true,
     readonly __trace?: string,
   ) {
     super(__trace)
@@ -436,9 +437,10 @@ export class Fork<R, E, A> extends Instr<R, E, A> {
   static make<R, E, A>(
     fx: Fx<R, E, A>,
     context: FiberContext<FiberId.Live>,
+    async = true,
     __trace?: string,
   ): Fx<R, never, Live<E, A>> {
-    return new Fork(fx, context, __trace)
+    return new Fork(fx, context, async, __trace)
   }
 }
 

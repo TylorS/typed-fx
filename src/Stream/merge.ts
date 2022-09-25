@@ -9,7 +9,6 @@ import { both } from '@/Fiber/hkt.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export function merge<R2, E2, B>(second: Stream<R2, E2, B>, __trace?: string) {
@@ -37,7 +36,7 @@ export class MergeStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A
     readonly __trace?: string,
   ) {}
 
-  fork = <E3>(sink: Sink<E | E2, A | B, E3>, scheduler: Scheduler, context: FiberContext<Live>) => {
+  fork = <E3>(sink: Sink<E | E2, A | B, E3>, context: FiberContext<Live>) => {
     const { first, second, __trace } = this
     const mergeSink = addTrace(
       new MergeSink<E | E2, A | B, E3>(sink, AtomicCounter(NonNegativeInteger(2))),
@@ -45,8 +44,8 @@ export class MergeStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A
     )
 
     return Fx.Fx(function* () {
-      const firstFiber: Fiber<E3, any> = yield* first.fork(mergeSink, scheduler, context)
-      const secondFiber: Fiber<E3, any> = yield* second.fork(mergeSink, scheduler, context.fork())
+      const firstFiber: Fiber<E3, any> = yield* first.fork(mergeSink, context)
+      const secondFiber: Fiber<E3, any> = yield* second.fork(mergeSink, context.fork())
 
       return both(secondFiber)(firstFiber)
     })

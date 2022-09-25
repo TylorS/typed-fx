@@ -13,31 +13,34 @@ import { Delay } from '@/Time/index.js'
 import { FiberId } from '@/index.js'
 
 export function scheduled(schedule: Schedule.Schedule, __trace?: string) {
-  return <R, E, A>(fx: Fx.Fx<R, E, A>): Stream<R, E, A> =>
-    Stream(<E2>(sink: Sink<E, A, E2>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) =>
-      pipe(
-        Fx.asksEnv(
-          (env: Env<R>) =>
-            scheduler.schedule(
-              Fx.matchCause(sink.error, sink.event, __trace)(fx),
-              env,
-              schedule,
-              context,
-              () => sink.end,
+  return <R, E, A>(fx: Fx.Fx<R, E, A>): Stream<R | Scheduler, E, A> =>
+    Stream(<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) =>
+      Fx.access(
+        (env: Env<R | Scheduler>) =>
+          pipe(
+            env.get(Scheduler),
+            Fx.map((scheduler) =>
+              scheduler.schedule(
+                Fx.matchCause(sink.error, sink.event, __trace)(fx),
+                env,
+                schedule,
+                context,
+                () => sink.end,
+              ),
             ),
-          __trace,
-        ),
+          ),
+        __trace,
       ),
     )
 }
 
 export function at(delay: Delay, __trace?: string) {
-  return <A>(value: A): Stream<never, never, A> =>
+  return <A>(value: A): Stream<Scheduler, never, A> =>
     scheduled(Schedule.delayed(delay), __trace)(Fx.now(value))
 }
 
 export function repeated(period: Delay, __trace?: string) {
-  return <A>(value: A): Stream<never, never, A> =>
+  return <A>(value: A): Stream<Scheduler, never, A> =>
     scheduled(Schedule.periodic(period), __trace)(Fx.now(value))
 }
 

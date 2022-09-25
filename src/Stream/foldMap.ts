@@ -1,4 +1,5 @@
 import { Maybe, flow, pipe } from 'hkt-ts'
+import * as A from 'hkt-ts/Array'
 import * as Endo from 'hkt-ts/Endomorphism'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 import * as B from 'hkt-ts/boolean'
@@ -6,15 +7,28 @@ import * as B from 'hkt-ts/boolean'
 import { Stream } from './Stream.js'
 import { FilterMapStream, MapStream } from './bimap.js'
 import { observeLazy } from './drain.js'
+import { FromArrayStream } from './fromArray.js'
 import { FromFxStream } from './fromFx.js'
 
 import * as Fx from '@/Fx/index.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 
 export const filterFoldMap = <A>(I: Identity<A>) => {
   const foldMap_ =
     <B>(f: (b: B) => Maybe.Maybe<A>, __trace?: string) =>
-    <R, E>(stream: Stream<R, E, B>): Fx.Fx<R | Scheduler, E, A> => {
+    <R, E>(stream: Stream<R, E, B>): Fx.Fx<R, E, A> => {
+      if (stream instanceof FromArrayStream) {
+        return pipe(
+          stream.array,
+          A.foldMap(I)(
+            flow(
+              f,
+              Maybe.getOrElse(() => I.id),
+            ),
+          ),
+          Fx.now,
+        )
+      }
+
       if (stream instanceof FromFxStream) {
         return pipe(
           stream.fx,
@@ -49,6 +63,11 @@ export const foldMap =
   <B>(f: (b: B) => A) =>
     filterFoldMap(I)(flow(f, Maybe.Just))
 
+export const foldLeft =
+  <A>(I: Identity<A>) =>
+  <R, E>(stream: Stream<R, E, A>) =>
+    foldMap(I)((a: A) => a)(stream)
+
 const filterFoldMapStream = <A, B, R, E>(
   I: Identity<A>,
   f: (b: B) => Maybe.Maybe<A>,
@@ -72,17 +91,15 @@ const filterFoldMapStream = <A, B, R, E>(
   })
 
 const foldMap_ = foldMap(Endo.makeIdentity<any>())
-const curry2Flip =
-  <A, B, C>(f: (a: A, b: B) => C) =>
-  (b: B) =>
-  (a: A) =>
-    f(a, b)
 
 export const reduce = <A, B>(
   f: (a: A, b: B) => A,
   seed: A,
-): (<R, E>(stream: Stream<R, E, B>) => Fx.Fx<Scheduler | R, E, A>) => {
-  return flow(foldMap_(curry2Flip(f)), Fx.flap(seed))
+): (<R, E>(stream: Stream<R, E, B>) => Fx.Fx<R, E, A>) => {
+  return flow(
+    foldMap_((b: B) => (a: A) => f(a, b)),
+    Fx.flap(seed),
+  )
 }
 
 export const every = foldMap(B.All)

@@ -5,20 +5,25 @@ import * as MS from '@most/scheduler'
 import * as Chunk from '@tsplus/stdlib/collections/Chunk'
 import benchmark from 'benchmark'
 import { pipe } from 'hkt-ts'
+import { IdentitySum } from 'hkt-ts/number'
 import * as rxjs from 'rxjs'
 
 import { runSuite, timeConstruction } from './_internal.js'
 
 import * as Fx from '@/Fx/index.js'
-import { RootScheduler } from '@/Scheduler/RootScheduler.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import * as Stream from '@/Stream/index.js'
 
 const filterEvens = (x: number) => x % 2 === 0
 const addOne = (x: number) => x + 1
 const sum = (x: number, y: number) => x + y
 
-const iterations = 100000
+function parseIterations() {
+  const i = parseInt(process.argv[2], 10)
+
+  return Number.isNaN(i) ? 10000 : i
+}
+
+const iterations = parseIterations()
 const array = Array.from({ length: iterations }, (_, i) => i)
 
 const timeFx = timeConstruction('Fx')
@@ -26,8 +31,7 @@ const fxStream = pipe(
   Stream.fromArray(array),
   Stream.filter(filterEvens),
   Stream.map(addOne),
-  Stream.reduce(sum, 0),
-  Fx.provideService(Scheduler, RootScheduler()),
+  Stream.foldLeft(IdentitySum),
 )
 timeFx()
 

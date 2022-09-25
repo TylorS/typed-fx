@@ -6,13 +6,12 @@ import { Fiber } from '@/Fiber/Fiber.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Drain, Sink, addTrace, makeDrain } from '@/Sink/Sink.js'
 
 export function drain<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, Fiber<never, unknown>> {
+): Fx.Fx<R, never, Fiber<never, unknown>> {
   return pipe(
     Fx.Do,
     Fx.bind('fiberContext', () => Fx.getFiberContext),
@@ -27,14 +26,12 @@ export function fork<R, E, A, E2 = never>(
   sink: Sink<E, A, E2>,
   context: FiberContext<FiberId.Live>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, never, Fiber<E2, unknown>> {
-  return Fx.asks(Scheduler)((scheduler) => stream.fork(addTrace(sink, __trace), scheduler, context))
+): Fx.Fx<R, never, Fiber<E2, unknown>> {
+  return stream.fork(addTrace(sink, __trace), context)
 }
 
 export function observe<A, R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>, __trace?: string) {
-  return <R, E>(
-    stream: Stream<R, E, A>,
-  ): Fx.Fx<R | R2 | Scheduler, never, Fiber<E | E2, unknown>> =>
+  return <R, E>(stream: Stream<R, E, A>): Fx.Fx<R | R2, never, Fiber<E | E2, unknown>> =>
     pipe(
       Fx.Do,
       Fx.bind('fiberContext', () => Fx.getFiberContext),
@@ -51,7 +48,7 @@ export function observeLazy<A, B>(f: (a: A) => B, __trace?: string) {
 export function collect<R, E, A>(
   stream: Stream<R, E, A>,
   __trace?: string,
-): Fx.Fx<R | Scheduler, E, readonly A[]> {
+): Fx.Fx<R, E, readonly A[]> {
   return Fx.lazy(() => {
     const events: A[] = []
 

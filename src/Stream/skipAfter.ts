@@ -4,8 +4,8 @@ import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export function skipAfter<A>(p: (a: A) => boolean, __trace?: string) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, A> => {
-    return Stream((sink, scheduler, context) =>
-      stream.fork(addTrace(new SkipAfterSink(sink, p), __trace), scheduler, context),
+    return Stream((sink, context) =>
+      stream.fork(addTrace(new SkipAfterSink(sink, p), __trace), context),
     )
   }
 }

@@ -7,7 +7,6 @@ import { Env } from '@/Env/Env.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export function continueWith<R2, E2, B>(f: () => Stream<R2, E2, B>, __trace?: string) {
@@ -30,15 +29,10 @@ export class ContinueWith<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, 
     readonly __trace?: string,
   ) {}
 
-  fork = <E3>(
-    sink: Sink<E | E2, A | B, E3>,
-    scheduler: Scheduler,
-    context: FiberContext<FiberId.Live>,
-  ) => {
+  fork = <E3>(sink: Sink<E | E2, A | B, E3>, context: FiberContext<FiberId.Live>) => {
     return Fx.access((env: Env<R | R2>) =>
       this.stream.fork(
-        addTrace(new ContinueWithSink(sink, scheduler, context, env, this.f), this.__trace),
-        scheduler,
+        addTrace(new ContinueWithSink(sink, context, env, this.f), this.__trace),
         context,
       ),
     )
@@ -48,7 +42,6 @@ export class ContinueWith<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, 
 export class ContinueWithSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A | B, E3> {
   constructor(
     readonly sink: Sink<E | E2, A | B, E3>,
-    readonly scheduler: Scheduler,
     readonly context: FiberContext<FiberId.Live>,
     readonly env: Env<R | R2>,
     readonly f: () => Stream<R2, E2, B>,
@@ -56,7 +49,5 @@ export class ContinueWithSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A 
 
   event = this.sink.event
   error = this.sink.error
-  end = Fx.lazy(() =>
-    pipe(this.f().fork(this.sink, this.scheduler, this.context.fork()), Fx.provide(this.env)),
-  )
+  end = Fx.lazy(() => pipe(this.f().fork(this.sink, this.context.fork()), Fx.provide(this.env)))
 }

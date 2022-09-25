@@ -10,8 +10,8 @@ import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export function ensuring(finalizer: Finalizer, __trace?: string) {
   return <R, E, A>(stream: Stream<R, E, A>): Stream<R, E, A> => {
-    return Stream((sink, scheduler, context) =>
-      stream.fork(addTrace(new EnsuringSink(sink, finalizer), __trace), scheduler, context),
+    return Stream((sink, context) =>
+      stream.fork(addTrace(new EnsuringSink(sink, finalizer), __trace), context),
     )
   }
 }

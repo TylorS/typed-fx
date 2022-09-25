@@ -1,5 +1,6 @@
 export * from './fromLayer.js'
 export * from './Fx.js'
+export * from './flatRec.js'
 export * from './join.js'
 export * from './logging.js'
 export * from './run.js'

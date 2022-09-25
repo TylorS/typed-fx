@@ -4,12 +4,10 @@ import { Either } from 'hkt-ts/Either'
 import { Stream } from './Stream.js'
 
 import { Cause } from '@/Cause/Cause.js'
-import { Env } from '@/Env/Env.js'
 import * as Exit from '@/Exit/Exit.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/index.js'
 import * as Fx from '@/Fx/Fx.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 
 /**
@@ -22,26 +20,11 @@ export function fromFx<R, E, A>(fx: Fx.Fx<R, E, A>, __trace?: string): Stream<R,
 export class FromFxStream<R, E, A> implements Stream<R, E, A> {
   constructor(readonly fx: Fx.Fx<R, E, A>, readonly __trace?: string) {}
 
-  fork<E2>(sink: Sink<E, A, E2>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
-    return Fx.asksEnv(
-      (env: Env<R>) =>
-        scheduler.asap(
-          pipe(
-            this.fx,
-            Fx.matchCause(
-              sink.error,
-              flow(
-                sink.event,
-                Fx.flatMap(() => sink.end),
-              ),
-              this.__trace,
-            ),
-          ),
-          env,
-          context,
-        ),
+  fork<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) {
+    return Fx.forkInContext(
+      context,
       this.__trace,
-    )
+    )(pipe(this.fx, Fx.matchCause(sink.error, flow(sink.event, Fx.zipRightSeq(sink.end)))))
   }
 }
 

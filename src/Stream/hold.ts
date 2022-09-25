@@ -13,11 +13,14 @@ import * as Fx from '@/Fx/index.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 
-export function hold<R, E, A>(stream: Stream<R, E, A>) {
+export function hold<R, E, A>(stream: Stream<R, E, A>): Stream<R | Scheduler, E, A> {
   return new HoldStream(stream)
 }
 
-export class HoldStream<R, E, A> extends MulticastStream<R, E, A> implements Stream<R, E, A> {
+export class HoldStream<R, E, A>
+  extends MulticastStream<R | Scheduler, E, A>
+  implements Stream<R | Scheduler, E, A>
+{
   protected value: Maybe<A> = Nothing
   protected pendingSinks: Array<readonly [Sink<E, A, never>, FiberContext<FiberId.Live>, A[]]> = []
   protected scheduledFiber: Fiber<any, any> | undefined
@@ -26,15 +29,20 @@ export class HoldStream<R, E, A> extends MulticastStream<R, E, A> implements Str
     super(stream)
   }
 
-  fork<E2>(sink: Sink<E, A, E2>, scheduler: Scheduler, context: FiberContext<FiberId.Live>) {
-    if (this.shouldScheduleFlush()) {
-      return pipe(
-        this.scheduleFlush(sink, scheduler, context),
-        Fx.flatMap(() => super.fork(sink, scheduler, context)),
-      )
-    }
+  fork<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) {
+    return pipe(
+      Fx.ask(Scheduler),
+      Fx.flatMap((scheduler) => {
+        if (this.shouldScheduleFlush()) {
+          return pipe(
+            this.scheduleFlush(sink, scheduler, context),
+            Fx.flatMap(() => super.fork(sink, context)),
+          )
+        }
 
-    return super.fork(sink, scheduler, context)
+        return super.fork(sink, context)
+      }),
+    )
   }
 
   event = (value: A) => {

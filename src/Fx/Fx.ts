@@ -376,14 +376,23 @@ export const either =
     EitherFx.make(first, second, __trace)
 
 export const forkInContext =
-  (context: FiberContext<FiberId.Live>, __trace?: string) =>
+  (context: FiberContext<FiberId.Live> & { readonly async?: boolean }, __trace?: string) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, never, Fiber.Live<E, A>> =>
-    Fork.make(fx, context, __trace)
+    Fork.make(fx, context, context.async ?? true, __trace)
 
 export const fork = <R, E, A>(fx: Fx<R, E, A>, __trace?: string): Fx<R, never, Fiber.Live<E, A>> =>
   pipe(
     getFiberContext,
     flatMap((context) => forkInContext(context.fork())(fx), __trace),
+  )
+
+export const forkSync = <R, E, A>(
+  fx: Fx<R, E, A>,
+  __trace?: string,
+): Fx<R, never, Fiber.Live<E, A>> =>
+  pipe(
+    getFiberContext,
+    flatMap((context) => forkInContext({ ...context.fork(), async: false })(fx), __trace),
   )
 
 export const forkIn =

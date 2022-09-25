@@ -15,7 +15,7 @@ import { testSuite } from '@/_internal/suite.js'
 testSuite(import.meta.url, () => {
   describe(hold.name, () => {
     const scheduler = RootScheduler()
-    const collectAll = <E, A>(stream: Stream<never, E, A>) =>
+    const collectAll = <E, A>(stream: Stream<Scheduler, E, A>) =>
       pipe(stream, collect, provideService(Scheduler, scheduler), runMain)
 
     it('emits previous event to late subscribers', async () => {

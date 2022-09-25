@@ -26,12 +26,18 @@ export const flatJoin: <R, E, E2, B>(
 export const forkJoinInContext =
   (context: FiberContext<FiberId.Live>) =>
   <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> =>
-    pipe(fx, Fx.forkInContext(context), flatJoin)
+    pipe(fx, Fx.forkInContext({ ...context, async: false }), flatJoin)
 
 export const forkJoinIn = <R, E, A>(fx: Fx.Fx<R, E, A>, scope: Scope): Fx.Fx<R, E, A> =>
-  pipe(fx, Fx.forkIn(scope), flatJoin)
+  pipe(
+    Fx.getFiberContext,
+    Fx.flatMap((ctx) =>
+      pipe(fx, Fx.forkInContext({ ...ctx, scope: scope.fork(), async: false }), flatJoin),
+    ),
+  )
 
-export const forkJoin = <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> => pipe(fx, Fx.fork, flatJoin)
+export const forkJoin = <R, E, A>(fx: Fx.Fx<R, E, A>): Fx.Fx<R, E, A> =>
+  pipe(fx, Fx.forkSync, flatJoin)
 
 export const flatJoinMap =
   <B, C>(f: (b: B) => C, __trace?: string) =>

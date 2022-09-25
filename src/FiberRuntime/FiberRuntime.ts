@@ -334,9 +334,11 @@ export class FiberRuntime<F extends Fx.AnyFx>
       }),
     )
 
-    // All Child fibers should be started asynchronously to ensure they are capable of
-    // being interrupted *before* any work has been started and could steal the thread.
-    child.startAsync()
+    if (instr.async) {
+      child.startAsync()
+    } else {
+      child.startSync()
+    }
 
     this.continueWith(child)
   }

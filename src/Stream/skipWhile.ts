@@ -17,8 +17,8 @@ export function skipWhile<A>(
 
 export function skipWhile<A>(p: (a: A) => boolean, __trace?: string) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, A> => {
-    return Stream((sink, scheduler, context) =>
-      stream.fork(addTrace(new SkipWhileSink(sink, p), __trace), scheduler, context),
+    return Stream((sink, context) =>
+      stream.fork(addTrace(new SkipWhileSink(sink, p), __trace), context),
     )
   }
 }

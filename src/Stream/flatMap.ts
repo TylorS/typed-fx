@@ -10,7 +10,6 @@ import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { Live } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
 import { access, lazy, unit } from '@/Fx/index.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import * as Sink from '@/Sink/Sink.js'
 import * as Supervisor from '@/Supervisor/index.js'
 
@@ -35,15 +34,11 @@ export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2,
     readonly __trace?: string,
   ) {}
 
-  fork<E3>(sink: Sink.Sink<E | E2, B, E3>, scheduler: Scheduler, context: FiberContext<Live>) {
+  fork<E3>(sink: Sink.Sink<E | E2, B, E3>, context: FiberContext<Live>) {
     const { stream, f } = this
 
     return access((env: Env<R | R2>) =>
-      stream.fork(
-        new FlatMapSink(sink, scheduler, context, f, env, this.__trace),
-        scheduler,
-        context,
-      ),
+      stream.fork(new FlatMapSink(sink, context, f, env, this.__trace), context),
     )
   }
 
@@ -66,7 +61,6 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> {
 
   constructor(
     readonly sink: Sink.Sink<E | E2, B, E3>,
-    readonly scheduler: Scheduler,
     readonly context: FiberContext<Live>,
     readonly f: (a: A) => Stream<R2, E2, B>,
     readonly env: Env<R | R2>,
@@ -82,7 +76,7 @@ class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> {
       increment(this._running)
 
       return pipe(
-        this.f(a).fork(Sink.addTrace(this.innerSink(), this.__trace), this.scheduler, forked),
+        this.f(a).fork(Sink.addTrace(this.innerSink(), this.__trace), forked),
         Fx.provide(this.env),
       )
     })

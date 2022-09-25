@@ -11,7 +11,6 @@ import { FiberId } from '@/FiberId/FiberId.js'
 import { Finalizer } from '@/Finalizer/Finalizer.js'
 import * as Fx from '@/Fx/index.js'
 import { Runtime } from '@/Runtime/Runtime.js'
-import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export interface CallbackSink<E, A> {
@@ -35,7 +34,6 @@ export class FromCallback<E, A> implements Stream<never, E, A> {
 
   fork = <E2>(
     sink: Sink<E, A, E2>,
-    _: Scheduler,
     context: FiberContext<FiberId.Live>,
   ): Fx.RIO<never, Fiber<E2, any>> => {
     return Fx.lazy(() => {
