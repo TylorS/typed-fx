@@ -129,6 +129,11 @@ export const provide =
   <E, A>(fx: Fx<R, E, A>): IO<E, A> =>
     Provide.make(fx, env, __trace)
 
+export const provideSome =
+  <R2>(env: Env<R2>, __trace?: string) =>
+  <R, E, A>(fx: Fx<R | R2, E, A>): Fx<Exclude<R, R2>, E, A> =>
+    access((r) => pipe(fx, provide<R | R2>(r.join(env), __trace)))
+
 export const provideService =
   <S, I extends S>(s: Service<S>, impl: I, __trace?: string) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R, S>, E, A> =>
@@ -602,8 +607,12 @@ export { let_ as let }
 
 export const AssociativeBoth = AF.makeAssociativeBoth<FxHKT>({ ...Flatten, ...Covariant })
 
-export const zipLeftSeq = AB.zipLeft<FxHKT>({ ...AssociativeBoth, ...Covariant })
-export const zipRightSeq = AB.zipRight<FxHKT>({ ...AssociativeBoth, ...Covariant })
+export const zipLeftSeq = AB.zipLeft<FxHKT>({ ...AssociativeBoth, ...Covariant }) as <R2, E2, B>(
+  second: Fx<R2, E2, B>,
+) => <R, E, A>(first: Fx<R, E, A>) => Fx<R | R2, E | E2, A>
+export const zipRightSeq = AB.zipRight<FxHKT>({ ...AssociativeBoth, ...Covariant }) as <R2, E2, B>(
+  second: Fx<R2, E2, B>,
+) => <R, E, A>(first: Fx<R, E, A>) => Fx<R | R2, E | E2, B>
 
 export const IdentityBoth: IB.IdentityBoth3<FxHKT> = {
   ...AssociativeBoth,

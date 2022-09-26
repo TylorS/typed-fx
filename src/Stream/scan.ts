@@ -1,7 +1,5 @@
 import { Stream } from './Stream.js'
 
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { Live } from '@/FiberId/FiberId.js'
 import { lazy } from '@/Fx/index.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
 
@@ -21,7 +19,7 @@ export class ScanStream<R, E, A, B> implements Stream<R, E, B> {
     this.state = b
   }
 
-  readonly fork = <E2>(sink: Sink<E, B, E2>, context: FiberContext<Live>) =>
+  readonly fork = <E2>(sink: Sink<E, B, E2>) =>
     this.stream.fork(
       addTrace(
         {
@@ -30,7 +28,6 @@ export class ScanStream<R, E, A, B> implements Stream<R, E, B> {
         },
         this.__trace,
       ),
-      context,
     )
 
   static make<R, E, A, B>(

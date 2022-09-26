@@ -1,4 +1,4 @@
-import { pipe } from 'hkt-ts'
+import { flow, pipe } from 'hkt-ts'
 
 import { Stream } from './Stream.js'
 
@@ -14,13 +14,13 @@ export function multicast<R, E, A>(stream: Stream<R, E, A>) {
   return new MulticastStream(stream)
 }
 
-export type Observer<E, A, E2> = {
-  sink: Sink<E, A, E2>
+export type Observer<E, A, R2, E2> = {
+  sink: Sink<E, A, R2, E2>
   context: FiberContext<FiberId.Live>
 }
 
-export class MulticastSink<E, A, E2> implements Sink<E, A, E2> {
-  protected observers: Array<Observer<E, A, E2>> = []
+export class MulticastSink<E, A, R2, E2> implements Sink<E, A, R2, E2> {
+  protected observers: Array<Observer<E, A, R2, E2>> = []
 
   constructor() {
     this.event = this.event.bind(this)
@@ -61,37 +61,49 @@ export class MulticastSink<E, A, E2> implements Sink<E, A, E2> {
 }
 
 export class MulticastStream<R, E, A>
-  extends MulticastSink<E, A, unknown>
+  extends MulticastSink<E, A, never, unknown>
   implements Stream<R, E, A>
 {
-  protected observers: Array<Observer<E, A, any>> = []
+  protected observers: Array<Observer<E, A, never, any>> = []
   protected fiber: Fiber.Fiber<any, any> | undefined
 
   constructor(readonly stream: Stream<R, E, A>) {
     super()
   }
 
-  fork<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) {
-    return Fx.lazy(() => {
-      const observer: Observer<E, A, E2> = {
-        sink,
-        context,
-      }
+  fork<R2, E2>(sink: Sink<E, A, R2, E2>) {
+    return pipe(
+      Fx.getFiberContext,
+      Fx.bindTo('fiberContext'),
+      Fx.bind('env', () => Fx.getEnv<R2>()),
+      Fx.flatMap(({ fiberContext, env }) =>
+        Fx.lazy(() => {
+          const context = fiberContext.fork()
+          const observer: Observer<E, A, never, E2> = {
+            sink: {
+              event: flow(sink.event, Fx.provide(env)),
+              error: flow(sink.error, Fx.provide(env)),
+              end: pipe(sink.end, Fx.provide(env)),
+            },
+            context,
+          }
 
-      const l = this.observers.length
+          const l = this.observers.length
 
-      this.observers.push(observer)
+          this.observers.push(observer)
 
-      if (l === 0) {
-        return pipe(
-          this.stream.fork(this, context),
-          Fx.tapLazy((fiber) => (this.fiber = fiber)),
-          Fx.map(() => this.createFiber(observer)),
-        )
-      }
+          if (l === 0) {
+            return pipe(
+              this.stream.fork(this),
+              Fx.tapLazy((fiber) => (this.fiber = fiber)),
+              Fx.map(() => this.createFiber(observer)),
+            )
+          }
 
-      return Fx.fromLazy(() => this.createFiber(observer))
-    })
+          return Fx.fromLazy(() => this.createFiber(observer))
+        }),
+      ),
+    )
   }
 
   error(cause: Cause<E>) {
@@ -101,7 +113,7 @@ export class MulticastStream<R, E, A>
     )
   }
 
-  protected createFiber = <E2>(observer: Observer<E, A, E2>) => {
+  protected createFiber = <E2>(observer: Observer<E, A, never, E2>) => {
     const { context } = observer
     context.scope.ensuring(() =>
       pipe(

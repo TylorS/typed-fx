@@ -1,16 +1,12 @@
 import { Maybe } from 'hkt-ts'
-import * as A from 'hkt-ts/Array'
 import { flow, pipe } from 'hkt-ts/function'
 
 import { Stream } from './Stream.js'
-import { FromArrayStream } from './fromArray.js'
 import { FromFxStream } from './fromFx.js'
 
 import * as Cause from '@/Cause/index.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { Live } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/Fx.js'
-import { Sink, addTrace } from '@/Sink/Sink.js'
+import * as Sink from '@/Sink/index.js'
 
 export function bimap<A, B, C, D>(
   f: (a: A) => B,
@@ -28,9 +24,8 @@ export class BimapStream<R, A, B, C, D> implements Stream<R, B, D> {
     readonly __trace?: string,
   ) {}
 
-  fork = <E>(sink: Sink<B, D, E>, context: FiberContext<Live>) => {
-    return this.stream.fork<E>(new BimapSink(sink, context, this.f, this.g), context)
-  }
+  fork = <R2, E>(sink: Sink.Sink<B, D, R2, E>) =>
+    this.stream.fork<R2, E>(pipe(sink, Sink.localBoth(Cause.map(this.f), this.g, this.__trace)))
 
   static make<R, A, B, C, D>(
     stream: Stream<R, A, C>,
@@ -41,6 +36,7 @@ export class BimapStream<R, A, B, C, D> implements Stream<R, B, D> {
     if (stream instanceof FromFxStream) {
       return new FromFxStream(pipe(stream.fx, Fx.bimap(f, g)), __trace)
     }
+
     if (stream instanceof MapStream) {
       return BimapStream.make(stream.stream, f, flow(stream.f, g), __trace)
     }
@@ -51,19 +47,6 @@ export class BimapStream<R, A, B, C, D> implements Stream<R, B, D> {
 
     return new BimapStream(stream, f, g, __trace)
   }
-}
-
-class BimapSink<A, B, C, D, E> implements Sink<A, C, E> {
-  constructor(
-    readonly sink: Sink<B, D, E>,
-    readonly context: FiberContext<Live>,
-    readonly f: (a: A) => B,
-    readonly g: (c: C) => D,
-  ) {}
-
-  event = flow(this.g, this.sink.event)
-  error = flow(Cause.map(this.f), this.sink.error)
-  end = this.sink.end
 }
 
 export function map<A, B>(
@@ -80,8 +63,8 @@ export class MapStream<R, E, A, B> implements Stream<R, E, B> {
     readonly __trace?: string,
   ) {}
 
-  fork<E2>(sink: Sink<E, B, E2>, context: FiberContext<Live>) {
-    return this.stream.fork(addTrace(new MapSink(sink, this.f), this.__trace), context)
+  fork<R2, E2>(sink: Sink.Sink<E, B, R2, E2>) {
+    return this.stream.fork(Sink.local(this.f, this.__trace)(sink))
   }
 
   static make<R, E, A, B>(
@@ -105,14 +88,6 @@ export class MapStream<R, E, A, B> implements Stream<R, E, B> {
   }
 }
 
-export class MapSink<E, A, E2, B> implements Sink<E, A, E2> {
-  constructor(readonly sink: Sink<E, B, E2>, readonly f: (a: A) => B, readonly __trace?: string) {}
-
-  event = flow(this.f, this.sink.event)
-  error = this.sink.error
-  end = this.sink.end
-}
-
 export function mapLeft<E1, E2>(
   f: (error: E1) => E2,
   __trace?: string,
@@ -127,17 +102,8 @@ export class MapLeftStream<R, E1, A, E2> implements Stream<R, E2, A> {
     readonly __trace?: string,
   ) {}
 
-  fork<E3>(sink: Sink<E2, A, E3>, context: FiberContext<Live>) {
-    return this.stream.fork(
-      addTrace(
-        {
-          ...sink,
-          error: flow(Cause.map(this.f), sink.error),
-        },
-        this.__trace,
-      ),
-      context,
-    )
+  fork<R3, E3>(sink: Sink.Sink<E2, A, R3, E3>) {
+    return this.stream.fork(pipe(sink, Sink.localError(Cause.map(this.f), this.__trace)))
   }
 
   static make<R, E1, A, E2>(
@@ -174,8 +140,18 @@ export class FilterMapStream<R, E, A, B> implements Stream<R, E, B> {
     readonly __trace?: string,
   ) {}
 
-  fork<E2>(sink: Sink<E, B, E2>, context: FiberContext<Live>) {
-    return this.stream.fork(addTrace(new FilterMapSink(sink, this.f), this.__trace), context)
+  fork<R3, E2>(sink: Sink.Sink<E, B, R3, E2>) {
+    return this.stream.fork<R3, E2>(
+      pipe(
+        sink,
+        Sink.onEvent(
+          flow(
+            this.f,
+            Maybe.match(() => Fx.unit, sink.event),
+          ),
+        ),
+      ),
+    )
   }
 
   static make<R, E, A, B>(
@@ -183,10 +159,6 @@ export class FilterMapStream<R, E, A, B> implements Stream<R, E, B> {
     f: (a: A) => Maybe.Maybe<B>,
     __trace?: string,
   ): Stream<R, E, B> {
-    if (stream instanceof FromArrayStream) {
-      return new FromArrayStream(pipe(stream.array, A.filterMap(f)), __trace)
-    }
-
     if (stream instanceof MapStream) {
       return FilterMapStream.make(stream.stream, flow(stream.f, f), __trace)
     }
@@ -197,15 +169,4 @@ export class FilterMapStream<R, E, A, B> implements Stream<R, E, B> {
 
     return new FilterMapStream(stream, f, __trace)
   }
-}
-
-export class FilterMapSink<E, A, E2, B> implements Sink<E, A, E2> {
-  constructor(readonly sink: Sink<E, B, E2>, readonly f: (a: A) => Maybe.Maybe<B>) {}
-
-  event: Sink<E, A, E2>['event'] = flow(
-    this.f,
-    Maybe.match(() => Fx.unit, this.sink.event),
-  )
-  error = this.sink.error
-  end = this.sink.end
 }

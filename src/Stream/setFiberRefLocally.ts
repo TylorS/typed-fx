@@ -2,11 +2,8 @@ import { pipe } from 'hkt-ts'
 
 import { Stream } from './Stream.js'
 
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberRef } from '@/FiberRef/FiberRef.js'
-import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
-import { flatMap, fromLazy } from '@/Fx/Fx.js'
+import * as Fx from '@/Fx/index.js'
 import { Sink } from '@/Sink/Sink.js'
 
 export function setFiberRefLocally<R, E, A>(fiberRef: FiberRef<R, E, A>, value: () => A) {
@@ -20,18 +17,9 @@ export class SetFiberRefLocallyStream<R, E, A, R2, E2, A2> implements Stream<R2,
     readonly value: () => A,
   ) {}
 
-  fork<E3>(sink: Sink<E2, A2, E3>, context: FiberContext<FiberId.Live>) {
-    return pipe(
-      fromLazy(() => {
-        // SetFiberRef
-        FiberRefs.setFiberRefLocally(this.fiberRef, this.value())(context.fiberRefs)
-
-        // Ensure it is popped off when the stream ends
-        context.scope.ensuring(() =>
-          fromLazy(() => FiberRefs.popLocalFiberRef(this.fiberRef)(context.fiberRefs)),
-        )
-      }),
-      flatMap(() => this.stream.fork(sink, context)),
+  fork<R3, E3>(sink: Sink<E2, A2, R3, E3>) {
+    return Fx.lazy(() =>
+      pipe(this.stream.fork(sink), Fx.fiberRefLocally(this.fiberRef, this.value())),
     )
   }
 }

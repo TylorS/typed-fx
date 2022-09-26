@@ -1,6 +1,4 @@
 import { Fiber } from '@/Fiber/Fiber.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/Fx.js'
 import { Sink } from '@/Sink/Sink.js'
 
@@ -26,10 +24,7 @@ import { Sink } from '@/Sink/Sink.js'
  */
 
 export interface Stream<out R = never, out E = never, out A = unknown> {
-  fork<E2 = never>(
-    sink: Sink<E, A, E2>,
-    context: FiberContext<FiberId.Live>,
-  ): Fx.RIO<R, Fiber<E2, any>>
+  fork<R3 = never, E3 = never>(sink: Sink<E, A, R3, E3>): Fx.RIO<R | R3, Fiber<E3, any>>
 }
 
 /* eslint-disable @typescript-eslint/no-unused-vars */

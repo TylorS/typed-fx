@@ -10,16 +10,15 @@ export function skipRepeatsWith<A>(
   E: Eq<A>,
   __trace?: string,
 ): <R, E>(stream: Stream<R, E, A>) => Stream<R, E, A> {
-  return (stream) =>
-    Stream((sink, context) => stream.fork(addTrace(new SkipRepeatsSink(sink, E), __trace), context))
+  return (stream) => Stream((sink) => stream.fork(addTrace(new SkipRepeatsSink(sink, E), __trace)))
 }
 
 export function skipRepeats<R, E, A>(stream: Stream<R, E, A>, __trace?: string): Stream<R, E, A> {
   return skipRepeatsWith<A>(DeepEquals, __trace)(stream)
 }
 
-class SkipRepeatsSink<E, A, E2> implements Sink<E, A, E2> {
-  constructor(readonly sink: Sink<E, A, E2>, readonly E: Eq<A>) {}
+class SkipRepeatsSink<E, A, R2, E2> implements Sink<E, A, R2, E2> {
+  constructor(readonly sink: Sink<E, A, R2, E2>, readonly E: Eq<A>) {}
 
   protected last: Maybe.Maybe<A> = Maybe.Nothing
   protected elem = Maybe.contains(this.E)

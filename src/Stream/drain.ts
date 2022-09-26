@@ -3,10 +3,8 @@ import { pipe } from 'hkt-ts'
 import { Stream } from './Stream.js'
 
 import { Fiber } from '@/Fiber/Fiber.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { Drain, Sink, addTrace, makeDrain } from '@/Sink/Sink.js'
+import { Drain, makeDrain } from '@/Sink/Sink.js'
 
 export function drain<R, E, A>(
   stream: Stream<R, E, A>,
@@ -17,17 +15,8 @@ export function drain<R, E, A>(
     Fx.bind('fiberContext', () => Fx.getFiberContext),
     Fx.let('context', ({ fiberContext }) => fiberContext.fork()),
     Fx.let('sink', ({ context }) => new Drain<E, A>(context.scope)),
-    Fx.flatMap(({ sink, context }) => fork(stream, sink, context, __trace), __trace),
+    Fx.flatMap(({ sink }) => stream.fork(sink), __trace),
   )
-}
-
-export function fork<R, E, A, E2 = never>(
-  stream: Stream<R, E, A>,
-  sink: Sink<E, A, E2>,
-  context: FiberContext<FiberId.Live>,
-  __trace?: string,
-): Fx.Fx<R, never, Fiber<E2, unknown>> {
-  return stream.fork(addTrace(sink, __trace), context)
 }
 
 export function observe<A, R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>, __trace?: string) {
@@ -37,7 +26,7 @@ export function observe<A, R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>, __trace?: s
       Fx.bind('fiberContext', () => Fx.getFiberContext),
       Fx.let('context', ({ fiberContext }) => fiberContext.fork()),
       Fx.bind('sink', ({ context }) => makeDrain<E, A, R2, E2>(context.scope, { event: f })),
-      Fx.flatMap(({ sink, context }) => fork(stream, sink, context, __trace), __trace),
+      Fx.flatMap(({ sink }) => stream.fork(sink), __trace),
     )
 }
 

@@ -3,21 +3,14 @@ import { flow, pipe } from 'hkt-ts'
 import { Stream } from './Stream.js'
 import { MapStream } from './bimap.js'
 
-import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
-import { Cause } from '@/Cause/index.js'
-import { Env } from '@/Env/Env.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { Live } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { access, lazy, unit } from '@/Fx/index.js'
-import * as Sink from '@/Sink/Sink.js'
-import * as Supervisor from '@/Supervisor/index.js'
+import * as Sink from '@/Sink/index.js'
 
 export function flatMap<A, R2, E2, B>(
   f: (a: A) => Stream<R2, E2, B>,
   __trace?: string,
 ): <R, E>(stream: Stream<R, E, A>) => Stream<R | R2, E | E2, B> {
-  return (stream) => FlatMapStream.make(stream, f, __trace)
+  return (stream) => makeFlatMap(stream, f, __trace)
 }
 
 export function join<R, E, R2, E2, A>(
@@ -27,92 +20,58 @@ export function join<R, E, R2, E2, A>(
   return flatMap((a: Stream<R2, E2, A>) => a, __trace)(stream)
 }
 
-export class FlatMapStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, B> {
-  constructor(
-    readonly stream: Stream<R, E, A>,
-    readonly f: (a: A) => Stream<R2, E2, B>,
-    readonly __trace?: string,
-  ) {}
-
-  fork<E3>(sink: Sink.Sink<E | E2, B, E3>, context: FiberContext<Live>) {
-    const { stream, f } = this
-
-    return access((env: Env<R | R2>) =>
-      stream.fork(new FlatMapSink(sink, context, f, env, this.__trace), context),
-    )
+function makeFlatMap<R, E, A, R2, E2, B>(
+  stream: Stream<R, E, A>,
+  f: (a: A) => Stream<R2, E2, B>,
+  __trace?: string,
+): Stream<R | R2, E | E2, B> {
+  if (stream instanceof MapStream) {
+    return makeFlatMap(stream.stream, flow(stream.f, f), __trace)
   }
 
-  static make<R, E, A, R2, E2, B>(
-    stream: Stream<R, E, A>,
-    f: (a: A) => Stream<R2, E2, B>,
-    __trace?: string,
-  ): Stream<R | R2, E | E2, B> {
-    if (stream instanceof MapStream) {
-      return FlatMapStream.make(stream.stream, flow(stream.f, f), __trace)
-    }
+  return Stream((sink) => {
+    let running = 0
+    let ended = false
 
-    return new FlatMapStream(stream, f, __trace)
-  }
-}
-
-class FlatMapSink<R, E, A, R2, E2, B, E3> implements Sink.Sink<E | E2, A, E3> {
-  protected _running = AtomicCounter()
-  protected _ended = false
-
-  constructor(
-    readonly sink: Sink.Sink<E | E2, B, E3>,
-    readonly context: FiberContext<Live>,
-    readonly f: (a: A) => Stream<R2, E2, B>,
-    readonly env: Env<R | R2>,
-    readonly __trace?: string,
-  ) {}
-
-  event = (a: A) =>
-    Fx.lazy(() => {
-      const forked = this.context.fork({
-        supervisor: Supervisor.and(Supervisor.inheritFiberRefs)(this.context.supervisor),
-      })
-
-      increment(this._running)
-
-      return pipe(
-        this.f(a).fork(Sink.addTrace(this.innerSink(), this.__trace), forked),
-        Fx.provide(this.env),
-      )
-    })
-
-  error = (cause: Cause<E | E2>) => {
-    return lazy(() => {
-      this._ended = true
-
-      return this.sink.error(cause)
-    })
-  }
-
-  end = lazy(() => {
-    this._ended = true
-
-    return this.endIfCompleted()
-  })
-
-  protected endIfCompleted() {
-    return lazy(() => {
-      if (this._ended && this._running.get() === 0) {
-        return this.sink.end
+    const endIfCompleted = Fx.lazy(() => {
+      if (ended && running === 0) {
+        return sink.end
       }
 
-      return unit
+      return Fx.unit
     })
-  }
 
-  protected innerSink(): Sink.Sink<E | E2, B, E3> {
-    return {
-      event: this.sink.event,
-      error: this.error,
-      end: lazy(() => {
-        decrement(this._running)
-        return this.endIfCompleted()
-      }),
-    }
-  }
+    return stream.fork(
+      pipe(
+        sink,
+        Sink.onEnd(
+          Fx.lazy(() => {
+            ended = true
+
+            return endIfCompleted
+          }),
+        ),
+        Sink.onEvent(
+          (a: A) =>
+            Fx.lazy(() => {
+              running++
+
+              return f(a).fork(
+                pipe(
+                  sink,
+                  Sink.onEnd(
+                    Fx.lazy(() => {
+                      running--
+
+                      return endIfCompleted
+                    }),
+                  ),
+                ),
+              )
+            }),
+          __trace,
+        ),
+      ),
+    )
+  })
 }

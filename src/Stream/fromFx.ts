@@ -5,7 +5,6 @@ import { Stream } from './Stream.js'
 
 import { Cause } from '@/Cause/Cause.js'
 import * as Exit from '@/Exit/Exit.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/index.js'
 import * as Fx from '@/Fx/Fx.js'
 import { Sink } from '@/Sink/Sink.js'
@@ -20,11 +19,20 @@ export function fromFx<R, E, A>(fx: Fx.Fx<R, E, A>, __trace?: string): Stream<R,
 export class FromFxStream<R, E, A> implements Stream<R, E, A> {
   constructor(readonly fx: Fx.Fx<R, E, A>, readonly __trace?: string) {}
 
-  fork<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) {
-    return Fx.forkInContext(
-      context,
+  fork<R2, E2>(sink: Sink<E, A, R2, E2>) {
+    return Fx.fork(
+      pipe(
+        this.fx,
+        Fx.matchCause(
+          sink.error,
+          flow(
+            sink.event,
+            Fx.tap(() => sink.end),
+          ),
+        ),
+      ),
       this.__trace,
-    )(pipe(this.fx, Fx.matchCause(sink.error, flow(sink.event, Fx.zipRightSeq(sink.end)))))
+    )
   }
 }
 

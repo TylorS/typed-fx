@@ -29,18 +29,20 @@ export class HoldStream<R, E, A>
     super(stream)
   }
 
-  fork<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) {
+  fork<E2>(sink: Sink<E, A, E2>) {
     return pipe(
       Fx.ask(Scheduler),
-      Fx.flatMap((scheduler) => {
+      Fx.bindTo('scheduler'),
+      Fx.bind('context', () => Fx.getFiberContext),
+      Fx.flatMap(({ scheduler, context }) => {
         if (this.shouldScheduleFlush()) {
           return pipe(
-            this.scheduleFlush(sink, scheduler, context),
-            Fx.flatMap(() => super.fork(sink, context)),
+            this.scheduleFlush(sink, scheduler, context.fork()),
+            Fx.flatMap(() => super.fork(sink)),
           )
         }
 
-        return super.fork(sink, context)
+        return super.fork(sink)
       }),
     )
   }

@@ -5,10 +5,12 @@ import { pipe } from 'hkt-ts/function'
 import * as Fx from './Fx.js'
 import { runMain, runMainFiber } from './run.js'
 
+import { Env } from '@/Env/Env.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { RootScheduler } from '@/Scheduler/RootScheduler.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
+import { Id } from '@/Service/Id.js'
 import { Delay } from '@/Time/index.js'
 import { Exit, sleep } from '@/index.js'
 
@@ -85,6 +87,40 @@ describe(new URL(import.meta.url).pathname, () => {
 
       deepStrictEqual(await runMain(fiber.interruptAs(FiberId.None)), Exit.success(value))
     })
+  })
+
+  it('allows providing partial Env', async () => {
+    const value = Math.random()
+    class Foo extends Id {
+      constructor(readonly foo: typeof value) {
+        super()
+      }
+    }
+
+    const test = pipe(
+      Foo.ask(),
+      Fx.map((foo) => foo.foo + value),
+      Fx.provideSome(Env(Foo.id(), new Foo(value))),
+    )
+
+    deepStrictEqual(await runMain(test), value * 2)
+  })
+
+  it('allows providing Layers', async () => {
+    const value = Math.random()
+    class Foo extends Id {
+      constructor(readonly foo: typeof value) {
+        super()
+      }
+    }
+
+    const test = pipe(
+      Foo.ask(),
+      Fx.map((foo) => foo.foo + value),
+      Fx.provideLayer(Foo.layerOf(value)),
+    )
+
+    deepStrictEqual(await runMain(test), value * 2)
   })
 
   it('runs Fib', async () => {

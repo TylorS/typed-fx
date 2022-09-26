@@ -64,7 +64,7 @@ testSuite(import.meta.url, () => {
         Stream.flatMapFx((a) =>
           pipe(
             Foo.ask(),
-            Fx.flatMap((foo) => Fx.now(a + foo.foo)),
+            Fx.flatMap((foo) => (console.log(foo), Fx.now(a + foo.foo))),
           ),
         ),
         Stream.provideLayer(Foo.layerOf(value)),

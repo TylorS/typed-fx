@@ -16,14 +16,12 @@ export function takeWhile<A>(
 
 export function takeWhile<A>(p: (a: A) => boolean, __trace?: string) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, A> => {
-    return Stream((sink, context) =>
-      stream.fork(addTrace(new TakeWhileSink(sink, p), __trace), context),
-    )
+    return Stream((sink) => stream.fork(addTrace(new TakeWhileSink(sink, p), __trace)))
   }
 }
 
-class TakeWhileSink<E, A, E2> {
-  constructor(readonly sink: Sink<E, A, E2>, readonly p: (a: A) => boolean) {}
+class TakeWhileSink<E, A, R2, E2> {
+  constructor(readonly sink: Sink<E, A, R2, E2>, readonly p: (a: A) => boolean) {}
 
   event(a: A) {
     if (this.p(a)) {

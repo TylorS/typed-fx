@@ -10,5 +10,5 @@ export function lazy<R, E, A>(f: () => Stream<R, E, A>): Stream<R, E, A> {
     return memo
   }
 
-  return Stream((sink, context) => get().fork(sink, context))
+  return Stream((sink) => get().fork(sink))
 }

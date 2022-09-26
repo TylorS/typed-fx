@@ -17,16 +17,14 @@ export function skipWhile<A>(
 
 export function skipWhile<A>(p: (a: A) => boolean, __trace?: string) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, A> => {
-    return Stream((sink, context) =>
-      stream.fork(addTrace(new SkipWhileSink(sink, p), __trace), context),
-    )
+    return Stream((sink) => stream.fork(addTrace(new SkipWhileSink(sink, p), __trace)))
   }
 }
 
-class SkipWhileSink<E, A, E2> {
+class SkipWhileSink<E, A, R2, E2> {
   protected _started = false
 
-  constructor(readonly sink: Sink<E, A, E2>, readonly p: (a: A) => boolean) {}
+  constructor(readonly sink: Sink<E, A, R2, E2>, readonly p: (a: A) => boolean) {}
 
   event(a: A) {
     if (!this._started && this.p(a)) {

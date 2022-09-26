@@ -1,9 +1,9 @@
-import { Maybe, constant, identity, pipe } from 'hkt-ts'
-import { Nothing } from 'hkt-ts/Maybe'
+import { Maybe, identity, pipe } from 'hkt-ts'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { FiberRef, make } from './FiberRef.js'
 
+import { unexpected } from '@/Cause/Cause.js'
 import type { Env } from '@/Env/Env.js'
 import { Live } from '@/Fiber/Fiber.js'
 import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
@@ -22,8 +22,7 @@ export const CurrentEnv = make(
     Fx.map((c) => makeEnvFromFiberRefs(c.fiberRefs)),
   ),
   {
-    fork: constant(Nothing), // Always create a new Env for each Fiber.
-    join: identity, // Always keep the parent Fiber's Env
+    join: identity,
   },
 )
 
@@ -62,14 +61,14 @@ export const Layers = FiberRef.make(
     ImmutableMap<Service<any>, readonly [() => Live<never, any>, Maybe.Maybe<Live<never, any>>]>(),
   ),
   {
-    join: identity, // Always keep the parent Fiber's layers
+    join: (f, s) => f.joinWith(s, identity),
   },
 )
 
 export const Services = FiberRef.make(
   Fx.fromLazy(() => ImmutableMap<Service<any>, any>()),
   {
-    join: identity, // Always keep the parent Fiber's services
+    join: (f, s) => f.joinWith(s, identity),
   },
 )
 
@@ -111,13 +110,17 @@ const getLayerFromFiberRefs = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs
 
     // Add Layers if it is missing
     if (Maybe.isNothing(layers)) {
-      throw new Error(`Unable to find Layer or Service for ${id.description}`)
+      return Fx.fromCause(
+        unexpected(new Error(`Unable to find Layer or Service for ${id.description}`)),
+      )
     }
 
     const layer = layers.value.get(id)
 
     if (Maybe.isNothing(layer)) {
-      throw new Error(`Unable to find Layer or Service for ${id.description}`)
+      return Fx.fromCause(
+        unexpected(new Error(`Unable to find Layer or Service for ${id.description}`)),
+      )
     }
 
     const [makeFiber, currentFiber] = layer.value
@@ -158,9 +161,40 @@ export function joinEnvFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R>[
   return (other) => {
     const forked = other.fiberRefs.fork()
 
-    // Reverse the order to ensure incoming values take precedence for Services + Layers
-    FiberRefs.join(forked, fiberRefs)
+    joinFiberRef(Services, forked, fiberRefs)
+    joinFiberRef(Layers, forked, fiberRefs)
 
     return makeEnvFromFiberRefs(forked)
   }
+}
+
+function joinFiberRef<R, E, A>(
+  fiberRef: FiberRef<R, E, A>,
+  first: FiberRefs.FiberRefs,
+  second: FiberRefs.FiberRefs,
+) {
+  return pipe(
+    first,
+    FiberRefs.maybeGetFiberRefValue(fiberRef),
+    Maybe.match(
+      () =>
+        pipe(
+          second,
+          FiberRefs.maybeGetFiberRefValue(fiberRef),
+          Maybe.match(
+            () => null,
+            (b) => FiberRefs.setFiberRef(fiberRef, b)(first),
+          ),
+        ),
+      (a) =>
+        pipe(
+          second,
+          FiberRefs.maybeGetFiberRefValue(fiberRef),
+          Maybe.match(
+            () => null,
+            (b) => FiberRefs.setFiberRef(fiberRef, fiberRef.join(a, b))(first),
+          ),
+        ),
+    ),
+  )
 }

@@ -3,15 +3,22 @@ import { pipe } from 'hkt-ts'
 import { Stream } from './Stream.js'
 import { now } from './fromFx.js'
 
-import { Env } from '@/Env/Env.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { FiberId } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
-import { Sink, addTrace } from '@/Sink/Sink.js'
+import * as Sink from '@/Sink/index.js'
 
 export function continueWith<R2, E2, B>(f: () => Stream<R2, E2, B>, __trace?: string) {
   return <R, E, A>(stream: Stream<R, E, A>): Stream<R | R2, E | E2, A | B> =>
-    new ContinueWith(stream, f, __trace)
+    Stream((sink) =>
+      stream.fork(
+        pipe(
+          sink,
+          Sink.onEnd(
+            Fx.lazy(() => f().fork(sink)),
+            __trace,
+          ),
+        ),
+      ),
+    )
 }
 
 export const startWith =
@@ -21,33 +28,3 @@ export const startWith =
       now(value),
       continueWith(() => stream, __trace),
     )
-
-export class ContinueWith<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A | B> {
-  constructor(
-    readonly stream: Stream<R, E, A>,
-    readonly f: () => Stream<R2, E2, B>,
-    readonly __trace?: string,
-  ) {}
-
-  fork = <E3>(sink: Sink<E | E2, A | B, E3>, context: FiberContext<FiberId.Live>) => {
-    return Fx.access((env: Env<R | R2>) =>
-      this.stream.fork(
-        addTrace(new ContinueWithSink(sink, context, env, this.f), this.__trace),
-        context,
-      ),
-    )
-  }
-}
-
-export class ContinueWithSink<R, E, A, R2, E2, B, E3> implements Sink<E | E2, A | B, E3> {
-  constructor(
-    readonly sink: Sink<E | E2, A | B, E3>,
-    readonly context: FiberContext<FiberId.Live>,
-    readonly env: Env<R | R2>,
-    readonly f: () => Stream<R2, E2, B>,
-  ) {}
-
-  event = this.sink.event
-  error = this.sink.error
-  end = Fx.lazy(() => pipe(this.f().fork(this.sink, this.context.fork()), Fx.provide(this.env)))
-}

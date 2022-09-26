@@ -4,14 +4,12 @@ import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export function skipAfter<A>(p: (a: A) => boolean, __trace?: string) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, A> => {
-    return Stream((sink, context) =>
-      stream.fork(addTrace(new SkipAfterSink(sink, p), __trace), context),
-    )
+    return Stream((sink) => stream.fork(addTrace(new SkipAfterSink(sink, p), __trace)))
   }
 }
 
-class SkipAfterSink<E, A, E2> {
-  constructor(readonly sink: Sink<E, A, E2>, readonly p: (a: A) => boolean) {}
+class SkipAfterSink<E, A, R2, E2> {
+  constructor(readonly sink: Sink<E, A, R2, E2>, readonly p: (a: A) => boolean) {}
 
   event(a: A) {
     if (this.p(a)) {

@@ -6,8 +6,6 @@ import { empty } from './empty.js'
 import { AtomicCounter, decrement } from '@/Atomic/AtomicCounter.js'
 import { Fiber } from '@/Fiber/Fiber.js'
 import { both } from '@/Fiber/hkt.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
-import { Live } from '@/FiberId/FiberId.js'
 import * as Fx from '@/Fx/index.js'
 import { Sink, addTrace } from '@/Sink/Sink.js'
 
@@ -36,16 +34,16 @@ export class MergeStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A
     readonly __trace?: string,
   ) {}
 
-  fork = <E3>(sink: Sink<E | E2, A | B, E3>, context: FiberContext<Live>) => {
+  fork = <R3, E3>(sink: Sink<E | E2, A | B, R3, E3>) => {
     const { first, second, __trace } = this
     const mergeSink = addTrace(
-      new MergeSink<E | E2, A | B, E3>(sink, AtomicCounter(NonNegativeInteger(2))),
+      new MergeSink<E | E2, A | B, R3, E3>(sink, AtomicCounter(NonNegativeInteger(2))),
       __trace,
     )
 
     return Fx.Fx(function* () {
-      const firstFiber: Fiber<E3, any> = yield* first.fork(mergeSink, context)
-      const secondFiber: Fiber<E3, any> = yield* second.fork(mergeSink, context.fork())
+      const firstFiber: Fiber<E3, any> = yield* first.fork(mergeSink)
+      const secondFiber: Fiber<E3, any> = yield* second.fork(mergeSink)
 
       return both(secondFiber)(firstFiber)
     })
@@ -60,8 +58,8 @@ export class MergeStream<R, E, A, R2, E2, B> implements Stream<R | R2, E | E2, A
   }
 }
 
-class MergeSink<E, A, E2> implements Sink<E, A, E2> {
-  constructor(readonly sink: Sink<E, A, E2>, readonly refCount: AtomicCounter) {}
+class MergeSink<E, A, R2, E2> implements Sink<E, A, R2, E2> {
+  constructor(readonly sink: Sink<E, A, R2, E2>, readonly refCount: AtomicCounter) {}
 
   event = this.sink.event
   error = this.sink.error

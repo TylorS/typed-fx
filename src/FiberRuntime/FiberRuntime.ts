@@ -654,13 +654,11 @@ export class FiberRuntime<F extends Fx.AnyFx>
     FiberRefs.setFiberRefLocally(ref, value)(this.context.fiberRefs)
 
     this.pushFrame(
-      ExitFrame((exit) =>
-        Fx.lazy(() => {
-          FiberRefs.popLocalFiberRef(ref)(this.context.fiberRefs)
+      ExitFrame((exit) => {
+        FiberRefs.popLocalFiberRef(ref)(this.context.fiberRefs)
 
-          return Fx.fromExit(exit)
-        }),
-      ),
+        return Fx.fromExit(exit)
+      }),
     )
   }
 

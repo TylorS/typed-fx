@@ -4,27 +4,27 @@ import { NonNegativeInteger } from 'hkt-ts/number'
 import { Stream } from './Stream.js'
 
 import { Env } from '@/Env/Env.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
 import * as Fx from '@/Fx/index.js'
 import * as Schedule from '@/Schedule/Schedule.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Sink } from '@/Sink/Sink.js'
 import { Delay } from '@/Time/index.js'
-import { FiberId } from '@/index.js'
 
 export function scheduled(schedule: Schedule.Schedule, __trace?: string) {
   return <R, E, A>(fx: Fx.Fx<R, E, A>): Stream<R | Scheduler, E, A> =>
-    Stream(<E2>(sink: Sink<E, A, E2>, context: FiberContext<FiberId.Live>) =>
+    Stream(<E2>(sink: Sink<E, A, E2>) =>
       Fx.access(
         (env: Env<R | Scheduler>) =>
           pipe(
             env.get(Scheduler),
-            Fx.map((scheduler) =>
+            Fx.bindTo('scheduler'),
+            Fx.bind('context', () => Fx.getFiberContext),
+            Fx.map(({ scheduler, context }) =>
               scheduler.schedule(
                 Fx.matchCause(sink.error, sink.event, __trace)(fx),
                 env,
                 schedule,
-                context,
+                context.fork(),
                 () => sink.end,
               ),
             ),

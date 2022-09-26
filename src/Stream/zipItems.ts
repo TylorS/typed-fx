@@ -6,7 +6,7 @@ import { Sink } from '@/Sink/Sink.js'
 
 export function zipItems<A, B, C>(f: (a: A, b: B) => C, array: ReadonlyArray<B>) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, C> => {
-    return Stream((sink, context) => stream.fork(new ZipItemSink(sink, f, array), context))
+    return Stream((sink) => stream.fork(new ZipItemSink(sink, f, array)))
   }
 }
 
@@ -15,12 +15,12 @@ export function withItems<B>(array: ReadonlyArray<B>) {
     pipe(stream, zipItems(second, array))
 }
 
-class ZipItemSink<A, B, C, E, E2> {
+class ZipItemSink<A, B, C, E, R2, E2> {
   protected _index = 0
   protected _endIndex = this.array.length - 1
 
   constructor(
-    readonly sink: Sink<E, C, E2>,
+    readonly sink: Sink<E, C, R2, E2>,
     readonly f: (a: A, b: B) => C,
     readonly array: ReadonlyArray<B>,
   ) {}

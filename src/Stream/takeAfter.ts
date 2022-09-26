@@ -5,16 +5,14 @@ import { Sink, addTrace } from '@/Sink/Sink.js'
 
 export function takeAfter<A>(p: (a: A) => boolean, __trace?: string) {
   return <R, E>(stream: Stream<R, E, A>): Stream<R, E, A> => {
-    return Stream((sink, context) =>
-      stream.fork(addTrace(new TakeAfterSink(sink, p), __trace), context),
-    )
+    return Stream((sink) => stream.fork(addTrace(new TakeAfterSink(sink, p), __trace)))
   }
 }
 
-class TakeAfterSink<E, A, E2> {
+class TakeAfterSink<E, A, R2, E2> {
   protected _started = false
 
-  constructor(readonly sink: Sink<E, A, E2>, readonly p: (a: A) => boolean) {}
+  constructor(readonly sink: Sink<E, A, R2, E2>, readonly p: (a: A) => boolean) {}
 
   event(a: A) {
     if (this._started) {

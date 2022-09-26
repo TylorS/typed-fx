@@ -37,7 +37,6 @@ export type Instruction<R, E, A> =
   | ModifyFiberRef<R, E, any, A>
   | Now<A>
   | Provide<any, E, A>
-  | Provide<never, E, A>
   | ProvideLayer<R, E, A, R, E, any>
   | ProvideService<R, E, A, any>
   | SetConcurrencyLevel<R, E, A>
@@ -136,8 +135,8 @@ export class FlatMap<out R, out E, in out A, out R2, out E2, out B> extends Inst
   readonly tag = 'FlatMap'
 
   constructor(
-    readonly fx: Fx<R, E, A>,
-    readonly f: (a: A) => Fx<R2, E2, B>,
+    readonly fx: Fx<any, any, any>,
+    readonly f: (a: A) => Fx<any, any, any>,
     readonly __trace?: string,
   ) {
     super(__trace)
@@ -178,9 +177,9 @@ export class Match<
   readonly tag = 'Match'
 
   constructor(
-    readonly fx: Fx<R, E, A>,
-    readonly onLeft: (cause: Cause<E>) => Fx<R2, E2, B>,
-    readonly onRight: (a: A) => Fx<R3, E3, C>,
+    readonly fx: Fx<any, any, any>,
+    readonly onLeft: (cause: Cause<E>) => Fx<any, any, any>,
+    readonly onRight: (a: A) => Fx<any, any, any>,
     readonly __trace?: string,
   ) {
     super(__trace)
@@ -214,7 +213,7 @@ export class GetEnv<out R, out E, out A> extends Instr<R, E, A> {
 export class Provide<out R, out E, out A> extends Instr<never, E, A> {
   readonly tag = 'Provide'
 
-  constructor(readonly fx: Fx<R, E, A>, readonly env: Env<R>, readonly __trace?: string) {
+  constructor(readonly fx: Fx<any, any, any>, readonly env: Env<R>, readonly __trace?: string) {
     super(__trace)
   }
 
@@ -227,7 +226,7 @@ export class ProvideService<R, E, A, S> extends Instr<Exclude<R, S>, E, A> {
   readonly tag = 'ProvideService'
 
   constructor(
-    readonly fx: Fx<R, E, A>,
+    readonly fx: Fx<any, any, any>,
     readonly service: Service<S>,
     readonly implementation: S,
     readonly __trace?: string,
@@ -253,8 +252,8 @@ export class ProvideLayer<R, E, A, R2, E2, S> extends Instr<Exclude<R | R2, S>, 
   readonly tag = 'ProvideLayer'
 
   constructor(
-    readonly fx: Fx<R, E, A>,
-    readonly layer: Layer<R2, E2, S>,
+    readonly fx: Fx<any, any, any>,
+    readonly layer: Layer<any, any, S>,
     readonly __trace?: string,
   ) {
     super(__trace)
@@ -272,7 +271,7 @@ export class ProvideLayer<R, E, A, R2, E2, S> extends Instr<Exclude<R | R2, S>, 
 export class LazyFx<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'Lazy'
 
-  constructor(readonly f: () => Fx<R, E, A>, readonly __trace?: string) {
+  constructor(readonly f: () => Fx<any, any, any>, readonly __trace?: string) {
     super(__trace)
   }
 

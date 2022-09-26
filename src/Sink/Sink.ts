@@ -2,13 +2,13 @@ import { flow, pipe } from 'hkt-ts'
 import { Left, Right } from 'hkt-ts/Either'
 
 import { Cause } from '@/Cause/Cause.js'
-import { Fx, IO, access, addCustomTrace, flatMap, fromLazy, provide, unit } from '@/Fx/Fx.js'
+import { Fx, access, addCustomTrace, flatMap, fromLazy, provide, unit } from '@/Fx/Fx.js'
 import { Closeable } from '@/Scope/Closeable.js'
 
-export interface Sink<in E, in A, out E2 = never> {
-  readonly event: (a: A) => IO<E2, any>
-  readonly error: (cause: Cause<E>) => IO<E2, any>
-  readonly end: IO<E2, any>
+export interface Sink<in E, in A, out R2 = never, out E2 = never> {
+  readonly event: (a: A) => Fx<R2, E2, any>
+  readonly error: (cause: Cause<E>) => Fx<R2, E2, any>
+  readonly end: Fx<R2, E2, any>
 }
 
 export class Drain<E, A> implements Sink<E, A> {
@@ -46,12 +46,12 @@ export function makeDrain<
 >(
   scope: Closeable,
   fx: SinkFx<E, A, R2, E2, R3, E3, R4, E4>,
-): Fx<R2 | R3 | R4, never, Sink<E, A, E2 | E3 | E4>> {
+): Fx<R2 | R3 | R4, never, Sink<E, A, never, E2 | E3 | E4>> {
   return access((env) =>
     fromLazy(() => {
       const drain = new Drain<E, A>(scope)
 
-      type O = Sink<E, A, E2 | E3 | E4>
+      type O = Sink<E, A, never, E2 | E3 | E4>
 
       const sink: O = {
         event: fx.event ? flow(fx.event, provide(env)) : drain.event,
@@ -60,15 +60,15 @@ export function makeDrain<
               pipe(
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 fx.error!(a as any),
-                provide(env),
                 flatMap(() => drain.error(a)),
+                provide(env),
               )
           : drain.error,
         end: fx.end
           ? pipe(
               fx.end,
-              provide(env),
               flatMap(() => drain.end),
+              provide(env),
             )
           : drain.end,
       }
@@ -78,7 +78,10 @@ export function makeDrain<
   )
 }
 
-export function addTrace<E, A, E2>(sink: Sink<E, A, E2>, trace?: string): Sink<E, A, E2> {
+export function addTrace<E, A, R2, E2>(
+  sink: Sink<E, A, R2, E2>,
+  trace?: string,
+): Sink<E, A, R2, E2> {
   if (trace === undefined) return sink
 
   return {
