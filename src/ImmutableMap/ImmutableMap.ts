@@ -7,7 +7,7 @@ import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 export interface ImmutableMap<K, V> extends Iterable<readonly [K, V]> {
   readonly has: (key: K) => boolean
   readonly get: (key: K) => Maybe<V>
-  readonly set: (key: K, value: V) => ImmutableMap<K, V>
+  readonly set: <K2, V2>(key: K2, value: V2) => ImmutableMap<K | K2, V | V2>
   readonly remove: (key: K) => ImmutableMap<K, V>
   readonly keys: () => Iterable<K>
   readonly values: () => Iterable<V>
@@ -38,8 +38,8 @@ class ImmutableMapImpl<K, V> implements ImmutableMap<K, V> {
   /**
    * Sets the value of the key, returning a new ImmutableMap with the new value.
    */
-  readonly set = (key: K, value: V): ImmutableMap<K, V> =>
-    ImmutableMap(new Map([...this.cache, [key, value]]))
+  readonly set = <K2, V2>(key: K2, value: V2): ImmutableMap<K | K2, V | V2> =>
+    ImmutableMap(new Map<K | K2, V | V2>([...this.cache, [key, value]]))
 
   /**
    * Removes the key from the map, returning a new ImmutableMap with the key removed.

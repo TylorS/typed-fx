@@ -83,7 +83,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   constructor(readonly fx: F, readonly context: FiberContext<FiberId.Live> = FiberContext()) {
     // All Fibers start Suspended
-    this._status = Suspended(this.getInterruptStatus)
+    this._status = Suspended
 
     // The last thing every Fiber should do is wait for its Scope to close
     this._frames.push(ExitFrame(flow(closeOrWait(context.scope), Fx.flatMap(Fx.fromExit))))
@@ -449,7 +449,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
               return fiber as Fiber.Live<never, any>
             },
             Maybe.Nothing,
-          ]),
+          ]) as any,
         ),
       )
     })
@@ -590,14 +590,14 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected running() {
     if (this._status.tag === 'Suspended') {
-      this._status = Running(this.getInterruptStatus)
+      this._status = Running
       this.withSupervisor((s) => s.onRunning(this))
     }
   }
 
   protected suspended() {
     if (this._status.tag === 'Running') {
-      this._status = Suspended(this.getInterruptStatus)
+      this._status = Suspended
       this.withSupervisor((s) => s.onSuspended(this))
     }
   }

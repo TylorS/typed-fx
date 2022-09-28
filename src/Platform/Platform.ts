@@ -17,7 +17,7 @@ export interface Platform {
 
 export function Platform(
   sequenceNumber: AtomicCounter = AtomicCounter(),
-  maxOpCount: NonNegativeInteger = NonNegativeInteger(500),
+  maxOpCount: NonNegativeInteger = NonNegativeInteger(8096),
   maxTraceCount: NonNegativeInteger = NonNegativeInteger(50),
   timer: Timer.Timer = SetTimeoutTimer(),
   renderer: Renderer<any> = defaultRenderer,

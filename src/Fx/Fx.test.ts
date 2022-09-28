@@ -14,7 +14,7 @@ import { Id } from '@/Service/Id.js'
 import { Delay } from '@/Time/index.js'
 import { Exit, sleep } from '@/index.js'
 
-describe(new URL(import.meta.url).pathname, () => {
+describe.only(new URL(import.meta.url).pathname, () => {
   describe(Fx.Fx.name, () => {
     describe('Sync', () => {
       it('allows running sync effects', async () => {
@@ -123,7 +123,7 @@ describe(new URL(import.meta.url).pathname, () => {
     deepStrictEqual(await runMain(test), value * 2)
   })
 
-  it('runs Fib', async () => {
+  it.only('runs Fib', async () => {
     const fib = (n: number): Fx.Of<number> => {
       if (n < 2) {
         return Fx.now(n)

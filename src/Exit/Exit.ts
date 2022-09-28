@@ -1,6 +1,8 @@
 import { pipe } from 'hkt-ts'
+import { makeAssociative } from 'hkt-ts/Array'
 import * as Either from 'hkt-ts/Either'
 import { Associative } from 'hkt-ts/Typeclass'
+import { First } from 'hkt-ts/Typeclass/Associative'
 import { Eq } from 'hkt-ts/Typeclass/Eq'
 import { Identity } from 'hkt-ts/Typeclass/Identity'
 
@@ -48,3 +50,14 @@ export const makeSequentialBottom = <E>() => Either.makeBottom(Cause.makeSequent
 
 export const makeEq = <E, A>(E: Eq<E>, A: Eq<A>): Eq<Exit<E, A>> =>
   Either.makeEq(Cause.makeEq(E), A)
+
+const concatPar = makeParallelAssociative<any, any>(makeAssociative<any>()).concat
+const concatSeq = makeSequentialAssociative<any, any>(First).concat
+
+export const both = <E, A, E2, B>(
+  exit: Exit<E, A>,
+  other: Exit<E2, B>,
+): Exit<E | E2, readonly [A, B]> => concatPar(Either.tupled(exit), Either.tupled(other))
+
+export const then = <E, A, E2>(exit: Exit<E, A>, other: Exit<E2, A>): Exit<E | E2, A> =>
+  concatSeq(exit, other)
