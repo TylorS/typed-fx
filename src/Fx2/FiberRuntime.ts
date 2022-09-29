@@ -11,7 +11,8 @@ import { Fx } from './Fx.js'
 import * as Instr from './Instruction.js'
 import { InterruptManager } from './InterruptManager.js'
 import { Observer, Observers } from './Observers.js'
-import { fromCause, fromExit, lazy, now } from './constructors.js'
+import { Closeable, LocalScope, closeOrWait } from './Scope.js'
+import { fromCause, fromExit, fromLazy, lazy, now } from './constructors.js'
 import { ensuring, flatMap, map, wait } from './control-flow.js'
 import { interruptAllAs } from './interrupts.js'
 import { getFiberRefs } from './intrinsics.js'
@@ -44,6 +45,8 @@ export function FiberRuntimeOptions(
   }
 }
 
+// TODO: Allow scope closes *before* Fiber exit to interrupt the Fiber
+
 export class FiberRuntime<R, E, A> implements Fiber<E, A> {
   protected _status: FiberStatus.FiberStatus = FiberStatus.Suspended
   protected _currentEnv: Stack<Env<any>> | null = null
@@ -59,9 +62,26 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
     readonly env: Env<R>,
     readonly platform: Platform = Platform(),
     readonly fiberRefs: FiberRefs = FiberRefs(),
+    readonly scope: Closeable = new LocalScope(),
     readonly options: FiberRuntimeOptions = FiberRuntimeOptions(),
   ) {
-    this._frameManager.setInstr(fx)
+    // Ensure that if the Scope closes early, we exit the Fiber
+    // Conversely, ensure that the Scope is closed after the Fx finishing running.
+    this._frameManager.setInstr(
+      pipe(
+        scope.ensuring((exit) =>
+          fromLazy(() => {
+            this._frameManager.setInstr(fromExit(exit))
+
+            if (this._status === FiberStatus.Suspended) {
+              this.setTimer(() => this.start())
+            }
+          }),
+        ),
+        flatMap((finalizer) => pipe(fx, ensuring(finalizer))),
+        ensuring(closeOrWait(scope)),
+      ),
+    )
   }
 
   public start() {
@@ -197,6 +217,10 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
     this._frameManager.continueWith(this._currentEnv?.value ?? this.env)
   }
 
+  protected GetScope() {
+    return this._frameManager.continueWith(this.scope)
+  }
+
   protected ProvideEnv(instr: Instr.ProvideEnv<any, any, any>) {
     const currentEnv = (this._currentEnv =
       this._currentEnv?.push(instr.env) ?? new Stack(instr.env))
@@ -257,52 +281,92 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
   }
 
   protected Fork(instr: Instr.Fork<any, any, any>) {
-    const child = new FiberRuntime(
-      instr.fx,
-      this._currentEnv?.value ?? this.env,
-      this.platform.fork(),
-      this.fiberRefs.fork(),
+    this._frameManager.setInstr(
+      pipe(
+        this.scope.fork,
+        flatMap((scope) =>
+          fromLazy(() => {
+            const child = new FiberRuntime(
+              instr.fx,
+              this._currentEnv?.value ?? this.env,
+              this.platform.fork(),
+              this.fiberRefs.fork(),
+              scope,
+            )
+
+            this._children.push(child)
+
+            child.addDisposable(() =>
+              Disposable(() => {
+                const index = this._children.indexOf(child)
+                if (index !== -1) {
+                  this._children.splice(index, 1)
+                }
+              }),
+            )
+
+            // Always start fibers asynchronously
+            this.setTimer(() => child.start())
+
+            return child
+          }),
+        ),
+      ),
     )
-
-    this._children.push(child)
-
-    child.addDisposable(() =>
-      Disposable(() => {
-        const index = this._children.indexOf(child)
-        if (index !== -1) {
-          this._children.splice(index, 1)
-        }
-      }),
-    )
-
-    // Always start fibers asynchronously
-    this.setTimer(() => child.start())
-
-    this._frameManager.continueWith(child)
   }
 
   protected BothFx(instr: Instr.BothFx<any, any, any, any, any, any>) {
     const env = this._currentEnv?.value ?? this.env
     const platform = this.platform.fork()
-    const left = new FiberRuntime(instr.left, env, platform, this.fiberRefs)
-    const right = new FiberRuntime(instr.right, env, platform, this.fiberRefs)
 
-    this._frameManager.setInstr(bothFuture(left, right))
+    this._frameManager.setInstr(
+      pipe(
+        this.scope.fork,
+        flatMap((s1) =>
+          pipe(
+            this.scope.fork,
+            flatMap((s2) =>
+              fromLazy(() => {
+                const left = new FiberRuntime(instr.left, env, platform, this.fiberRefs, s1)
+                const right = new FiberRuntime(instr.right, env, platform, this.fiberRefs, s2)
 
-    left.start()
-    right.start()
+                left.start()
+                right.start()
+
+                return bothFuture(left, right)
+              }),
+            ),
+          ),
+        ),
+      ),
+    )
   }
 
   protected EitherFx(instr: Instr.EitherFx<any, any, any, any, any, any>) {
     const env = this._currentEnv?.value ?? this.env
     const platform = this.platform.fork()
-    const left = new FiberRuntime(instr.left, env, platform, this.fiberRefs)
-    const right = new FiberRuntime(instr.right, env, platform, this.fiberRefs)
 
-    this._frameManager.setInstr(eitherFuture(left, right))
+    this._frameManager.setInstr(
+      pipe(
+        this.scope.fork,
+        flatMap((s1) =>
+          pipe(
+            this.scope.fork,
+            flatMap((s2) =>
+              fromLazy(() => {
+                const left = new FiberRuntime(instr.left, env, platform, this.fiberRefs, s1)
+                const right = new FiberRuntime(instr.right, env, platform, this.fiberRefs, s2)
 
-    left.start()
-    right.start()
+                left.start()
+                right.start()
+
+                return eitherFuture(left, right)
+              }),
+            ),
+          ),
+        ),
+      ),
+    )
   }
 
   protected running() {

@@ -21,21 +21,22 @@ import type { Platform } from '@/Platform/Platform.js'
 // TODO: Tracing
 
 export type Instruction =
-  | Now<any>
+  | BothFx<any, any, any, any, any, any>
+  | ControlFrame<any, any, any, any, any, any>
+  | EitherFx<any, any, any, any, any, any>
   | Fail<any>
+  | Fork<any, any, any>
   | FromLazy<any>
-  | LazyFx<any, any, any>
+  | GetEnv<any>
   | GetFiberId
   | GetFiberRefs
   | GetPlatform
-  | GetEnv<any>
+  | GetScope
+  | LazyFx<any, any, any>
+  | Now<any>
   | ProvideEnv<any, any, any>
-  | ControlFrame<any, any, any, any, any, any>
-  | Wait<any, any, any>
-  | Fork<any, any, any>
-  | BothFx<any, any, any, any, any, any>
-  | EitherFx<any, any, any, any, any, any>
   | SetInterruptStatus<any, any, any>
+  | Wait<any, any, any>
 
 export class Now<A> extends Fx<never, never, A> {
   static tag = 'Now' as const

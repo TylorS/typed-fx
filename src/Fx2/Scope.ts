@@ -1,10 +1,12 @@
 import { Maybe, flow, pipe } from 'hkt-ts'
+import { Left, Right } from 'hkt-ts/Either'
 import { First } from 'hkt-ts/Typeclass/Associative'
 
+import { Pending, complete } from './Future.js'
 import { Fx } from './Fx.js'
-import { fromLazy, lazy, now, unit } from './constructors.js'
-import { attempt, flatMap, map } from './control-flow.js'
-import { gen } from './gen.js'
+import { fromExit, fromLazy, lazy, now, unit } from './constructors.js'
+import { attempt, flatMap, map, wait } from './control-flow.js'
+import { flatRec } from './flatRec.js'
 import { getEnv, getScope, provideEnv, provideService } from './intrinsics.js'
 
 import * as Exit from '@/Exit/index.js'
@@ -16,7 +18,7 @@ const concatExitSeq = makeSequentialAssociative<any, any>(First).concat
 export interface Scope {
   readonly get: Fx.Of<Maybe.Maybe<Exit.Exit<any, any>>>
   readonly ensuring: <R>(f: Finalizer<R, any, any>) => Fx.RIO<R, Finalizer<never, any, any>>
-  readonly fork: Fx.Of<Scope>
+  readonly fork: Fx.Of<Closeable>
 }
 
 export const Scope: Service<Scope> = Service<Scope>('Scope')
@@ -31,7 +33,7 @@ export interface Finalizer<R, E, A> {
 
 export class LocalScope implements Closeable {
   protected _value: Maybe.Maybe<Exit.Exit<any, any>> = Maybe.Nothing
-  protected _refCount = 1
+  protected _refCount = 0
   protected _finalizers: Array<Finalizer<never, any, any>> = []
   protected _closed = false
 
@@ -65,7 +67,12 @@ export class LocalScope implements Closeable {
     flatMap((scope) =>
       pipe(
         fromLazy(() => this._refCount++),
-        flatMap(() => scope.ensuring(() => this.release)),
+        flatMap(() =>
+          scope.ensuring(() => {
+            this._refCount--
+            return this.release
+          }),
+        ),
         map(() => scope),
       ),
     ),
@@ -83,7 +90,7 @@ export class LocalScope implements Closeable {
     })
 
   protected release: Fx.Of<boolean> = lazy(() => {
-    if (--this._refCount > 0 || Maybe.isNothing(this._value)) {
+    if (this._refCount > 0 || Maybe.isNothing(this._value)) {
       return now(false)
     }
 
@@ -93,21 +100,21 @@ export class LocalScope implements Closeable {
 
     const finalizers = this._finalizers
     const exit = this._value.value
-    const finalize = gen(function* () {
-      let finalExit = exit
 
-      while (finalizers.length > 0) {
-        finalExit = yield pipe(
-          finalExit,
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          finalizers.shift()!,
-          attempt,
-          map((e2: Exit.Exit<any, any>) => concatExitSeq(finalExit, e2)),
-        )
-      }
-
-      return finalExit
-    })
+    const finalize = pipe(
+      exit,
+      flatRec((finalExit) =>
+        finalizers.length > 0
+          ? pipe(
+              finalExit,
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              finalizers.shift()!,
+              attempt,
+              map((e2: Exit.Exit<any, any>) => Left(concatExitSeq(finalExit, e2))),
+            )
+          : now(Right(finalExit)),
+      ),
+    )
 
     return pipe(
       finalize,
@@ -129,4 +136,23 @@ export function scoped<R, E, A>(fx: Fx<R | Scope, E, A>): Fx<Exclude<R, Scope>, 
     flatMap((scope) => scope.fork),
     flatMap((forked) => pipe(fx, provideService(Scope, forked))),
   )
+}
+
+export function waitForClose(scope: Closeable) {
+  return lazy(() => {
+    const future = Pending<never, never, Exit.Exit<any, any>>()
+
+    return pipe(
+      scope.ensuring((exit) => fromLazy(() => complete(future)(now(exit)))),
+      flatMap(() => wait(future)),
+    )
+  })
+}
+
+export function closeOrWait(scope: Closeable) {
+  return (exit: Exit.Exit<any, any>) =>
+    pipe(
+      scope.close(exit),
+      flatMap((closed) => (closed ? fromExit(exit) : waitForClose(scope))),
+    )
 }
