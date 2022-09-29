@@ -14,7 +14,7 @@ export class FrameManager<E, A> {
 
   constructor(
     protected _frames: Instr.Frame<any, any, any, any, any>[],
-    protected onDone: (exit: Exit<E, A>) => void,
+    protected _onDone: (exit: Exit<E, A>) => void,
   ) {}
 
   public pushFrames(...frames: Instr.Frame<any, any, any, any, any>[]) {
@@ -73,7 +73,7 @@ export class FrameManager<E, A> {
 
   private done(exit: Exit<E, A>) {
     this.instr = null
-    this.onDone(exit)
+    this._onDone(exit)
   }
 
   public setInstr<R, E, A>(fx: Fx<R, E, A>) {

@@ -1,6 +1,6 @@
 import { Maybe } from 'hkt-ts'
 import { isRight } from 'hkt-ts/Either'
-import { flow, pipe, second } from 'hkt-ts/function'
+import { constFalse, constTrue, flow, pipe, second } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Fiber } from './Fiber.js'
@@ -12,10 +12,12 @@ import { fromExit, fromLazy, lazy, now } from './constructors.js'
 import { ensuring, flatMap, fork, map, wait } from './control-flow.js'
 import { ask, getFiberRefs } from './intrinsics.js'
 
+import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
 import { Tagged } from '@/Tagged/index.js'
 
 export interface FiberRefs {
-  readonly getAll: Fx.Of<ReadonlyMap<FiberRef<any, any, any>, any>>
+  readonly getAll: Fx.Of<ImmutableMap<FiberRef<any, any, any>, any>>
+  readonly has: <R, E, A>(ref: FiberRef<R, E, A>) => Fx.Of<boolean>
   readonly get: <R, E, A>(ref: FiberRef<R, E, A>) => Fx<R, E, A>
   readonly modify: <R, E, A, R2, E2, B>(
     ref: FiberRef<R, E, A>,
@@ -31,6 +33,8 @@ export interface FiberRef<R, E, A> {
   readonly initial: Fx<R, E, A>
   readonly fork: (a: A) => Maybe.Maybe<A>
   readonly join: (a: A, b: A) => A
+
+  readonly [Symbol.iterator]: () => Generator<Fx<R, E, A>, A, A>
 }
 
 export type FiberRefId = Tagged<'FiberRefId', unknown>
@@ -48,27 +52,23 @@ export function FiberRef<R, E, A>(
   initial: Fx<R, E, A>,
   params?: Partial<Omit<FiberRef<R, E, A>, 'initial'>> & { readonly name?: string },
 ): FiberRef<R, E, A> {
-  return {
+  const ref: FiberRef<R, E, A> = {
     initial,
     id: params?.id ?? FiberRefId(Symbol(params?.name)),
     fork: params?.fork ?? Maybe.Just,
     join: params?.join ?? second,
+    *[Symbol.iterator]() {
+      return yield get(ref)
+    },
   }
+
+  return ref
 }
 
 const one = NonNegativeInteger(1)
 
 export function FiberRefs(locals: FiberRefLocals = FiberRefLocals()): FiberRefs {
-  const getRef = (ref: FiberRef<any, any, any>) => locals.idsToValues.get().get(ref.id)
-  const setRef = (ref: FiberRef<any, any, any>, value: any) => {
-    locals.idsToRefs.set(locals.idsToRefs.get().set(ref.id, ref))
-    locals.idsToValues.set(locals.idsToValues.get().set(ref.id, value))
-  }
-  const deleteRef = (ref: FiberRef<any, any, any>) => {
-    locals.idsToRefs.set(locals.idsToRefs.get().remove(ref.id))
-    locals.idsToValues.set(locals.idsToValues.get().remove(ref.id))
-  }
-
+  const initializing = new Map<FiberRef<any, any, any>, Fiber<any, any>>()
   const semaphoreMap = new Map<FiberRefId, Semaphore<any, any, any>>()
   const getSemaphore = <R, E, A>(ref: FiberRef<R, E, A>) => {
     if (!semaphoreMap.has(ref.id)) {
@@ -78,7 +78,16 @@ export function FiberRefs(locals: FiberRefLocals = FiberRefLocals()): FiberRefs 
     return semaphoreMap.get(ref.id) as Semaphore<R, E, A>
   }
 
-  const initializing = new Map<FiberRef<any, any, any>, Fiber<any, any>>()
+  const getRef = (ref: FiberRef<any, any, any>) => locals.values.get().get(ref.id)
+  const setRef = (ref: FiberRef<any, any, any>, value: any) => {
+    locals.refs.set(locals.refs.get().set(ref.id, ref))
+    locals.values.set(locals.values.get().set(ref.id, value))
+  }
+  const deleteRef = (ref: FiberRef<any, any, any>) => {
+    locals.refs.set(locals.refs.get().remove(ref.id))
+    locals.values.set(locals.values.get().remove(ref.id))
+    semaphoreMap.delete(ref.id)
+  }
 
   const modify = <R, E, A, R2, E2, B>(
     ref: FiberRef<R, E, A>,
@@ -133,8 +142,12 @@ export function FiberRefs(locals: FiberRefLocals = FiberRefLocals()): FiberRefs 
       ),
     )
 
+  const has: FiberRefs['has'] = (ref) =>
+    fromLazy(() => pipe(ref, getRef, Maybe.match(constFalse, constTrue)))
+
   const refs: FiberRefs = {
     getAll: fromLazy(locals.getAll),
+    has,
     get,
     modify,
     delete: (ref) =>
@@ -159,7 +172,7 @@ export function FiberRefs(locals: FiberRefLocals = FiberRefLocals()): FiberRefs 
         }
       }
 
-      return FiberRefs(FiberRefLocals(updated))
+      return FiberRefs(FiberRefLocals(ImmutableMap(updated), locals.initializing.get()))
     },
     inherit: (second) =>
       pipe(
@@ -335,6 +348,23 @@ export function setFiberRefLocally<R2, E2, B>(ref: FiberRef<R2, E2, B>, value: B
     )
 }
 
+export function updateFiberRefLocally<R2, E2, B, R3, E3>(
+  ref: FiberRef<R2, E2, B>,
+  f: (a: B) => Fx<R3, E3, B>,
+) {
+  return <R, E, A>(fx: Fx<R, E, A>): Fx<R | R2 | R3, E | E2 | E3, A> =>
+    pipe(
+      ref,
+      getAndUpdate(f),
+      flatMap((current: B) =>
+        pipe(
+          fx,
+          ensuring(() => set(current)(ref)),
+        ),
+      ),
+    )
+}
+
 export const forkRefs = pipe(
   getFiberRefs,
   map((refs) => refs.fork()),
@@ -345,8 +375,3 @@ export const inheritRefs = (second: FiberRefs) =>
     getFiberRefs,
     flatMap((refs) => refs.inherit(second)),
   )
-
-export const makeSemaphore =
-  (maxPermits: NonNegativeInteger) =>
-  <R, E, A>(ref: FiberRef<R, E, A>): Fx.Of<Semaphore<R, E, A>> =>
-    fromLazy(() => Semaphore(ref, maxPermits))

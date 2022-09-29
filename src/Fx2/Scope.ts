@@ -2,8 +2,9 @@ import { Maybe, flow, pipe } from 'hkt-ts'
 import { First } from 'hkt-ts/Typeclass/Associative'
 
 import { Fx } from './Fx.js'
-import { fromLazy, lazy, now } from './constructors.js'
-import { flatMap, map } from './control-flow.js'
+import { fromLazy, lazy, now, unit } from './constructors.js'
+import { attempt, flatMap, map } from './control-flow.js'
+import { gen } from './gen.js'
 import { getEnv, getScope, provideEnv, provideService } from './intrinsics.js'
 
 import * as Exit from '@/Exit/index.js'
@@ -32,26 +33,32 @@ export class LocalScope implements Closeable {
   protected _value: Maybe.Maybe<Exit.Exit<any, any>> = Maybe.Nothing
   protected _refCount = 1
   protected _finalizers: Array<Finalizer<never, any, any>> = []
+  protected _closed = false
 
   readonly get: Closeable['get'] = fromLazy(() => this._value)
 
   readonly ensuring: Closeable['ensuring'] = <R>(f: Finalizer<R, any, any>) =>
-    pipe(
-      getEnv<R>(),
-      flatMap((r) =>
-        fromLazy(() => {
-          const finalizer = flow(f, provideEnv(r))
-          this._finalizers.push(finalizer)
+    this._closed && Maybe.isJust(this._value)
+      ? pipe(
+          f(this._value.value),
+          map(() => () => unit),
+        )
+      : pipe(
+          getEnv<R>(),
+          flatMap((r) =>
+            fromLazy(() => {
+              const finalizer = flow(f, provideEnv(r))
+              this._finalizers.push(finalizer)
 
-          return (exit) =>
-            lazy(() => {
-              this._finalizers.splice(this._finalizers.indexOf(finalizer), 1)
+              return (exit) =>
+                lazy(() => {
+                  this._finalizers.splice(this._finalizers.indexOf(finalizer), 1)
 
-              return finalizer(exit)
-            })
-        }),
-      ),
-    )
+                  return finalizer(exit)
+                })
+            }),
+          ),
+        )
 
   readonly fork: Closeable['fork'] = pipe(
     fromLazy(() => new LocalScope()),
@@ -59,8 +66,6 @@ export class LocalScope implements Closeable {
       pipe(
         fromLazy(() => this._refCount++),
         flatMap(() => scope.ensuring(() => this.release)),
-        flatMap((finalizer) => this.ensuring(finalizer)),
-        flatMap((finalizer) => scope.ensuring(finalizer)),
         map(() => scope),
       ),
     ),
@@ -86,23 +91,28 @@ export class LocalScope implements Closeable {
       return now(true)
     }
 
+    const finalizers = this._finalizers
     const exit = this._value.value
+    const finalize = gen(function* () {
+      let finalExit = exit
 
-    const fx = pipe(
-      this._finalizers.reduce(
-        (fx, f) =>
-          pipe(
-            fx,
-            flatMap(() => f(exit)),
-          ),
-        now(null),
-      ),
-      map(() => true),
+      while (finalizers.length > 0) {
+        finalExit = yield pipe(
+          finalExit,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          finalizers.shift()!,
+          attempt,
+          map((e2: Exit.Exit<any, any>) => concatExitSeq(finalExit, e2)),
+        )
+      }
+
+      return finalExit
+    })
+
+    return pipe(
+      finalize,
+      map(() => (this._closed = true)),
     )
-
-    this._finalizers = []
-
-    return fx
   })
 }
 

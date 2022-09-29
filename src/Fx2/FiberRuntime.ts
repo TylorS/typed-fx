@@ -106,11 +106,15 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
       }
 
       return pipe(
-        getFiberRefs,
-        flatMap((refs) => refs.inherit(this.fiberRefs)),
+        this.inheritRefs,
         map(() => exit.right),
       )
     }),
+  )
+
+  readonly inheritRefs = pipe(
+    getFiberRefs,
+    flatMap((refs) => refs.inherit(this.fiberRefs)),
   )
 
   readonly interruptAs: (id: FiberId.FiberId) => Fx.Of<boolean> = (id) =>
