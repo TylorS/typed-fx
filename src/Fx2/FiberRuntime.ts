@@ -318,6 +318,7 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
   }
 
   protected done(exit: Exit.Exit<E, A>) {
+    this._frameManager.instr = null
     this._status = FiberStatus.Done(exit)
     this._disposable?.dispose()
     this._observers.notify(exit)
