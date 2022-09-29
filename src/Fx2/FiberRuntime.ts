@@ -288,6 +288,9 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
     const right = new FiberRuntime(instr.right, env, platform, this.fiberRefs)
 
     this._frameManager.setInstr(bothFuture(left, right))
+
+    left.start()
+    right.start()
   }
 
   protected EitherFx(instr: Instr.EitherFx<any, any, any, any, any, any>) {
@@ -297,6 +300,9 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
     const right = new FiberRuntime(instr.right, env, platform, this.fiberRefs)
 
     this._frameManager.setInstr(eitherFuture(left, right))
+
+    left.start()
+    right.start()
   }
 
   protected running() {
