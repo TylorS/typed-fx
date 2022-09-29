@@ -3,6 +3,7 @@ import { pipe } from 'hkt-ts'
 import { Env } from './Env.js'
 import { Fx } from './Fx.js'
 import { flatMap, uninterruptable } from './control-flow.js'
+import { tuple } from './hkt.js'
 import { getEnv, provideEnv } from './intrinsics.js'
 
 export interface Layer<R, E, S> extends Fx.Scoped<R, E, Env<S>> {}
@@ -30,23 +31,26 @@ export function provideLayer<R, E, S>(layer: Layer<R, E, S>) {
   }
 }
 
-export function provideLayers<Layers extends readonly Layer<any, any, any>[]>(
-  ...layers: Layers
-): <R, E, A>(
-  fx: Fx<R | Layer.OutputOf<Layers[number]>, E, A>,
-) => Fx.Scoped<
-  Exclude<R | Layer.ResourcesOf<Layers[number]>>,
-  E | Layer.ErrorsOf<Layers[number]>,
-  A
-> {
-  return pipe(
-    zipAll(layers),
-    uninterruptable,
-    flatMap((otherEnv) =>
-      pipe(
-        getEnv<R | R2>(),
-        flatMap((env) => pipe(fx, provideEnv(env.join(otherEnv)))),
+export function provideLayers<Layers extends readonly Layer<any, any, any>[]>(...layers: Layers) {
+  return <R, E, A>(
+    fx: Fx<R | Layer.OutputOf<Layers[number]>, E, A>,
+  ): Fx.Scoped<
+    Exclude<R | Layer.ResourcesOf<Layers[number]>, A>,
+    E | Layer.ErrorsOf<Layers[number]>,
+    A
+  > =>
+    pipe(
+      tuple(...layers),
+      uninterruptable,
+      flatMap((otherEnvs) =>
+        pipe(
+          getEnv<R | Layer.ResourcesOf<Layers[number]>>(),
+          flatMap((env) => pipe(fx, provideEnv(otherEnvs.reduce((a, b) => a.join(b), env)))),
+        ),
       ),
-    ),
-  )
+    ) as Fx.Scoped<
+      Exclude<R | Layer.ResourcesOf<Layers[number]>, A>,
+      E | Layer.ErrorsOf<Layers[number]>,
+      A
+    >
 }

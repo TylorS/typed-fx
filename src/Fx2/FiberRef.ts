@@ -1,6 +1,6 @@
 import { Maybe } from 'hkt-ts'
 import { isRight } from 'hkt-ts/Either'
-import { pipe, second } from 'hkt-ts/function'
+import { flow, pipe, second } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Fiber } from './Fiber.js'
@@ -260,11 +260,55 @@ export function modify<A, R2, E2, B>(
     )
 }
 
+export function set<A>(value: A) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  return modify((_: A) => now([value, value]))
+}
+
+export function getAndSet<A>(value: A) {
+  return modify((_: A) => now([_, value]))
+}
+
+export function update<A, R2, E2>(f: (a: A) => Fx<R2, E2, A>) {
+  return modify(
+    flow(
+      f,
+      map((a) => [a, a]),
+    ),
+  )
+}
+
+export function getAndUpdate<A, R2, E2>(f: (a: A) => Fx<R2, E2, A>) {
+  return modify((_: A) =>
+    pipe(
+      _,
+      f,
+      map((a) => [_, a]),
+    ),
+  )
+}
+
 export function remove<R, E, A>(ref: FiberRef<R, E, A>): Fx<R, E, Maybe.Maybe<A>> {
   return pipe(
     getFiberRefs,
     flatMap((fiberRefs) => fiberRefs.delete(ref)),
   )
+}
+
+export { remove as delete }
+
+export function setFiberRefLocally<R2, E2, B>(ref: FiberRef<R2, E2, B>, value: B) {
+  return <R, E, A>(fx: Fx<R, E, A>) =>
+    pipe(
+      ref,
+      getAndSet(value),
+      flatMap((current: B) =>
+        pipe(
+          fx,
+          ensuring(() => set(current)(ref)),
+        ),
+      ),
+    )
 }
 
 export const forkRefs = pipe(

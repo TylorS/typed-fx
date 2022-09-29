@@ -21,10 +21,7 @@ export function Environment<R = never>(
     get: <S extends R>(service: Service<S>) =>
       fromLazy(() => pipe(services.get(service) as Maybe.Maybe<S>, Maybe.getOrElse<S>(absurd))),
     add: <S>(service: Service<S>, impl: S) => Environment<R | S>(services.set(service, impl)),
-    join: <S>(other: Env<S>) =>
-      Environment<R | S>(
-        (services as ImmutableMap<Service<any>, R | S>).joinWith(other.services, second),
-      ),
+    join: <S>(other: Env<S>) => Environment<R | S>(services.joinWith(other.services, second)),
   }
 }
 

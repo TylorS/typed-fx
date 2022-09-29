@@ -1,4 +1,5 @@
 import { Maybe, flow, pipe } from 'hkt-ts'
+import { First } from 'hkt-ts/Typeclass/Associative'
 
 import { Fx } from './Fx.js'
 import { fromLazy, lazy, now } from './constructors.js'
@@ -6,7 +7,10 @@ import { flatMap, map } from './control-flow.js'
 import { getEnv, getScope, provideEnv, provideService } from './intrinsics.js'
 
 import * as Exit from '@/Exit/index.js'
+import { makeSequentialAssociative } from '@/Exit/index.js'
 import { Service } from '@/Service/Service.js'
+
+const concatExitSeq = makeSequentialAssociative<any, any>(First).concat
 
 export interface Scope {
   readonly get: Fx.Of<Maybe.Maybe<Exit.Exit<any, any>>>
@@ -64,9 +68,10 @@ export class LocalScope implements Closeable {
 
   readonly close: Closeable['close'] = (a) =>
     lazy(() => {
-      // TODO: Should we be able to merge these values if they exist?
       if (Maybe.isNothing(this._value)) {
         this._value = Maybe.Just(a)
+      } else {
+        this._value = Maybe.Just(concatExitSeq(this._value.value, a))
       }
 
       return this.release

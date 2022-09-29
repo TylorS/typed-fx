@@ -4,7 +4,7 @@ import { Covariant3 } from 'hkt-ts/Typeclass/Covariant'
 import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import { Top3 } from 'hkt-ts/Typeclass/Top'
 
-import { Fx } from './Fx.js'
+import { ErrorsOf, Fx, OutputOf, ResourcesOf } from './Fx.js'
 import { now } from './constructors.js'
 import { both, map } from './control-flow.js'
 
@@ -29,5 +29,15 @@ export const IdentityBoth: IB.IdentityBoth3<FxHKT> = {
   ...Top,
 }
 
-export const tuple = IB.tuple<FxHKT>({ ...IdentityBoth, ...Covariant })
+export const tuple = IB.tuple<FxHKT>({ ...IdentityBoth, ...Covariant }) as <
+  FX extends ReadonlyArray<Fx<any, any, any>>,
+>(
+  ...fxs: FX
+) => Fx<
+  ResourcesOf<FX[number]>,
+  ErrorsOf<FX[number]>,
+  {
+    readonly [K in keyof FX]: OutputOf<FX[K]>
+  }
+>
 export const struct = IB.struct<FxHKT>({ ...IdentityBoth, ...Covariant })

@@ -11,7 +11,10 @@ export interface ImmutableMap<K, V> extends Iterable<readonly [K, V]> {
   readonly remove: (key: K) => ImmutableMap<K, V>
   readonly keys: () => Iterable<K>
   readonly values: () => Iterable<V>
-  readonly joinWith: (other: ImmutableMap<K, V>, join: (v: V, v2: V) => V) => ImmutableMap<K, V>
+  readonly joinWith: <K2, V2>(
+    other: ImmutableMap<K2, V2>,
+    join: (v: V, v2: V2) => V | V2,
+  ) => ImmutableMap<K | K2, V | V2>
 }
 
 export function ImmutableMap<K, V>(cache: ReadonlyMap<K, V> = new Map()): ImmutableMap<K, V> {
@@ -47,11 +50,11 @@ class ImmutableMapImpl<K, V> implements ImmutableMap<K, V> {
   readonly remove = (key: K): ImmutableMap<K, V> =>
     ImmutableMap(new Map([...this.cache].filter(([k]) => k !== key)))
 
-  readonly joinWith = (
-    incoming: ImmutableMap<K, V>,
-    join: (v: V, v2: V) => V,
-  ): ImmutableMap<K, V> => {
-    const outgoing = new Map(this.cache)
+  readonly joinWith = <K2, V2>(
+    incoming: ImmutableMap<K2, V2>,
+    join: (v: V, v2: V2) => V | V2,
+  ): ImmutableMap<K | K2, V | V2> => {
+    const outgoing = new Map<K | K2, V | V2>(this.cache)
 
     Array.from(incoming).forEach(([key, value]) => {
       if (outgoing.has(key)) {
