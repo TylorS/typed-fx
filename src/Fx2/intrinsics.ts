@@ -27,12 +27,20 @@ export const provideEnv =
   <E, A>(fx: Fx<R, E, A>): Fx<never, E, A> =>
     new ProvideEnv(fx, env)
 
+export const provide =
+  <R2>(env: Env<R2>) =>
+  <R, E, A>(fx: Fx<R | R2, E, A>): Fx<Exclude<R, R2>, E, A> =>
+    pipe(
+      getEnv<Exclude<R, R2>>(),
+      flatMap((current) => provideEnv((current as Env<R>).join(env))(fx)),
+    )
+
 export const provideService =
   <S>(service: Service<S>, impl: S) =>
   <R, E, A>(fx: Fx<R | S, E, A>): Fx<Exclude<R, S>, E, A> =>
     pipe(
       getEnv<Exclude<R, S>>(),
-      flatMap((env) => provideEnv((env as any as Env<R>).add(service, impl))(fx)),
+      flatMap((env) => provideEnv((env as Env<R>).add(service, impl))(fx)),
     )
 
 export const getScope: Fx.Of<Scope> = new GetScope()

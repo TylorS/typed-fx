@@ -31,7 +31,7 @@ export type Tag<T> = { readonly [TAG]: () => T }
 /**
  * @category Type-level
  */
-export type TagOf<A> = [A] extends [Tagged<infer Brand, infer _>] ? Brand : unknown
+export type TagOf<A> = [A] extends [Tagged<infer Brand, infer _>] ? Brand : never
 
 /**
  * @category Type-level
@@ -46,7 +46,7 @@ export type Tagged<T, Type> = Type & Tag<T>
 /**
  * @category Type-level
  */
-export type Combine<T, U> = ValueOf<T> & ValueOf<U> & Tag<TagOf<T> & TagOf<U>>
+export type Combine<T, U> = (ValueOf<T> | ValueOf<U>) & Tag<TagOf<T> | TagOf<U>>
 
 /**
  * @category Constructor

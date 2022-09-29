@@ -12,7 +12,7 @@ import * as Instr from './Instruction.js'
 import { InterruptManager } from './InterruptManager.js'
 import { Observer, Observers } from './Observers.js'
 import { fromCause, fromExit, lazy, now } from './constructors.js'
-import { flatMap, map, wait } from './control-flow.js'
+import { ensuring, flatMap, map, wait } from './control-flow.js'
 import { interruptAllAs } from './interrupts.js'
 import { getFiberRefs } from './intrinsics.js'
 
@@ -119,7 +119,7 @@ export class FiberRuntime<R, E, A> implements Fiber<E, A> {
         this._frameManager.setInstr(
           pipe(
             interruptAllAs(this._interruptManager.makeFiberId())(...this._children),
-            flatMap(() => fromCause(this._interruptManager.makeCause())),
+            ensuring(() => fromCause(this._interruptManager.makeCause())),
           ),
         )
 

@@ -4,12 +4,15 @@ import { flow, pipe, second } from 'hkt-ts/function'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { Fiber } from './Fiber.js'
+import { FiberRefLocals } from './FiberRefLocals.js'
 import { Pending, complete } from './Future.js'
 import type { Fx } from './Fx.js'
 import { Scope, scoped } from './Scope.js'
 import { fromExit, fromLazy, lazy, now } from './constructors.js'
 import { ensuring, flatMap, fork, map, wait } from './control-flow.js'
 import { ask, getFiberRefs } from './intrinsics.js'
+
+import { Tagged } from '@/Tagged/index.js'
 
 export interface FiberRefs {
   readonly getAll: Fx.Of<ReadonlyMap<FiberRef<any, any, any>, any>>
@@ -24,17 +27,30 @@ export interface FiberRefs {
 }
 
 export interface FiberRef<R, E, A> {
+  readonly id: FiberRefId
   readonly initial: Fx<R, E, A>
   readonly fork: (a: A) => Maybe.Maybe<A>
   readonly join: (a: A, b: A) => A
 }
 
+export type FiberRefId = Tagged<'FiberRefId', unknown>
+export const FiberRefId = Tagged<FiberRefId>()
+
+export namespace FiberRef {
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  export type ResourcesOf<T> = T extends FiberRef<infer R, infer _E, infer _A> ? R : never
+  export type ErrorsOf<T> = T extends FiberRef<infer _R, infer E, infer _A> ? E : never
+  export type OutputOf<T> = T extends FiberRef<infer _R, infer _E, infer A> ? A : never
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+}
+
 export function FiberRef<R, E, A>(
   initial: Fx<R, E, A>,
-  params?: Omit<FiberRef<R, E, A>, 'initial'>,
+  params?: Partial<Omit<FiberRef<R, E, A>, 'initial'>> & { readonly name?: string },
 ): FiberRef<R, E, A> {
   return {
     initial,
+    id: params?.id ?? FiberRefId(Symbol(params?.name)),
     fork: params?.fork ?? Maybe.Just,
     join: params?.join ?? second,
   }
@@ -42,18 +58,24 @@ export function FiberRef<R, E, A>(
 
 const one = NonNegativeInteger(1)
 
-export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Map()): FiberRefs {
-  const getRef = (ref: FiberRef<any, any, any>) => {
-    return references.has(ref) ? Maybe.Just(references.get(ref)) : Maybe.Nothing
+export function FiberRefs(locals: FiberRefLocals = FiberRefLocals()): FiberRefs {
+  const getRef = (ref: FiberRef<any, any, any>) => locals.idsToValues.get().get(ref.id)
+  const setRef = (ref: FiberRef<any, any, any>, value: any) => {
+    locals.idsToRefs.set(locals.idsToRefs.get().set(ref.id, ref))
+    locals.idsToValues.set(locals.idsToValues.get().set(ref.id, value))
+  }
+  const deleteRef = (ref: FiberRef<any, any, any>) => {
+    locals.idsToRefs.set(locals.idsToRefs.get().remove(ref.id))
+    locals.idsToValues.set(locals.idsToValues.get().remove(ref.id))
   }
 
-  const semaphoreMap = new Map<FiberRef<any, any, any>, Semaphore<any, any, any>>()
+  const semaphoreMap = new Map<FiberRefId, Semaphore<any, any, any>>()
   const getSemaphore = <R, E, A>(ref: FiberRef<R, E, A>) => {
-    if (!semaphoreMap.has(ref)) {
-      semaphoreMap.set(ref, Semaphore(ref, one))
+    if (!semaphoreMap.has(ref.id)) {
+      semaphoreMap.set(ref.id, Semaphore(ref, one))
     }
 
-    return semaphoreMap.get(ref) as Semaphore<R, E, A>
+    return semaphoreMap.get(ref.id) as Semaphore<R, E, A>
   }
 
   const initializing = new Map<FiberRef<any, any, any>, Fiber<any, any>>()
@@ -68,7 +90,7 @@ export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Ma
       flatMap(([b, a]) =>
         pipe(
           fromLazy(() => {
-            references.set(ref, a)
+            setRef(ref, a)
             return b
           }),
         ),
@@ -91,7 +113,7 @@ export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Ma
         fromLazy(() => {
           initializing.delete(ref)
           if (isRight(exit)) {
-            references.set(ref, exit.right)
+            setRef(ref, exit.right)
           }
         }),
       ),
@@ -112,7 +134,7 @@ export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Ma
     )
 
   const refs: FiberRefs = {
-    getAll: fromLazy(() => new Map(references)),
+    getAll: fromLazy(locals.getAll),
     get,
     modify,
     delete: (ref) =>
@@ -120,7 +142,7 @@ export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Ma
         fromLazy(() => getRef(ref)),
         flatMap((current) =>
           lazy(() => {
-            references.delete(ref)
+            deleteRef(ref)
 
             return now(current)
           }),
@@ -129,7 +151,7 @@ export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Ma
     fork: () => {
       const updated = new Map()
 
-      for (const [ref, value] of references) {
+      for (const [ref, value] of locals.getAll()) {
         const forked = ref.fork(value)
 
         if (Maybe.isJust(forked)) {
@@ -137,7 +159,7 @@ export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Ma
         }
       }
 
-      return FiberRefs(updated)
+      return FiberRefs(FiberRefLocals(updated))
     },
     inherit: (second) =>
       pipe(
@@ -145,10 +167,12 @@ export function FiberRefs(references: Map<FiberRef<any, any, any>, any> = new Ma
         flatMap((s) =>
           fromLazy(() => {
             for (const [ref, value] of s) {
-              if (references.has(ref)) {
-                references.set(ref, ref.join(references.get(ref), value))
+              const currentValue = getRef(ref)
+
+              if (Maybe.isJust(currentValue)) {
+                setRef(ref, ref.join(currentValue.value, value))
               } else {
-                references.set(ref, value)
+                setRef(ref, value)
               }
             }
           }),

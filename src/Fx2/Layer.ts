@@ -1,33 +1,37 @@
-import { pipe } from 'hkt-ts'
+import { pipe } from 'hkt-ts/function'
 
 import { Env } from './Env.js'
+import { FiberRef, get } from './FiberRef.js'
 import { Fx } from './Fx.js'
+import { now } from './constructors.js'
 import { flatMap, uninterruptable } from './control-flow.js'
 import { tuple } from './hkt.js'
-import { getEnv, provideEnv } from './intrinsics.js'
+import { getEnv, provide, provideEnv } from './intrinsics.js'
 
-export interface Layer<R, E, S> extends Fx.Scoped<R, E, Env<S>> {}
+import { Service } from '@/Service/Service.js'
+
+export interface Layer<R, E, S> extends FiberRef<R, E, Env<S>> {}
 
 export namespace Layer {
   /* eslint-disable @typescript-eslint/no-unused-vars */
-  export type ResourcesOf<L> = L extends Layer<infer R, infer _E, infer _A> ? R : never
-  export type ErrorsOf<L> = L extends Layer<infer _R, infer E, infer _A> ? E : never
-  export type OutputOf<L> = L extends Layer<infer _R, infer _E, infer A> ? A : never
+  export type ResourcesOf<L> = FiberRef.ResourcesOf<L>
+  export type ErrorsOf<L> = FiberRef.ErrorsOf<L>
+  export type OutputOf<L> = FiberRef.OutputOf<L>
   /* eslint-enable @typescript-eslint/no-unused-vars */
 }
 
+export function Layer<R, E, S>(provider: Fx<R, E, Env<S>>): Layer<R, E, S> {
+  return FiberRef(provider)
+}
+
 export function provideLayer<R, E, S>(layer: Layer<R, E, S>) {
-  return <R2, E2, A>(fx: Fx<R2 | S, E2, A>): Fx.Scoped<Exclude<R | R2, S>, E | E2, A> => {
+  return <R2, E2, A>(fx: Fx<R2 | S, E2, A>): Fx<R | Exclude<R2, S>, E | E2, A> => {
     return pipe(
       layer,
+      get,
       uninterruptable,
-      flatMap((otherEnv) =>
-        pipe(
-          getEnv<R | R2>(),
-          flatMap((env) => pipe(fx, provideEnv(env.join(otherEnv)))),
-        ),
-      ),
-    ) as Fx.Scoped<Exclude<R | R2, S>, E | E2, A>
+      flatMap((otherEnv) => pipe(fx, provide(otherEnv))),
+    )
   }
 }
 
@@ -40,7 +44,7 @@ export function provideLayers<Layers extends readonly Layer<any, any, any>[]>(..
     A
   > =>
     pipe(
-      tuple(...layers),
+      tuple(...layers.map(get)),
       uninterruptable,
       flatMap((otherEnvs) =>
         pipe(
@@ -48,9 +52,9 @@ export function provideLayers<Layers extends readonly Layer<any, any, any>[]>(..
           flatMap((env) => pipe(fx, provideEnv(otherEnvs.reduce((a, b) => a.join(b), env)))),
         ),
       ),
-    ) as Fx.Scoped<
-      Exclude<R | Layer.ResourcesOf<Layers[number]>, A>,
-      E | Layer.ErrorsOf<Layers[number]>,
-      A
-    >
+    )
+}
+
+export function fromService<S>(service: Service<S>, impl: S): Layer<never, never, S> {
+  return Layer(now(Env(service, impl)))
 }
