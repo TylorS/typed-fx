@@ -44,7 +44,24 @@ export class FiberRuntime<F extends Fx.AnyFx>
   implements Fiber.Live<Fx.ErrorsOf<F>, Fx.OutputOf<F>>
 {
   protected _started = false
-  protected _current: Maybe.Maybe<AnyInstruction> = Maybe.Just(this.fx.instr)
+  protected _current: Maybe.Maybe<AnyInstruction> = pipe(
+    this.fx,
+    // Ensure this Fiber closes with its Scope
+    Fx.ensuring(
+      this.context.scope.ensuring((exit) =>
+        Fx.fromLazy(() => {
+          this._current = Maybe.Just(Fx.fromExit(exit).instr)
+
+          if (this._status.tag === 'Suspended') {
+            this.setTimer(() => this.loop())
+          }
+        }),
+      ),
+    ),
+    (x) => x.instr,
+    Maybe.Just,
+  )
+
   protected _status: FiberStatus
   protected _observers: Array<(exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) => void> = []
   protected _children: Array<FiberRuntime<Fx.AnyFx>> = []
@@ -244,10 +261,12 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
       return pipe(
         wait(future),
-        Fx.ensuring(() =>
+        Fx.ensuring((exit) =>
           Fx.fromLazy(() => {
-            FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs)
-            FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs)
+            if (Either.isRight(exit)) {
+              FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs)
+              FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs)
+            }
 
             inner.dispose()
           }),
@@ -284,11 +303,19 @@ export class FiberRuntime<F extends Fx.AnyFx>
               index === 0
                 ? pipe(
                     s.interruptAs(f.context.id),
-                    Fx.tapLazy(() => FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs)),
+                    Fx.tapLazy(
+                      () =>
+                        Either.isRight(exit) &&
+                        FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs),
+                    ),
                   )
                 : pipe(
                     f.interruptAs(s.context.id),
-                    Fx.tapLazy(() => FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs)),
+                    Fx.tapLazy(
+                      () =>
+                        Either.isRight(exit) &&
+                        FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs),
+                    ),
                   ),
             ),
           ),

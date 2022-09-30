@@ -1,4 +1,5 @@
 import { deepStrictEqual } from 'assert'
+import { performance } from 'perf_hooks'
 
 import { pipe } from 'hkt-ts/function'
 
@@ -143,11 +144,17 @@ describe.only(new URL(import.meta.url).pathname, () => {
     console.time('Fx: Fib25 Construction')
     const program = fib(25)
     console.timeEnd('Fx: Fib25 Construction')
-    for (let i = 0; i < 5; i++) {
+    const iterations = 10
+    let values = 0
+    for (let i = 0; i < iterations; i++) {
       console.time('Fib25')
+      const start = performance.now()
       await runMain(program)
+      values += performance.now() - start
       console.timeEnd('Fib25')
     }
+
+    console.log('Fx: Fib25 Average', values / iterations)
   })
 
   it.skip('runs Fib w/ generators', async () => {
