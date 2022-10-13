@@ -3,8 +3,9 @@ import { performance } from 'perf_hooks'
 
 import { pipe } from 'hkt-ts/function'
 
-import * as Fx from './Fx.js'
 import { runMain, runMainFiber } from './run.js'
+
+import * as Fx from './index.js'
 
 import { Env } from '@/Env/Env.js'
 import { FiberId } from '@/FiberId/FiberId.js'

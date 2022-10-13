@@ -1,9 +1,12 @@
 import { makeAssociative } from 'hkt-ts/Array'
+import * as Either from 'hkt-ts/Either'
 import { HKT2, Params } from 'hkt-ts/HKT'
 import * as AB from 'hkt-ts/Typeclass/AssociativeBoth'
+import * as AE from 'hkt-ts/Typeclass/AssociativeEither'
 import * as B from 'hkt-ts/Typeclass/Bicovariant'
 import { Bottom2 } from 'hkt-ts/Typeclass/Bottom'
 import { CommutativeBoth2 } from 'hkt-ts/Typeclass/CommutativeBoth'
+import * as CE from 'hkt-ts/Typeclass/CommutativeEither'
 import * as C from 'hkt-ts/Typeclass/Covariant'
 import * as IB from 'hkt-ts/Typeclass/IdentityBoth'
 import { Top2 } from 'hkt-ts/Typeclass/Top'
@@ -123,3 +126,92 @@ export const tuple = IB.tuple<FiberHKT>({ ...IdentityBothPar, ...Covariant })
 export const struct = IB.struct<FiberHKT>({ ...IdentityBothPar, ...Covariant })
 
 // TODO: More Typeclass instances
+
+export const AssociativeEither: AE.AssociativeEither2<FiberHKT> = {
+  either:
+    <E, B>(s: Fiber<E, B>) =>
+    <A>(f: Fiber<E, A>) => {
+      const exit = pipe(
+        Fx.eitherSeq(s.exit)(f.exit),
+        Fx.map((e) => pipe(e, Either.match(Either.map(Either.Left), Either.map(Either.Right)))),
+        (x) => x as Fx.Of<Exit.Exit<E, Either.Either<A, B>>>,
+      )
+
+      return Synthetic<E, Either.Either<A, B>>({
+        id: FiberId.Synthetic([f.id, s.id]),
+        exit,
+        inheritFiberRefs: pipe(
+          exit,
+          Fx.flatMap(
+            Either.match(
+              () => Fx.unit,
+              Either.match(
+                () => inheritFiberRefs(f),
+                () => inheritFiberRefs(s),
+              ),
+            ),
+          ),
+        ),
+        interruptAs: (id) =>
+          pipe(
+            Fx.zipAll([f.interruptAs(id), s.interruptAs(id)]),
+            Fx.map(([a, b]) =>
+              pipe(
+                a,
+                Either.match(
+                  () => pipe(b, Either.map(Either.Right)),
+                  flow(Either.Left, Either.Right),
+                ),
+              ),
+            ),
+          ),
+      })
+    },
+}
+
+export const eitherSeq = AssociativeEither.either
+
+export const CommutativeEither: CE.CommutativeEither2<FiberHKT> = {
+  either:
+    <E, B>(s: Fiber<E, B>) =>
+    <A>(f: Fiber<E, A>) => {
+      const exit = pipe(
+        Fx.eitherSeq(s.exit)(f.exit),
+        Fx.map((e) => pipe(e, Either.match(Either.map(Either.Left), Either.map(Either.Right)))),
+        (x) => x as Fx.Of<Exit.Exit<E, Either.Either<A, B>>>,
+      )
+
+      return Synthetic<E, Either.Either<A, B>>({
+        id: FiberId.Synthetic([f.id, s.id]),
+        exit,
+        inheritFiberRefs: pipe(
+          exit,
+          Fx.flatMap(
+            Either.match(
+              () => Fx.unit,
+              Either.match(
+                () => inheritFiberRefs(f),
+                () => inheritFiberRefs(s),
+              ),
+            ),
+          ),
+        ),
+        interruptAs: (id) =>
+          pipe(
+            Fx.zipAll([f.interruptAs(id), s.interruptAs(id)]),
+            Fx.map(([a, b]) =>
+              pipe(
+                a,
+                Either.match(
+                  () => pipe(b, Either.map(Either.Right)),
+                  flow(Either.Left, Either.Right),
+                ),
+              ),
+            ),
+          ),
+      })
+    },
+}
+
+export const either = AssociativeEither.either
+export const orElse = AE.orElse<FiberHKT>({ ...CommutativeEither, ...Covariant })

@@ -12,8 +12,6 @@ import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import type { FiberRef } from '@/FiberRef/FiberRef.js'
 import type { Future } from '@/Future/index.js'
-import type { Layer } from '@/Layer/Layer.js'
-import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
 export type Instruction<R, E, A> =
@@ -37,17 +35,11 @@ export type Instruction<R, E, A> =
   | ModifyFiberRef<R, E, any, R, E, A>
   | Now<A>
   | Provide<any, E, A>
-  | ProvideLayer<R, E, A, R, E, any>
-  | ProvideService<R, E, A, any>
   | SetConcurrencyLevel<R, E, A>
   | SetInterruptStatus<R, E, A>
   | Wait<R, E, A>
 
-export type AnyInstruction =
-  | Instruction<any, any, any>
-  | Instruction<never, never, any>
-  | Instruction<never, any, any>
-  | Instruction<any, never, any>
+export type AnyInstruction = Instruction<any, any, any>
 
 export abstract class Instr<out R, out E, out A> {
   readonly _R!: () => R
@@ -219,52 +211,6 @@ export class Provide<out R, out E, out A> extends Instr<never, E, A> {
 
   static make<R, E, A>(fx: Fx<R, E, A>, env: Env<R>, __trace?: string): Fx<never, E, A> {
     return new Provide(fx, env, __trace)
-  }
-}
-
-export class ProvideService<R, E, A, S> extends Instr<Exclude<R, S>, E, A> {
-  readonly tag = 'ProvideService'
-
-  constructor(
-    readonly fx: Fx<any, any, any>,
-    readonly service: Service<S>,
-    readonly implementation: S,
-    readonly __trace?: string,
-  ) {
-    super(__trace)
-  }
-
-  static make<R, E, A, S>(
-    fx: Fx<R, E, A>,
-    service: Service<S>,
-    implementation: S,
-    __trace?: string,
-  ): Fx<Exclude<R, S>, E, A> {
-    return new ProvideService(fx, service, implementation, __trace) as any as Fx<
-      Exclude<R, S>,
-      E,
-      A
-    >
-  }
-}
-
-export class ProvideLayer<R, E, A, R2, E2, S> extends Instr<Exclude<R | R2, S>, E | E2, A> {
-  readonly tag = 'ProvideLayer'
-
-  constructor(
-    readonly fx: Fx<any, any, any>,
-    readonly layer: Layer<any, any, S>,
-    readonly __trace?: string,
-  ) {
-    super(__trace)
-  }
-
-  static make<R, E, A, R2, E2, S>(
-    fx: Fx<R, E, A>,
-    layer: Layer<R2, E2, S>,
-    __trace?: string,
-  ): Fx<Exclude<R, S>, E, A> {
-    return new ProvideLayer(fx, layer, __trace) as any
   }
 }
 

@@ -2,13 +2,13 @@ import { Just, Maybe } from 'hkt-ts/Maybe'
 import { Second } from 'hkt-ts/Typeclass/Concat'
 import { DeepEquals, Eq } from 'hkt-ts/Typeclass/Eq'
 
-import { type Fx } from '@/Fx/Fx.js'
+import * as Fx from '@/Fx/Fx.js'
 import { Tagged } from '@/Tagged/index.js'
 
 export class FiberRef<R, E, A> {
   constructor(
     readonly id: FiberRefId,
-    readonly initial: Fx<R, E, A>,
+    readonly initial: Fx.Fx<R, E, A>,
     readonly fork: (a: A) => Maybe<A> = Just,
     readonly join: (current: A, incoming: A) => A = Second.concat,
     readonly Eq: Eq<A> = DeepEquals,
@@ -28,7 +28,7 @@ export type OutputOf<T> = T extends FiberRef<infer _R, infer _E, infer _A> ? _A 
 
 export type AnyFiberRef = FiberRef<any, any, any>
 
-export function make<R, E, A>(initial: Fx<R, E, A>, params: Params<A> = {}): FiberRef<R, E, A> {
+export function make<R, E, A>(initial: Fx.Fx<R, E, A>, params: Params<A> = {}): FiberRef<R, E, A> {
   return new FiberRef(
     params.id ?? FiberRefId(Symbol(params.name ?? '')),
     initial,

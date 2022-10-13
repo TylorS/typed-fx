@@ -4,7 +4,6 @@ import { Service } from './Service.js'
 
 import { Fx, RIO, ask, flatMap, fromLazy } from '@/Fx/Fx.js'
 import * as Layer from '@/Layer/Layer.js'
-import { Scope } from '@/Scope/Scope.js'
 
 const idCache = new WeakMap<object, Service<any>>()
 
@@ -66,8 +65,8 @@ export class Id {
     },
     R,
     E,
-  >(this: S, provider: Fx<R | Scope, E, InstanceOf<S>>): Layer.Layer<R, E, InstanceOf<S>> {
-    return Layer.fromFx(this.id(), provider)
+  >(this: S, provider: Fx<R, E, InstanceOf<S>>): Layer.Layer<R, E, InstanceOf<S>> {
+    return Layer.fromService(this.id(), provider)
   }
 
   static layerOf<
@@ -76,7 +75,7 @@ export class Id {
       new (...args: any): any
     },
   >(this: S, ...args: ConstructorParameters<S>): Layer.Layer<never, never, InstanceOf<S>> {
-    return Layer.fromFx(
+    return Layer.fromService(
       this.id(),
       fromLazy(() => new this(...(args as any))),
     )

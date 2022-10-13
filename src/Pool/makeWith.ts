@@ -33,7 +33,7 @@ export function makeWith<R, E, A, R2, S>(
     const resources: Env<R> = yield* Fx.getEnv<R>()
     const scope: Scope = yield* Fx.ask(Scope)
     const pool: Pool<E, A> = Pool(
-      pipe(creator, Fx.provide(resources.addService(Scope, scope))),
+      pipe(creator, Fx.provide(resources.add(Scope, scope))),
       range,
       strategy.track(initial),
     )

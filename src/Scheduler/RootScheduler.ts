@@ -9,7 +9,6 @@ import { Live } from '@/Fiber/index.js'
 import { FiberContext } from '@/FiberContext/FiberContext.js'
 import * as FiberId from '@/FiberId/index.js'
 import { CurrentEnv } from '@/FiberRef/builtins.js'
-import { setFiberRef } from '@/FiberRefs/FiberRefs.js'
 import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
@@ -49,7 +48,7 @@ class RootSchedulerImpl implements Scheduler {
     env: Env<R>,
     context: FiberContext<FiberId.Live>,
   ): Live<E, A> => {
-    setFiberRef(CurrentEnv, env)(context.fiberRefs)
+    context.fiberRefs.locals.set(CurrentEnv, env)
 
     const runtime = new FiberRuntime(this.runAt(fx, Delay(0)), context)
 
@@ -66,7 +65,7 @@ class RootSchedulerImpl implements Scheduler {
     context: FiberContext<FiberId.Live>,
     onEnd?: (state: ScheduleState) => Fx<R, E, B>,
   ) => {
-    setFiberRef(CurrentEnv, env)(context.fiberRefs)
+    context.fiberRefs.locals.set(CurrentEnv, env)
 
     const runtime = new FiberRuntime(
       runSchedule(fx, schedule, this.timer, this.runAt, onEnd),

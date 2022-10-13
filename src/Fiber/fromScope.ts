@@ -8,13 +8,13 @@ import * as FiberRefs from '@/FiberRefs/index.js'
 import * as Fx from '@/Fx/index.js'
 import { Closeable, closeOrWait, wait } from '@/Scope/Closeable.js'
 
-export function fromScope(id: FiberId, fiberRefs: FiberRefs.FiberRefs, scope: Closeable) {
-  return Synthetic({
+export function fromScope<E, A>(id: FiberId, fiberRefs: FiberRefs.FiberRefs, scope: Closeable) {
+  return Synthetic<E, A>({
     id,
     exit: wait(scope),
     inheritFiberRefs: pipe(
       Fx.getFiberRefs,
-      Fx.flatMap((refs) => Fx.fromLazy(() => FiberRefs.join(refs, fiberRefs))),
+      Fx.flatMap((refs) => refs.join(fiberRefs)),
     ),
     interruptAs: (id) => closeOrWait(scope)(interrupt(id)),
   })

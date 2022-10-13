@@ -1,54 +1,54 @@
-import { flow, pipe } from 'hkt-ts/function'
+import { pipe } from 'hkt-ts'
+import { foldLeft } from 'hkt-ts/Array'
 
+import { Env, makeIdentity } from '@/Env/Env.js'
+import { FiberRef, make } from '@/FiberRef/FiberRef.js'
 import * as Fx from '@/Fx/Fx.js'
-import { Scope } from '@/Scope/Scope.js'
 import { Service } from '@/Service/Service.js'
 
-export interface Layer<R, E, A> {
-  readonly service: Service<A>
-  readonly build: (scope: Scope) => Fx.Fx<R, E, A>
-}
+export interface Layer<R, E, A> extends FiberRef<R, E, Env<A>> {}
 
-export type AnyLayer = Layer<any, any, any>
+export interface AnyLayer extends Layer<any, any, any> {}
+
+export function Layer<R, E, A>(provider: Fx.Fx<R, E, Env<A>>): Layer<R, E, A> {
+  return make(provider)
+}
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-export type ResourcesOf<T> = T extends Layer<infer _R, infer _E, infer _A> ? _R : never
-export type ErrorsOf<T> = T extends Layer<infer _R, infer _E, infer _A> ? _E : never
-export type OutputOf<T> = T extends Layer<infer _R, infer _E, infer _A> ? _A : never
+export type ResourcesOf<T> = [T] extends [Layer<infer _R, infer _E, infer _A>] ? _R : never
+export type ErrorsOf<T> = [T] extends [Layer<infer _R, infer _E, infer _A>] ? _E : never
+export type OutputOf<T> = [T] extends [Layer<infer _R, infer _E, infer _A>] ? _A : never
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
-export function Layer<R, E, A>(
-  service: Service<A>,
-  build: Layer<R, E, A>['build'],
-): Layer<R, E, A> {
-  return {
-    service,
-    build,
-  }
+export function fromService<S, R, E>(service: Service<S>, fx: Fx.Fx<R, E, S>): Layer<R, E, S> {
+  return Layer(
+    pipe(
+      fx,
+      Fx.map((a) => Env(service, a)),
+    ),
+  )
 }
 
-export function fromFx<S, R, E, A extends S>(
-  s: Service<S>,
-  fx: Fx.Fx<R | Scope, E, A>,
-): Layer<R, E, S> {
-  return Layer(s, (scope) => pipe(fx, Fx.provideService(Scope, scope)))
+export function combine<Layers extends ReadonlyArray<AnyLayer>>(...layers: Layers) {
+  return Layer<ResourcesOf<Layers[number]>, ErrorsOf<Layers[number]>, OutputOf<Layers[number]>>(
+    pipe(Fx.zipAll(layers.map((layer) => Fx.get(layer))), Fx.map(foldLeft(makeIdentity()))),
+  )
 }
 
-export function orElse<E, A, R2, E2, R3, E3, B extends A>(
-  orElse: (e: E) => Fx.Fx<R2, E2, Layer<R3, E3, B>>,
-) {
-  return <R>(layer: Layer<R, E, A>): Layer<R | R2 | R3, E2 | E3, A> => {
-    return Layer(layer.service, (scope) =>
+export function compose<R2, E2, B>(second: Layer<R2, E2, B>) {
+  return <R, E, A>(first: Layer<R, E, A>) =>
+    Layer(
       pipe(
-        scope,
-        layer.build,
-        Fx.orElse(
-          flow(
-            orElse,
-            Fx.flatMap((l) => l.build(scope)),
+        first,
+        Fx.get,
+        Fx.flatMap((envA) =>
+          pipe(
+            second,
+            Fx.get,
+            Fx.provideSome(envA),
+            Fx.map((envB) => envA.join(envB)),
           ),
         ),
       ),
     )
-  }
 }

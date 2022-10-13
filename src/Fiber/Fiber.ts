@@ -3,9 +3,8 @@ import { flow, pipe } from 'hkt-ts/function'
 import type { Exit } from '@/Exit/Exit.js'
 import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import type { FiberId } from '@/FiberId/FiberId.js'
-import { join } from '@/FiberRefs/FiberRefs.js'
 import type { FiberStatus } from '@/FiberStatus/index.js'
-import { Of, flatMap, fork, fromExit, getFiberContext, map } from '@/Fx/Fx.js'
+import { Of, flatMap, fork, fromExit, getFiberContext } from '@/Fx/Fx.js'
 import type { Trace } from '@/Trace/Trace.js'
 
 export type Fiber<E, A> = Live<E, A> | Synthetic<E, A>
@@ -60,7 +59,7 @@ export const inheritFiberRefs = <E, A>(fiber: Fiber<E, A>): Of<void> =>
       (l) =>
         pipe(
           getFiberContext,
-          map((c) => join(c.fiberRefs, l.context.fiberRefs)),
+          flatMap((c) => c.fiberRefs.join(l.context.fiberRefs)),
         ),
       (s) => s.inheritFiberRefs,
     ),

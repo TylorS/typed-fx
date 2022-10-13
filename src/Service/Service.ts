@@ -20,12 +20,9 @@ export const Service = <S>(name: string): Service<S> => Tagged<Service<S>>()(Sym
  */
 export type OutputOf<T> = [T] extends [Service<infer S>] ? S : never
 
-const symbolRegex = /^Symbol/i
-const serviceText = 'Service'
-
 /**
  * Format a Service's into a string.
  */
-export function formatService<A>(service: Service<A>) {
-  return service.toString().replace(symbolRegex, serviceText)
+export function formatService<A>(service: Service<A>): string {
+  return service.description as string
 }

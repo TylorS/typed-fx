@@ -12,8 +12,8 @@ const makeLogWithLevel = (level: LogLevel) => (msg: string, __trace?: string) =>
   pipe(
     Fx.Do,
     Fx.bind('context', () => Fx.getFiberContext),
-    Fx.bind('spans', () => Fx.getFiberRef(CurrentLogSpans)),
-    Fx.bind('annotations', () => Fx.getFiberRef(CurrentLogAnnotations)),
+    Fx.bind('spans', () => Fx.get(CurrentLogSpans)),
+    Fx.bind('annotations', () => Fx.get(CurrentLogAnnotations)),
     Fx.bind('trace', () => (level >= LogLevel.Trace ? Fx.getTrace : Fx.now<Trace>(EmptyTrace))),
     Fx.flatMap(
       ({ context, spans, annotations, trace }) =>
@@ -42,12 +42,12 @@ export const span =
   <R, E, A>(fx: Fx.Fx<R, E, A>) =>
     pipe(
       Fx.Do,
-      Fx.bind('spans', () => Fx.getFiberRef(CurrentLogSpans)),
+      Fx.bind('spans', () => Fx.get(CurrentLogSpans)),
       Fx.bind('context', () => Fx.getFiberContext),
       Fx.flatMap(({ spans, context }) =>
         pipe(
           fx,
-          Fx.fiberRefLocally(
+          Fx.locally(
             CurrentLogSpans,
             spans.set(label, LogSpan(label, context.platform.timer.getCurrentTime())),
           ),
@@ -59,14 +59,11 @@ export const annotate =
   (label: string, value: string) =>
   <R, E, A>(fx: Fx.Fx<R, E, A>) =>
     pipe(
-      Fx.getFiberRef(CurrentLogAnnotations),
+      Fx.get(CurrentLogAnnotations),
       Fx.flatMap((annotations) =>
         pipe(
           fx,
-          Fx.fiberRefLocally(
-            CurrentLogAnnotations,
-            annotations.set(label, LogAnnotation(label, value)),
-          ),
+          Fx.locally(CurrentLogAnnotations, annotations.set(label, LogAnnotation(label, value))),
         ),
       ),
     )

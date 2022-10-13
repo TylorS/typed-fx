@@ -16,12 +16,10 @@ import { FiberContext } from '@/FiberContext/FiberContext.js'
 import * as FiberId from '@/FiberId/FiberId.js'
 import * as FiberRef from '@/FiberRef/FiberRef.js'
 import * as Builtin from '@/FiberRef/builtins.js'
-import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
 import { Done, FiberStatus, Running, Suspended } from '@/FiberStatus/index.js'
 import { Pending, addObserver, complete, wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/Fx.js'
 import { AnyInstruction } from '@/Fx/Instruction.js'
-import { join } from '@/Fx/join.js'
 import { closeOrWait } from '@/Scope/Closeable.js'
 import { Semaphore, acquireFiber } from '@/Semaphore/Semaphore.js'
 import { Stack } from '@/Stack/index.js'
@@ -91,8 +89,6 @@ export class FiberRuntime<F extends Fx.AnyFx>
     ModifyFiberRef: this.processModifyFiberRef.bind(this),
     Now: this.processNow.bind(this),
     Provide: this.processProvide.bind(this),
-    ProvideLayer: this.processProvideLayer.bind(this),
-    ProvideService: this.processProvideService.bind(this),
     SetConcurrencyLevel: this.processSetConcurrencyLevel.bind(this),
     SetInterruptStatus: this.processSetInterruptStatus.bind(this),
     Wait: this.processWait.bind(this),
@@ -245,8 +241,14 @@ export class FiberRuntime<F extends Fx.AnyFx>
     this.withFiberRef(Builtin.CurrentConcurrencyLevel, (semaphore) => {
       const withConcurrency = acquireFiber(semaphore.value)
 
-      const f = new FiberRuntime(withConcurrency(instr.first), this.context.fork())
-      const s = new FiberRuntime(withConcurrency(instr.second), this.context.fork())
+      const f = new FiberRuntime(
+        withConcurrency(() => instr.first),
+        this.context.fork(),
+      )
+      const s = new FiberRuntime(
+        withConcurrency(() => instr.second),
+        this.context.fork(),
+      )
 
       const [future, onExit] = bothFuture(f, s)
 
@@ -261,16 +263,13 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
       return pipe(
         wait(future),
-        Fx.ensuring((exit) =>
-          Fx.fromLazy(() => {
-            if (Either.isRight(exit)) {
-              FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs)
-              FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs)
-            }
-
-            inner.dispose()
-          }),
+        Fx.tap(() =>
+          pipe(
+            this.context.fiberRefs.join(f.context.fiberRefs),
+            Fx.zipRightSeq(this.context.fiberRefs.join(s.context.fiberRefs)),
+          ),
         ),
+        Fx.ensuring(() => Fx.fromLazy(() => inner.dispose())),
       )
     })
   }
@@ -278,20 +277,20 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected processDeleteFiberRef(
     instr: Extract<AnyInstruction, { readonly tag: 'DeleteFiberRef' }>,
   ) {
-    this.continueWith(
-      pipe(
-        this.context.fiberRefs,
-        FiberRefs.deleteFiberRef(instr.fiberRef),
-        Maybe.map((s) => s.value),
-      ),
-    )
+    this._current = Maybe.Just(this.context.fiberRefs.delete(instr.fiberRef).instr)
   }
 
   protected processEither(instr: Extract<AnyInstruction, { readonly tag: 'Either' }>) {
     this.withFiberRef(Builtin.CurrentConcurrencyLevel, (semaphore) => {
       const withConcurrency = acquireFiber(semaphore.value)
-      const f = new FiberRuntime(withConcurrency(instr.first), this.context.fork())
-      const s = new FiberRuntime(withConcurrency(instr.second), this.context.fork())
+      const f = new FiberRuntime(
+        withConcurrency(() => instr.first),
+        this.context.fork(),
+      )
+      const s = new FiberRuntime(
+        withConcurrency(() => instr.second),
+        this.context.fork(),
+      )
 
       const inner = settable()
       const future = Pending<never, any, any>()
@@ -299,23 +298,15 @@ export class FiberRuntime<F extends Fx.AnyFx>
         complete(future)(
           pipe(
             Fx.fromExit(exit),
-            Fx.ensuring(() =>
+            Fx.tap(() =>
               index === 0
                 ? pipe(
                     s.interruptAs(f.context.id),
-                    Fx.tapLazy(
-                      () =>
-                        Either.isRight(exit) &&
-                        FiberRefs.join(this.context.fiberRefs, f.context.fiberRefs),
-                    ),
+                    Fx.tap(() => this.context.fiberRefs.join(f.context.fiberRefs)),
                   )
                 : pipe(
                     f.interruptAs(s.context.id),
-                    Fx.tapLazy(
-                      () =>
-                        Either.isRight(exit) &&
-                        FiberRefs.join(this.context.fiberRefs, s.context.fiberRefs),
-                    ),
+                    Fx.tap(() => this.context.fiberRefs.join(s.context.fiberRefs)),
                   ),
             ),
           ),
@@ -338,8 +329,9 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected processFiberRefLocally(
     instr: Extract<AnyInstruction, { readonly tag: 'FiberRefLocally' }>,
   ) {
-    this.pushPopFiberRef(instr.fiberRef, instr.value)
-    this._current = Maybe.Just(instr.fx.instr)
+    this._current = Maybe.Just(
+      this.context.fiberRefs.locally(instr.fiberRef, instr.value, instr.fx).instr,
+    )
   }
 
   protected processFlatMap(instr: Extract<AnyInstruction, { readonly tag: 'FlatMap' }>) {
@@ -423,13 +415,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   protected processModifyFiberRef(
     instr: Extract<AnyInstruction, { readonly tag: 'ModifyFiberRef' }>,
   ) {
-    this.withFiberRef(instr.fiberRef, (stack) => {
-      const [b, a] = instr.modify(stack.value)
-
-      FiberRefs.setFiberRef(instr.fiberRef, a)(this.context.fiberRefs)
-
-      return Fx.now(b)
-    })
+    this._current = Maybe.Just(this.context.fiberRefs.modify(instr.fiberRef, instr.modify).instr)
   }
 
   protected processNow(instr: Extract<AnyInstruction, { readonly tag: 'Now' }>) {
@@ -437,70 +423,21 @@ export class FiberRuntime<F extends Fx.AnyFx>
   }
 
   protected processProvide(instr: Extract<AnyInstruction, { readonly tag: 'Provide' }>) {
-    this.pushPopFiberRef(Builtin.CurrentEnv, instr.env)
-    this._current = Maybe.Just(instr.fx.instr)
-  }
-
-  protected processProvideLayer(instr: Extract<AnyInstruction, { readonly tag: 'ProvideLayer' }>) {
-    this.withFiberRef(Builtin.Layers, (layers) => {
-      const layer = instr.layer
-      const context = this.context
-
-      const unwindStack = (cause: Cause.AnyCause): Fx.Of<any> =>
-        this._status.tag === 'Done'
-          ? context.scope.state.tag === 'Open'
-            ? context.scope.close(Either.Left(cause))
-            : Fx.fromLazy(() => this.reportFailure(cause))
-          : Fx.fromLazy(() => this.unwindStack(cause))
-
-      const provider = pipe(
-        Fx.uninterruptable(layer.build(context.scope)),
-        Fx.orElseCause((cause) =>
-          cause.tag === 'Expected'
-            ? pipe(
-                unwindStack(cause),
-                Fx.flatMap(() => Fx.never),
-              )
-            : Fx.fromCause(cause),
-        ),
-      )
-
-      return pipe(
-        instr.fx,
-        Fx.fiberRefLocally(
-          Builtin.Layers,
-          layers.value.set(layer.service, [
-            () => {
-              const fiber = new FiberRuntime(provider, this.context.fork())
-              fiber.startSync()
-              return fiber as Fiber.Live<never, any>
-            },
-            Maybe.Nothing,
-          ]) as any,
-        ),
-      )
-    })
-  }
-
-  protected processProvideService(
-    instr: Extract<AnyInstruction, { readonly tag: 'ProvideService' }>,
-  ) {
-    this.withFiberRef(Builtin.CurrentEnv, (env) =>
-      pipe(
-        instr.fx,
-        Fx.fiberRefLocally(
-          Builtin.CurrentEnv,
-          env.value.addService(instr.service, instr.implementation),
-        ),
-      ),
+    this._current = Maybe.Just(
+      this.context.fiberRefs.locally(Builtin.CurrentEnv, instr.env, instr.fx).instr,
     )
   }
 
   protected processSetConcurrencyLevel(
     instr: Extract<AnyInstruction, { readonly tag: 'SetConcurrencyLevel' }>,
   ) {
-    this.pushPopFiberRef(Builtin.CurrentConcurrencyLevel, new Semaphore(instr.concurrencyLevel))
-    this._current = Maybe.Just(instr.fx.instr)
+    this._current = Maybe.Just(
+      this.context.fiberRefs.locally(
+        Builtin.CurrentConcurrencyLevel,
+        Semaphore(FiberRef.make(Fx.unit), instr.concurrencyLevel),
+        instr.fx,
+      ).instr,
+    )
   }
 
   protected processSetInterruptStatus(
@@ -508,15 +445,12 @@ export class FiberRuntime<F extends Fx.AnyFx>
   ) {
     const currentlyInterruptable = this.getInterruptStatus()
 
-    FiberRefs.setFiberRefLocally(
-      Builtin.CurrentInterruptStatus,
-      instr.interruptStatus,
-    )(this.context.fiberRefs)
+    this.context.fiberRefs.locals.pushLocal(Builtin.CurrentInterruptStatus, instr.interruptStatus)
 
     this.pushFrame(
       ExitFrame((exit) =>
         Fx.lazy(() => {
-          FiberRefs.popLocalFiberRef(Builtin.CurrentInterruptStatus)(this.context.fiberRefs)
+          this.context.fiberRefs.locals.popLocal(Builtin.CurrentInterruptStatus)
 
           if (currentlyInterruptable && this._interruptedBy.size > 0) {
             return Fx.fromExit(
@@ -672,65 +606,36 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected getInterruptStatus = (): boolean =>
     pipe(
-      this.context.fiberRefs,
-      FiberRefs.maybeGetFiberRefValue(Builtin.CurrentInterruptStatus),
+      this.context.fiberRefs.locals.get(Builtin.CurrentInterruptStatus),
       Maybe.getOrElse(() => true),
     )
 
   protected pushPopFiberRef = (ref: FiberRef.AnyFiberRef, value: any) => {
-    FiberRefs.setFiberRefLocally(ref, value)(this.context.fiberRefs)
+    this.context.fiberRefs.locals.pushLocal(ref, value)
 
     this.pushFrame(
       ExitFrame((exit) => {
-        FiberRefs.popLocalFiberRef(ref)(this.context.fiberRefs)
+        this.context.fiberRefs.locals.popLocal(ref)
 
         return Fx.fromExit(exit)
       }),
     )
   }
-
   protected withFiberRef<R, E, A, R2, E2, B>(
     ref: FiberRef.FiberRef<R, E, A>,
     f: (a: Stack<A>) => Fx.Fx<R2, E2, B>,
   ): void {
     const fiberRefs = this.context.fiberRefs
-    const currentValue = fiberRefs.locals.get().get(ref)
+    const currentValue = fiberRefs.locals.getStack(ref)
 
     if (Maybe.isJust(currentValue)) {
       this._current = Maybe.Just(f(currentValue.value).instr)
       return
     }
 
-    const initializing = fiberRefs.initializing.get()
-    const initializingFiber = initializing.get(ref)
-
-    if (Maybe.isJust(initializingFiber)) {
-      this._current = Maybe.Just(
-        pipe(
-          (initializingFiber.value as Fiber.Live<E, A>).exit,
-          Fx.flatMap(Fx.fromExit),
-          Fx.flatMap((a) => f(new Stack(a))),
-        ).instr,
-      )
-      return
-    }
-
     this._current = Maybe.Just(
       pipe(
-        Fx.forkInContext(this.context.fork({ fiberRefs: this.context.fiberRefs }))(ref.initial),
-        Fx.tap((fiber) =>
-          Fx.fromLazy(() => fiberRefs.initializing.modify((a) => [null, a.set(ref, fiber)])),
-        ),
-        Fx.flatMap(join),
-        Fx.ensuring((exit) =>
-          Fx.fromLazy(() => {
-            fiberRefs.initializing.modify((a) => [null, a.remove(ref)])
-
-            if (Either.isRight(exit)) {
-              FiberRefs.setFiberRef(ref, exit.right)(this.context.fiberRefs)
-            }
-          }),
-        ),
+        fiberRefs.get(ref),
         Fx.flatMap((a) => f(new Stack(a))),
       ).instr,
     )
@@ -738,8 +643,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected getCurrentTrace(): Trace.Trace {
     return pipe(
-      this.context.fiberRefs,
-      FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
+      this.context.fiberRefs.locals.getStack(Builtin.CurrentTrace),
       Maybe.match(
         () => Trace.Trace.runtime(new Error()),
         (stackTrace) => Trace.getTraceUpTo(stackTrace, this.context.platform.maxTraceCount),
@@ -749,8 +653,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected getRuntimeTrace(): Trace.Trace {
     return pipe(
-      this.context.fiberRefs,
-      FiberRefs.maybeGetFiberRefStack(Builtin.CurrentTrace),
+      this.context.fiberRefs.locals.getStack(Builtin.CurrentTrace),
       Maybe.match(
         () => Trace.Trace.runtime(new Error()),
         (stackTrace) => Trace.getTrimmedTrace(Cause.Empty, stackTrace),

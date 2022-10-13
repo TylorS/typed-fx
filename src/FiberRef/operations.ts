@@ -1,19 +1,11 @@
-import { deleteFiberRef, getFiberRef, modifyFiberRef } from '@/Fx/Fx.js'
+import * as Fx from '@/Fx/Fx.js'
 
-export const get = getFiberRef
-export const modify = modifyFiberRef
-export const remove = deleteFiberRef
+export const get = Fx.get
+export const modify = Fx.modify
+export const remove = Fx.remove
+export const set = Fx.set
+export const getAndSet = Fx.getAndSet
+export const update = Fx.update
+export const getAndUpdate = Fx.getAndUpdate
 
 export { remove as delete }
-
-export const set = <A>(value: A) => modify(() => [value, value])
-export const getAndSet = <A>(value: A) => modify((a) => [a, value])
-
-export const update = <A>(f: (a: A) => A) =>
-  modify((a: A) => {
-    const a2 = f(a)
-
-    return [a2, a2]
-  })
-
-export const getAndUpdate = <A>(f: (a: A) => A) => modify((a: A) => [a, f(a)])

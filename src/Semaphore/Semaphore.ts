@@ -1,102 +1,89 @@
-import { constant, pipe } from 'hkt-ts/function'
+import { pipe } from 'hkt-ts'
+import { Maybe } from 'hkt-ts/Maybe'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
-import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
-import { MutableFutureQueue } from '@/Future/MutableFutureQueue.js'
+import { AtomicCounter } from '@/Atomic/AtomicCounter.js'
+import { FiberRef } from '@/FiberRef/FiberRef.js'
+import { Future, Pending } from '@/Future/Future.js'
+import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
 import * as Fx from '@/Fx/Fx.js'
-import { fiberScoped, managed, scoped } from '@/Fx/scoped.js'
+import { fiberScoped, scoped } from '@/Fx/scoped.js'
+import { Scope } from '@/Scope/Scope.js'
 
-export class Semaphore {
-  protected waiting = MutableFutureQueue<never, never, void>()
-  protected running = AtomicCounter()
-
-  constructor(readonly maxPermits: NonNegativeInteger) {}
-
-  // Retrieve the number of permits still available
-  get available(): NonNegativeInteger {
-    return NonNegativeInteger(Math.max(0, this.maxPermits - this.running.get()))
-  }
-
-  get acquired(): NonNegativeInteger {
-    return this.running.get()
-  }
-
-  readonly prepare = Fx.fromLazy(() => {
-    if (this.available > 0) {
-      return new Acquisition(
-        Fx.fromLazy(() => {
-          increment(this.running)
-        }),
-        this.release,
-      )
-    }
-
-    const [future] = this.waiting.waitFor(1)
-
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const that = this
-    const acquisition = new Acquisition(
-      pipe(
-        wait(future),
-        Fx.tapLazy(() => increment(that.running)),
-      ),
-      this.release,
-    )
-
-    return acquisition
-  })
-
-  protected release = Fx.fromLazy(() => {
-    decrement(this.running)
-    this.waiting.next(Fx.unit)
-  })
+export interface Semaphore<R, E, A> {
+  readonly maxPermits: NonNegativeInteger
+  readonly acquiredPermits: Fx.Fx.Of<NonNegativeInteger>
+  readonly remainingPermits: Fx.Fx.Of<NonNegativeInteger>
+  readonly acquirePermits: (permits: NonNegativeInteger) => Fx.Fx<R | Scope, E, A>
+  readonly refresh: Fx.Fx<R, E, Maybe<A>>
 }
 
-export class Acquisition {
-  constructor(readonly acquire: Fx.Of<void>, readonly release: Fx.Of<void>) {}
-}
+export function Semaphore<R, E, A>(
+  ref: FiberRef<R, E, A>,
+  maxPermits: NonNegativeInteger,
+): Semaphore<R, E, A> {
+  const waiting: Array<[requested: NonNegativeInteger, future: Future<R | Scope, E, A>]> = []
+  const acquiredPermits = AtomicCounter()
+  const remainingPermits = () => NonNegativeInteger(Math.max(0, maxPermits - acquiredPermits.get()))
 
-/**
- * Specialization of Semaphore which only allows 1 permit.
- */
-export class Lock extends Semaphore {
-  constructor() {
-    super(NonNegativeInteger(1))
-  }
-}
+  const release = (permits: NonNegativeInteger) =>
+    Fx.fromLazy(() => {
+      acquiredPermits.set(NonNegativeInteger(Math.max(0, acquiredPermits.get() - permits)))
 
-/**
- * Acquire a permit from a given semaphore, blocking until it is available.
- * Must be used with Fx.scoped() to release the permit at the desired time.
- */
-export function acquirePermit(semaphore: Semaphore) {
-  return pipe(
-    semaphore.prepare,
-    Fx.flatMap(({ acquire, release }) => managed(acquire, constant(release))),
-  )
-}
+      if (waiting.length > 0 && waiting[0][0] <= remainingPermits()) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const [permits, future] = waiting.shift()!
+        complete(future)(acquire(permits))
+      }
+    })
 
-/**
- * Acquire a permit from a given semaphore, run an Fx, and then release the permit.
- */
-export function acquire(semaphore: Semaphore) {
-  return <R, E, A>(fx: Fx.Fx<R, E, A>) =>
+  const acquire = (requestedPermits: NonNegativeInteger) =>
     pipe(
-      acquirePermit(semaphore),
-      Fx.flatMap(() => fx),
-      scoped,
+      Fx.ask(Scope),
+      Fx.tapLazy((scope) => {
+        acquiredPermits.set(NonNegativeInteger(acquiredPermits.get() + requestedPermits))
+        scope.ensuring(() => release(requestedPermits))
+      }),
+      Fx.flatMap(() => Fx.get(ref)),
     )
+
+  const semaphore: Semaphore<R, E, A> = {
+    maxPermits,
+    acquiredPermits: Fx.fromLazy(acquiredPermits.get),
+    remainingPermits: Fx.fromLazy(remainingPermits),
+    acquirePermits: (permits) =>
+      Fx.lazy(() => {
+        const requestedPermits = NonNegativeInteger(Math.min(permits, maxPermits)) // Cannot request more than maxPermits
+
+        if (remainingPermits() >= requestedPermits) {
+          return acquire(requestedPermits)
+        }
+
+        const future = Pending<R | Scope, E, A>()
+
+        waiting.push([requestedPermits, future])
+
+        return wait(future)
+      }),
+    refresh: Fx.remove(ref),
+  }
+
+  return semaphore
 }
 
-/**
- * Acquire a permit from a given semaphore, run an Fx, and then release the permit.
- */
-export function acquireFiber(semaphore: Semaphore) {
-  return <R, E, A>(fx: Fx.Fx<R, E, A>) =>
-    pipe(
-      acquirePermit(semaphore),
-      Fx.flatMap(() => fx),
-      fiberScoped,
-    )
+const one = NonNegativeInteger(1)
+
+export function Lock<R, E, A>(ref: FiberRef<R, E, A>) {
+  return Semaphore(ref, one)
+}
+
+export function acquire<R, E, A>(semaphore: Semaphore<R, E, A>) {
+  return <R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>) =>
+    scoped(Fx.flatMap(f)(semaphore.acquirePermits(one)))
+}
+
+export function acquireFiber<R, E, A>(semaphore: Semaphore<R, E, A>) {
+  return <R2, E2, B>(f: (a: A) => Fx.Fx<R2, E2, B>) =>
+    fiberScoped(Fx.flatMap(f)(semaphore.acquirePermits(one)))
 }

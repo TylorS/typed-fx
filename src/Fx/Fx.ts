@@ -37,8 +37,6 @@ import {
   ModifyFiberRef,
   Now,
   Provide,
-  ProvideLayer,
-  ProvideService,
   SetConcurrencyLevel,
   SetInterruptStatus,
 } from './Instruction.js'
@@ -56,13 +54,11 @@ import type { FiberRef } from '@/FiberRef/FiberRef.js'
 import { Pending } from '@/Future/Future.js'
 import { complete } from '@/Future/complete.js'
 import { wait } from '@/Future/wait.js'
-import type * as Layer from '@/Layer/Layer.js'
 import type { Scope } from '@/Scope/Scope.js'
 import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
 /**
- * TODO: Update Fx to utilize FiberRefs2, Env2, and Layer2
  * TODO: Update Fx Instructions for Modifying FiberRef to be asynchronous
  * TODO: Update Stream to utilize Sink2
  * TODO: Update Pool to be a workflow around FiberRef
@@ -143,31 +139,15 @@ export const provideSome =
 export const provideService =
   <S, I extends S>(s: Service<S>, impl: I, __trace?: string) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R, S>, E, A> =>
-    ProvideService.make(fx, s, impl, __trace)
-
-export const provideLayer =
-  <R2, E2, S>(layer: Layer.Layer<R2, E2, S>, __trace?: string) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<Exclude<R | R2, S>, E | E2, A> =>
-    ProvideLayer.make(fx, layer, __trace)
-
-export const provideLayers =
-  <Layers extends ReadonlyArray<Layer.AnyLayer>>(...layers: Layers) =>
-  <R, E, A>(
-    fx: Fx<R, E, A>,
-  ): Fx<
-    Exclude<R | Layer.ResourcesOf<Layers[number]>, Layer.OutputOf<Layers[number]>>,
-    E | Layer.ErrorsOf<Layers[number]>,
-    A
-  > =>
-    layers.reduce((fx, l) => pipe(fx, provideLayer(l)), fx) as any
+    access((env) => pipe(fx, provide((env as Env<R>).add(s, impl))), __trace)
 
 export const ask = <S>(s: Service<S>, __trace?: string): RIO<S, S> =>
-  access((e) => e.get(s), __trace)
+  access((e) => now(e.get(s)), __trace)
 
 export const asks =
   <S>(s: Service<S>, __trace?: string) =>
   <R, E, A>(f: (s: S) => Fx<R, E, A>): Fx<R | S, E, A> =>
-    access((e) => pipe(e.get(s), flatMap(f)), __trace)
+    access((e) => f(e.get(s)), __trace)
 
 export const asksEnv = <R, A>(f: (env: Env<R>) => A, __trace?: string): Fx<R, never, A> =>
   access((e) => now(f(e)), __trace)
@@ -414,20 +394,43 @@ export const forkIn =
       flatMap((context) => forkInContext(context.fork({ scope: scope.fork() }))(fx), __trace),
     )
 
-export const getFiberRef = <R, E, A>(ref: FiberRef<R, E, A>, __trace?: string): Fx<R, E, A> =>
+export const get = <R, E, A>(ref: FiberRef<R, E, A>, __trace?: string): Fx<R, E, A> =>
   GetFiberRef.make(ref, __trace)
 
-export const modifyFiberRef =
+export const modify =
   <A, R2, E2, B>(f: (a: A) => Fx<R2, E2, readonly [B, A]>, __trace?: string) =>
   <R, E>(ref: FiberRef<R, E, A>): Fx<R | R2, E | E2, B> =>
     ModifyFiberRef.make(ref, f, __trace)
 
-export const deleteFiberRef = <R, E, A>(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const set = <A>(value: A) => modify((_: A) => now([value, value]))
+
+export const set_ =
+  <R, E, A>(ref: FiberRef<R, E, A>) =>
+  (value: A) =>
+    set(value)(ref)
+
+export const getAndSet = <A>(value: A) => modify((_: A) => now([_, value]))
+
+export const remove = <R, E, A>(
   ref: FiberRef<R, E, A>,
   __trace?: string,
 ): Fx<R, E, Maybe.Maybe<A>> => DeleteFiberRef.make(ref, __trace)
 
-export const fiberRefLocally =
+export { remove as delete }
+
+export const update = <A>(f: (a: A) => A) =>
+  modify((a: A) =>
+    lazy(() => {
+      const a2 = f(a)
+
+      return now([a2, a2])
+    }),
+  )
+
+export const getAndUpdate = <A>(f: (a: A) => A) => modify((a: A) => now([a, f(a)]))
+
+export const locally =
   <R2, E2, B>(ref: FiberRef<R2, E2, B>, value: B) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> =>
     FiberRefLocally.make(ref, value, fx)

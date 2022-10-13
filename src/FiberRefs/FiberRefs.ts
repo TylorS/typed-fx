@@ -1,141 +1,241 @@
 import { flow, pipe } from 'hkt-ts'
 import * as Maybe from 'hkt-ts/Maybe'
+import { NonNegativeInteger } from 'hkt-ts/number'
+import { Scope } from 'ts-morph'
 
-import { Atomic } from '@/Atomic/Atomic.js'
-import type { AnyLiveFiber } from '@/Fiber/Fiber.js'
-import * as FiberRef from '@/FiberRef/FiberRef.js'
-import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
-import * as Stack from '@/Stack/index.js'
+import { Fiber } from '@/Fiber/Fiber.js'
+import { FiberRef, FiberRefId } from '@/FiberRef/FiberRef.js'
+import * as Fx from '@/Fx/Fx.js'
+import { flatJoin } from '@/Fx/join.js'
+import { scoped } from '@/Fx/scoped.js'
+import { Lock, Semaphore } from '@/Semaphore/Semaphore.js'
+import { Stack } from '@/Stack/index.js'
 
-export interface FiberRefs extends Iterable<readonly [FiberRef.AnyFiberRef, any]> {
-  readonly locals: Atomic<ImmutableMap<FiberRef.AnyFiberRef, Stack.Stack<any>>>
-  readonly initializing: Atomic<ImmutableMap<FiberRef.AnyFiberRef, AnyLiveFiber>>
+export interface FiberRefs {
+  readonly locals: Locals
+
+  readonly get: <R, E, A>(fiberRef: FiberRef<R, E, A>) => Fx.Fx<R, E, A>
+
+  readonly modify: <R, E, A, R2, E2, B>(
+    fiberRef: FiberRef<R, E, A>,
+    f: (a: A) => Fx.Fx<R2, E2, readonly [B, A]>,
+  ) => Fx.Fx<Exclude<R | R2, Scope>, E | E2, B>
+
+  readonly delete: <R, E, A>(fiberRef: FiberRef<R, E, A>) => Fx.Fx<R, E, Maybe.Maybe<A>>
+
+  readonly locally: <R, E, A, R2, E2, B>(
+    fiberRef: FiberRef<R, E, A>,
+    value: A,
+    fx: Fx.Fx<R2, E2, B>,
+  ) => Fx.Fx<R2, E2, B>
+
   readonly fork: () => FiberRefs
+
+  readonly join: (fiberRefs: FiberRefs) => Fx.Fx.Of<void>
 }
 
 export function FiberRefs(
-  locals: ImmutableMap<FiberRef.AnyFiberRef, Stack.Stack<any>> = ImmutableMap(),
-  initializing: ImmutableMap<FiberRef.AnyFiberRef, AnyLiveFiber> = ImmutableMap(),
+  locals: Locals = Locals(),
+  initializing: Iterable<readonly [FiberRefId, Fiber<any, any>]> = new Map(),
 ): FiberRefs {
-  const atomic = Atomic(locals)
-  const fiberRefs: FiberRefs = {
-    locals: atomic,
-    initializing: Atomic(initializing),
-    fork: () => fork(fiberRefs),
-    *[Symbol.iterator]() {
-      for (const [key, stack] of atomic.get()) {
-        yield [key, stack.value] as const
-      }
-    },
+  const initializingFibers = new Map(initializing)
+  const semaphores = new Map<FiberRefId, Semaphore<any, any, any>>()
+  const getSemaphore = <R, E, A>(ref: FiberRef<R, E, A>) => {
+    // TODO: How to handle when the current ref is being modified?
+    if (semaphores.has(ref.id) && locals.isCurrentRef(ref)) {
+      return semaphores.get(ref.id) as Semaphore<R, E, A>
+    }
+
+    const semaphore = Lock(ref)
+
+    semaphores.set(ref.id, semaphore)
+
+    return semaphore
   }
 
-  return fiberRefs
-}
+  const get: FiberRefs['get'] = (ref) =>
+    Fx.lazy(() => {
+      const current = locals.get(ref)
 
-export function maybeGetFiberRefStack<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>) {
-  return (fiberRefs: FiberRefs) =>
-    fiberRefs.locals.get().get(fiberRef) as Maybe.Maybe<Stack.Stack<A>>
-}
-
-export function maybeGetFiberRefValue<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>) {
-  return flow(
-    maybeGetFiberRefStack(fiberRef),
-    Maybe.map((s) => s.value),
-  )
-}
-
-export function setFiberRef<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>, value: A) {
-  return (fiberRefs: FiberRefs): A =>
-    fiberRefs.locals.modify((locals) => {
-      const curr = maybeGetFiberRefStack(fiberRef)(fiberRefs)
-
-      return [
-        value,
-        locals.set(
-          fiberRef,
-          pipe(
-            curr,
-            Maybe.match(
-              () => new Stack.Stack(value),
-              (c) => c.replace(() => value),
-            ),
-          ),
-        ),
-      ]
-    })
-}
-
-export function setFiberRefLocally<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>, value: A) {
-  return (fiberRefs: FiberRefs): A =>
-    fiberRefs.locals.modify((locals) => {
-      const curr = maybeGetFiberRefStack(fiberRef)(fiberRefs)
-
-      return [
-        value,
-        locals.set(
-          fiberRef,
-          pipe(
-            curr,
-            Maybe.match(
-              () => new Stack.Stack(value),
-              (c) => c.push(value),
-            ),
-          ),
-        ),
-      ]
-    })
-}
-
-export function popLocalFiberRef<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>) {
-  return (fiberRefs: FiberRefs): Maybe.Maybe<A> =>
-    fiberRefs.locals.modify((locals) => {
-      const curr = maybeGetFiberRefStack(fiberRef)(fiberRefs)
-
-      if (Maybe.isNothing(curr)) {
-        return [Maybe.Nothing, locals.remove(fiberRef)]
+      if (Maybe.isJust(current)) {
+        return Fx.now(current.value)
       }
 
-      const prev = curr.value.pop()
+      if (initializingFibers.has(ref.id)) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        return pipe(initializingFibers.get(ref.id)!.exit, Fx.flatMap(Fx.fromExit))
+      }
 
-      return [
-        pipe(
-          curr,
-          Maybe.map((c) => c.value),
-        ),
-        prev ? locals.set(fiberRef, prev) : locals.remove(fiberRef),
-      ]
+      return pipe(
+        ref.initial,
+        Fx.fork,
+        Fx.tapLazy((fiber) => initializingFibers.set(ref.id, fiber)),
+        flatJoin,
+        Fx.tapLazy((a) => {
+          locals.set(ref, a)
+          initializingFibers.delete(ref.id)
+        }),
+      )
     })
+
+  const modify = <R, E, A, R2, E2, B>(
+    ref: FiberRef<R, E, A>,
+    f: (a: A) => Fx.Fx<R2, E2, readonly [B, A]>,
+  ) =>
+    pipe(
+      getSemaphore(ref).acquirePermits(NonNegativeInteger(1)),
+      Fx.flatMap((a) => f(a)),
+      Fx.tapLazy(([, a]) => locals.set(ref, a)),
+      Fx.map(([b]) => b),
+      scoped,
+    )
+
+  const remove: FiberRefs['delete'] = (ref) => Fx.fromLazy(() => locals.delete(ref))
+
+  const locally: FiberRefs['locally'] = <R, E, A, R2, E2, B>(
+    fiberRef: FiberRef<R, E, A>,
+    value: A,
+    fx: Fx.Fx<R2, E2, B>,
+  ) =>
+    pipe(
+      Fx.lazy(() => {
+        const current = locals.get(fiberRef)
+
+        locals.set(fiberRef, value)
+
+        return pipe(
+          current,
+          Maybe.match(
+            () =>
+              pipe(
+                fx,
+                Fx.tapLazy(() => locals.delete(fiberRef)),
+              ),
+            (a) =>
+              pipe(
+                fx,
+                Fx.tapLazy(() => locals.set(fiberRef, a)),
+              ),
+          ),
+        )
+      }),
+    )
+
+  const refs: FiberRefs = {
+    locals,
+    get,
+    modify: flow(modify, scoped) as FiberRefs['modify'],
+    delete: remove,
+    locally,
+    fork: () => FiberRefs(locals.fork(), initializingFibers),
+    join: (other) =>
+      Fx.fromLazy(() => {
+        locals.join(other.locals)
+      }),
+  }
+
+  return refs
 }
 
-export function deleteFiberRef<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>) {
-  return (fiberRefs: FiberRefs): Maybe.Maybe<Stack.Stack<A>> =>
-    fiberRefs.locals.modify((locals) => {
-      const curr = maybeGetFiberRefStack(fiberRef)(fiberRefs)
-
-      return [curr, locals.remove(fiberRef)]
-    })
+export interface Locals {
+  readonly getAll: () => ReadonlyMap<FiberRef<any, any, any>, Stack<any>>
+  readonly isCurrentRef: <R, E, A>(fiberRef: FiberRef<R, E, A>) => boolean
+  readonly getStack: <R, E, A>(fiberRef: FiberRef<R, E, A>) => Maybe.Maybe<Stack<A>>
+  readonly get: <R, E, A>(fiberRef: FiberRef<R, E, A>) => Maybe.Maybe<A>
+  readonly set: <R, E, A>(fiberRef: FiberRef<R, E, A>, value: A) => void
+  readonly delete: <R, E, A>(fiberRef: FiberRef<R, E, A>) => Maybe.Maybe<A>
+  readonly pushLocal: <R, E, A>(fiberRef: FiberRef<R, E, A>, value: A) => void
+  readonly popLocal: <R, E, A>(fiberRef: FiberRef<R, E, A>) => void
+  readonly fork: () => Locals
+  readonly join: (locals: Locals) => void
 }
 
-export function fork(fiberRefs: FiberRefs): FiberRefs {
-  const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>()
+export function Locals(
+  initial: Iterable<readonly [FiberRef<any, any, any>, Stack<any>]> = new Map(),
+): Locals {
+  const idToFiberRef = new Map([...initial].map(([k]) => [k.id, k] as const))
+  const idToValue = new Map([...initial].map(([k, v]) => [k.id, v]))
 
-  for (const [key, stack] of fiberRefs.locals.get()) {
-    const forked = key.fork(stack.value)
+  const getAll = () => {
+    const map = new Map()
 
-    if (Maybe.isJust(forked)) {
-      updated.set(key, new Stack.Stack(forked.value))
+    for (const ref of idToFiberRef.values()) {
+      map.set(ref, idToValue.get(ref.id))
+    }
+
+    return map
+  }
+
+  const getStack = <R, E, A>(ref: FiberRef<R, E, A>) =>
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    idToValue.has(ref.id) ? Maybe.Just(idToValue.get(ref.id)!) : Maybe.Nothing
+
+  const get = <R, E, A>(ref: FiberRef<R, E, A>) =>
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    idToValue.has(ref.id) ? Maybe.Just(idToValue.get(ref.id)!.value) : Maybe.Nothing
+
+  const set = <R, E, A>(ref: FiberRef<R, E, A>, value: A) => {
+    idToFiberRef.set(ref.id, ref)
+    idToValue.set(ref.id, idToValue.get(ref.id)?.replace(() => value) ?? new Stack(value))
+  }
+
+  const setStack = <R, E, A>(ref: FiberRef<R, E, A>, stack: Stack<A>) => {
+    idToFiberRef.set(ref.id, ref)
+    idToValue.set(ref.id, stack)
+  }
+
+  const remove: Locals['delete'] = (ref) => {
+    const c = get(ref)
+
+    idToValue.delete(ref.id)
+    idToFiberRef.delete(ref.id)
+
+    return c
+  }
+
+  const pushLocal = <R, E, A>(ref: FiberRef<R, E, A>, value: A) => {
+    idToFiberRef.set(ref.id, ref)
+    idToValue.set(ref.id, idToValue.get(ref.id)?.push(() => value) ?? new Stack(value))
+  }
+
+  const popLocal = <R, E, A>(ref: FiberRef<R, E, A>) => {
+    const popped = idToValue.get(ref.id)?.pop()
+
+    if (popped) {
+      setStack(ref, popped)
+    } else {
+      remove(ref)
     }
   }
 
-  return FiberRefs(ImmutableMap(updated), fiberRefs.initializing.get())
-}
+  return {
+    getAll,
+    isCurrentRef: (ref) => idToFiberRef.get(ref.id) === ref,
+    getStack,
+    get,
+    set,
+    delete: remove,
+    pushLocal,
+    popLocal,
+    fork: () => {
+      const forked = new Map()
 
-export function join(first: FiberRefs, second: FiberRefs): void {
-  const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>(first.locals.get())
+      for (const [ref, value] of getAll()) {
+        const maybe = ref.fork(value)
 
-  for (const [key, value] of second) {
-    updated.set(key, updated.get(key)?.replace((a) => key.join(a, value)) ?? new Stack.Stack(value))
+        if (Maybe.isJust(maybe)) {
+          forked.set(ref, maybe.value)
+        }
+      }
+
+      return Locals(forked)
+    },
+    join: (other) => {
+      for (const [ref, value] of other.getAll()) {
+        const current = get(ref)
+
+        set(ref, Maybe.isJust(current) ? ref.join(current.value, value) : value)
+      }
+    },
   }
-
-  first.locals.set(ImmutableMap(updated))
 }

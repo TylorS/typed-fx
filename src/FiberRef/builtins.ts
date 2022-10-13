@@ -1,45 +1,27 @@
-import { Maybe, identity, pipe } from 'hkt-ts'
+import { identity } from 'hkt-ts'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { FiberRef, make } from './FiberRef.js'
 
-import { unexpected } from '@/Cause/Cause.js'
-import type { Env } from '@/Env/Env.js'
-import { Live } from '@/Fiber/Fiber.js'
-import * as FiberRefs from '@/FiberRefs/FiberRefs.js'
+import { Empty } from '@/Env/Env.js'
 import * as Fx from '@/Fx/Fx.js'
-import { join } from '@/Fx/join.js'
 import { ImmutableMap } from '@/ImmutableMap/ImmutableMap.js'
 import { LogAnnotation } from '@/Logger/LogAnnotation.js'
 import { LogSpan } from '@/Logger/LogSpan.js'
 import { Semaphore } from '@/Semaphore/Semaphore.js'
-import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
 export const CurrentEnv = make(
-  pipe(
-    Fx.getFiberContext,
-    Fx.map((c) => makeEnvFromFiberRefs(c.fiberRefs)),
-  ),
+  Fx.fromLazy(() => Empty),
   {
     join: identity,
   },
 )
 
-export function makeEnvFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R> {
-  // Always use a snapshot of the FiberRefs to avoid mutability problems.
-  const forked = FiberRefs.fork(fiberRefs)
-
-  return {
-    fiberRefs: forked,
-    get: getServiceFromFiberRefs(forked),
-    addService: addServiceFromFiberRefs(forked),
-    join: joinEnvFromFiberRefs(forked),
-  }
-}
+const emptyRef = make(Fx.unit)
 
 export const CurrentConcurrencyLevel = make(
-  Fx.fromLazy(() => new Semaphore(NonNegativeInteger(Infinity))),
+  Fx.fromLazy(() => Semaphore(emptyRef, NonNegativeInteger(Infinity))),
   {
     join: identity, // Always keep the parent Fiber's concurrency level
   },
@@ -56,22 +38,6 @@ export const CurrentTrace = make(
   },
 )
 
-export const Layers = FiberRef.make(
-  Fx.fromLazy(() =>
-    ImmutableMap<Service<any>, readonly [() => Live<never, any>, Maybe.Maybe<Live<never, any>>]>(),
-  ),
-  {
-    join: (f, s) => f.joinWith(s, identity),
-  },
-)
-
-export const Services = FiberRef.make(
-  Fx.fromLazy(() => ImmutableMap<Service<any>, any>()),
-  {
-    join: (f, s) => f.joinWith(s, identity),
-  },
-)
-
 export const CurrentLogSpans = FiberRef.make(
   Fx.fromLazy(() => ImmutableMap<string, LogSpan>()),
   {
@@ -85,119 +51,3 @@ export const CurrentLogAnnotations = FiberRef.make(
     join: identity,
   },
 )
-
-export function getServiceFromFiberRefs(fiberRefs: FiberRefs.FiberRefs) {
-  return <S>(id: Service<S>): Fx.Of<S> => {
-    return Fx.lazy(() => {
-      const service = pipe(
-        fiberRefs,
-        FiberRefs.maybeGetFiberRefValue(Services),
-        Maybe.flatMap((s) => s.get(id)),
-      )
-
-      if (Maybe.isJust(service)) {
-        return Fx.success(service.value as S)
-      }
-
-      return getLayerFromFiberRefs(id, fiberRefs)
-    })
-  }
-}
-
-const getLayerFromFiberRefs = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs) =>
-  Fx.lazy(() => {
-    const layers = FiberRefs.maybeGetFiberRefValue(Layers)(fiberRefs)
-
-    // Add Layers if it is missing
-    if (Maybe.isNothing(layers)) {
-      return Fx.fromCause(
-        unexpected(new Error(`Unable to find Layer or Service for ${id.description}`)),
-      )
-    }
-
-    const layer = layers.value.get(id)
-
-    if (Maybe.isNothing(layer)) {
-      return Fx.fromCause(
-        unexpected(new Error(`Unable to find Layer or Service for ${id.description}`)),
-      )
-    }
-
-    const [makeFiber, currentFiber] = layer.value
-
-    if (Maybe.isJust(currentFiber)) {
-      return pipe(currentFiber.value.exit, Fx.flatMap(Fx.fromExit))
-    }
-
-    const fiber = makeFiber()
-
-    FiberRefs.setFiberRef(
-      Layers,
-      layers.value.set(id, [makeFiber, Maybe.Just(fiber)] as const),
-    )(fiberRefs)
-
-    return join(fiber)
-  })
-
-export function addServiceFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R>['addService'] {
-  return (id, impl) => {
-    const forked = fiberRefs.fork()
-
-    // AddService
-    FiberRefs.setFiberRef(
-      Services,
-      pipe(
-        forked,
-        FiberRefs.maybeGetFiberRefValue(Services),
-        Maybe.match(
-          () => ImmutableMap<Service<any>, any>().set(id, impl),
-          (s) => s.set(id, impl),
-        ),
-      ),
-    )(forked)
-
-    return makeEnvFromFiberRefs(forked)
-  }
-}
-
-export function joinEnvFromFiberRefs<R>(fiberRefs: FiberRefs.FiberRefs): Env<R>['join'] {
-  return (other) => {
-    const forked = other.fiberRefs.fork()
-
-    joinFiberRef(Services, forked, fiberRefs)
-    joinFiberRef(Layers, forked, fiberRefs)
-
-    return makeEnvFromFiberRefs(forked)
-  }
-}
-
-function joinFiberRef<R, E, A>(
-  fiberRef: FiberRef<R, E, A>,
-  first: FiberRefs.FiberRefs,
-  second: FiberRefs.FiberRefs,
-) {
-  return pipe(
-    first,
-    FiberRefs.maybeGetFiberRefValue(fiberRef),
-    Maybe.match(
-      () =>
-        pipe(
-          second,
-          FiberRefs.maybeGetFiberRefValue(fiberRef),
-          Maybe.match(
-            () => null,
-            (b) => FiberRefs.setFiberRef(fiberRef, b)(first),
-          ),
-        ),
-      (a) =>
-        pipe(
-          second,
-          FiberRefs.maybeGetFiberRefValue(fiberRef),
-          Maybe.match(
-            () => null,
-            (b) => FiberRefs.setFiberRef(fiberRef, fiberRef.join(a, b))(first),
-          ),
-        ),
-    ),
-  )
-}

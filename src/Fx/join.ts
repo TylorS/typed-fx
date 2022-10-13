@@ -3,7 +3,7 @@ import { pipe } from 'hkt-ts'
 import * as Fx from './Fx.js'
 
 import * as Fiber from '@/Fiber/Fiber.js'
-import { FiberContext } from '@/FiberContext/FiberContext.js'
+import type { FiberContext } from '@/FiberContext/FiberContext.js'
 import { FiberId } from '@/FiberId/FiberId.js'
 import { Scope } from '@/Scope/Scope.js'
 
