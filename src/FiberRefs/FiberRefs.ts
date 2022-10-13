@@ -132,15 +132,9 @@ export function fork(fiberRefs: FiberRefs): FiberRefs {
 
 export function join(first: FiberRefs, second: FiberRefs): void {
   const updated = new Map<FiberRef.AnyFiberRef, Stack.Stack<any>>(first.locals.get())
-  const incoming = second.locals.get()
 
-  for (const [key, stack] of incoming) {
-    const current = updated.get(key)
-
-    updated.set(
-      key,
-      current ? current.replace((a) => key.join(a, stack.value)) : new Stack.Stack(stack.value),
-    )
+  for (const [key, value] of second) {
+    updated.set(key, updated.get(key)?.replace((a) => key.join(a, value)) ?? new Stack.Stack(value))
   }
 
   first.locals.set(ImmutableMap(updated))

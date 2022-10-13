@@ -1,7 +1,8 @@
 import { flow, pipe } from 'hkt-ts'
 import * as Maybe from 'hkt-ts/Maybe'
 
-import * as Fx from '@/Fx2/index.js'
+import * as FiberRef from '@/FiberRef/index.js'
+import * as Fx from '@/Fx/index.js'
 
 export interface Ref<R, E, I, O = I> {
   readonly get: Fx.Fx<R, E, O>
@@ -9,15 +10,15 @@ export interface Ref<R, E, I, O = I> {
   readonly delete: Fx.Fx<R, E, Maybe.Maybe<O>>
 }
 
-export function fromFiberRef<R, E, A>(fiberRef: Fx.FiberRef<R, E, A>): Ref<R, E, A, A> {
+export function fromFiberRef<R, E, A>(fiberRef: FiberRef.FiberRef<R, E, A>): Ref<R, E, A, A> {
   return {
-    get: Fx.get(fiberRef),
-    set: (i) => Fx.set(i)(fiberRef),
-    delete: Fx.remove(fiberRef),
+    get: FiberRef.get(fiberRef),
+    set: (i) => FiberRef.set(i)(fiberRef),
+    delete: FiberRef.delete(fiberRef),
   }
 }
 
-export const make = flow(Fx.FiberRef, fromFiberRef)
+export const make = flow(FiberRef.make, fromFiberRef)
 
 export function map<A, B>(f: (a: A) => B) {
   return <R, E, I>(ref: Ref<R, E, I, A>): Ref<R, E, I, B> => ({

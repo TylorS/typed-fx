@@ -131,7 +131,10 @@ const getLayerFromFiberRefs = <S>(id: Service<S>, fiberRefs: FiberRefs.FiberRefs
 
     const fiber = makeFiber()
 
-    FiberRefs.setFiberRef(Layers, layers.value.set(id, [makeFiber, Maybe.Just(fiber)]))(fiberRefs)
+    FiberRefs.setFiberRef(
+      Layers,
+      layers.value.set(id, [makeFiber, Maybe.Just(fiber)] as const),
+    )(fiberRefs)
 
     return join(fiber)
   })

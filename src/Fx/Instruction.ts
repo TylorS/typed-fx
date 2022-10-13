@@ -19,7 +19,7 @@ import { Trace } from '@/Trace/Trace.js'
 export type Instruction<R, E, A> =
   | AddTrace<R, E, A>
   | BothFx<R, E, A>
-  | DeleteFiberRef<R, E, any, A>
+  | DeleteFiberRef<R, E, A>
   | EitherFx<R, E, A>
   | FiberRefLocally<any, any, any, R, E, A>
   | FlatMap<R, E, any, R, E, A>
@@ -34,7 +34,7 @@ export type Instruction<R, E, A> =
   | LazyFx<R, E, A>
   | MapFx<R, E, any, A>
   | Match<R, any, any, R, E, A, R, E, A>
-  | ModifyFiberRef<R, E, any, A>
+  | ModifyFiberRef<R, E, any, R, E, A>
   | Now<A>
   | Provide<any, E, A>
   | ProvideLayer<R, E, A, R, E, any>
@@ -367,30 +367,30 @@ export class GetFiberRef<R, E, A> extends Instr<R, E, A> {
   }
 }
 
-export class ModifyFiberRef<R, E, A, B> extends Instr<R, E, B> {
+export class ModifyFiberRef<R, E, A, R2, E2, B> extends Instr<R | R2, E | E2, B> {
   readonly tag = 'ModifyFiberRef'
 
   constructor(
     readonly fiberRef: FiberRef<any, any, any>,
-    readonly modify: (a: A) => readonly [B, A],
+    readonly modify: (a: A) => Fx<R2, E2, readonly [B, A]>,
     __trace?: string,
   ) {
     super(__trace)
   }
 
-  static make<R, E, A, B>(
+  static make<R, E, A, R2, E2, B>(
     fiberRef: FiberRef<R, E, A>,
-    modify: (a: A) => readonly [B, A],
+    modify: (a: A) => Fx<R2, E2, readonly [B, A]>,
     __trace?: string,
-  ): Fx<R, E, B> {
+  ): Fx<R | R2, E | E2, B> {
     return new ModifyFiberRef(fiberRef, modify, __trace)
   }
 }
 
-export class DeleteFiberRef<R, E, A, B> extends Instr<R, E, B> {
+export class DeleteFiberRef<R, E, A> extends Instr<R, E, A> {
   readonly tag = 'DeleteFiberRef'
 
-  constructor(readonly fiberRef: FiberRef<any, any, A>, __trace?: string) {
+  constructor(readonly fiberRef: FiberRef<any, any, any>, __trace?: string) {
     super(__trace)
   }
 

@@ -61,6 +61,12 @@ import type { Scope } from '@/Scope/Scope.js'
 import { Service } from '@/Service/Service.js'
 import { Trace } from '@/Trace/Trace.js'
 
+/**
+ * TODO: Update Fx to utilize FiberRefs2, Env2, and Layer2
+ * TODO: Update Fx Instructions for Modifying FiberRef to be asynchronous
+ * TODO: Update Stream to utilize Sink2
+ * TODO: Update Pool to be a workflow around FiberRef
+ */
 export interface Fx<out R, out E, out A> {
   readonly instr: Instruction<R, E, A>
   readonly [Symbol.iterator]: () => Generator<Instruction<R, E, any>, A, any>
@@ -412,8 +418,8 @@ export const getFiberRef = <R, E, A>(ref: FiberRef<R, E, A>, __trace?: string): 
   GetFiberRef.make(ref, __trace)
 
 export const modifyFiberRef =
-  <A, B>(f: (a: A) => readonly [B, A], __trace?: string) =>
-  <R, E>(ref: FiberRef<R, E, A>): Fx<R, E, B> =>
+  <A, R2, E2, B>(f: (a: A) => Fx<R2, E2, readonly [B, A]>, __trace?: string) =>
+  <R, E>(ref: FiberRef<R, E, A>): Fx<R | R2, E | E2, B> =>
     ModifyFiberRef.make(ref, f, __trace)
 
 export const deleteFiberRef = <R, E, A>(
