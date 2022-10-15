@@ -1,5 +1,6 @@
 import { pipe } from 'hkt-ts'
 import { Right, isRight } from 'hkt-ts/Either'
+import { match } from 'hkt-ts/Maybe'
 import { NonNegativeInteger } from 'hkt-ts/number'
 
 import { join } from './join.js'
@@ -78,7 +79,12 @@ export const sleep = (delay: Delay): Fx.RIO<Scheduler, Time> =>
     Fx.unit,
     scheduled(Schedule.delayed(delay)),
     Fx.flatMap(join),
-    Fx.flatMap(() => Fx.getCurrentTime),
+    Fx.flatMap((state) =>
+      pipe(
+        state.time,
+        match(() => Fx.getCurrentTime, Fx.now),
+      ),
+    ),
   )
 
 export function repeated(period: Delay, __trace?: string) {

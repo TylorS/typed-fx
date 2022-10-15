@@ -4,21 +4,14 @@
 import * as A from 'hkt-ts/Array'
 import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 import { First } from 'hkt-ts/Typeclass/Associative'
-import { pipe } from 'hkt-ts/function'
 
 import * as Exit from '@/Exit/Exit.js'
-import {
-  FinalizationStrategy,
-  Finalizer,
-  FinalizerKey,
-  finalizationStrategyToConcurrency,
-} from '@/Finalizer/Finalizer.js'
-import { Fx, Of, attempt, lazy, unit, withConcurrency, zipAll } from '@/Fx/Fx.js'
+import { Finalizer, FinalizerKey } from '@/Finalizer/Finalizer.js'
+import { Fx, Of, attempt, lazy, unit } from '@/Fx/Fx.js'
 
 let nextId = 0
 
 const concatExitSeq = Exit.makeSequentialAssociative<any, any>(First).concat
-const concatExitPar = Exit.makeParallelAssociative<any, any>(First).concat
 
 /**
  * ReleaseMap is an underlying class utilizing in the implementation of Managed. It allows
@@ -26,8 +19,6 @@ const concatExitPar = Exit.makeParallelAssociative<any, any>(First).concat
  */
 export class ReleaseMap {
   protected finalizers: Map<FinalizerKey, Finalizer> = new Map()
-
-  constructor(readonly strategy: FinalizationStrategy) {}
 
   readonly isEmpty = () => this.finalizers.size === 0
 
@@ -72,35 +63,13 @@ export class ReleaseMap {
 
     const isEmpty = () => this.isEmpty()
 
-    if (this.strategy.strategy === 'Sequential') {
-      return Fx(function* () {
-        const exits: Array<Exit.AnyExit> = []
-
-        while (!isEmpty()) {
-          for (const fx of toBeReleased()) {
-            exits.push(yield* fx)
-          }
-        }
-
-        if (A.isNonEmpty(exits)) {
-          return exits.reduce(concatExitSeq, exit)
-        }
-
-        return exit
-      })
-    }
-
-    const releaseAll_ = () =>
-      pipe(
-        zipAll(toBeReleased()),
-        withConcurrency(finalizationStrategyToConcurrency(this.strategy)),
-      )
-
     return Fx(function* () {
       const exits: Array<Exit.AnyExit> = []
 
       while (!isEmpty()) {
-        exits.push((yield* releaseAll_()).reduce(concatExitPar as any))
+        for (const fx of toBeReleased()) {
+          exits.push(yield* fx)
+        }
       }
 
       if (A.isNonEmpty(exits)) {

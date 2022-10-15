@@ -1,87 +1,84 @@
-import { pipe } from 'hkt-ts'
-import { Left, Right } from 'hkt-ts/Either'
-
 import { Stream } from './Stream.js'
 
-import { Cause } from '@/Cause/Cause.js'
-import * as Fiber from '@/Fiber/index.js'
-import * as FiberId from '@/FiberId/FiberId.js'
+import { Fiber, Synthetic, inheritFiberRefs } from '@/Fiber/Fiber.js'
+import { Pending, complete, wait } from '@/Future/index.js'
 import * as Fx from '@/Fx/index.js'
-import { closeOrWait, wait } from '@/Scope/Closeable.js'
-import { Sink } from '@/Sink/Sink.js'
+import { Sink } from '@/Sink/index.js'
 
 export function flatMap<A, R2, E2, B>(f: (a: A) => Stream<R2, E2, B>) {
-  return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R | R2, E, B, E1 | E2> => {
-    return Stream(<R3, E3, C>(sink: Sink<E, B, R3, E3, C>) =>
-      pipe(
-        Fx.getPlatform,
-        Fx.bindTo('platform'),
-        Fx.bind('fiberRefs', () => Fx.getFiberRefs),
-        Fx.bind('scope', () =>
-          pipe(
-            Fx.getFiberScope,
-            Fx.map((s) => s.fork()),
-          ),
-        ),
-        Fx.bind('fiber', ({ scope }) =>
-          Fx.lazy(() => {
-            let ended = false
-            let running = 0
+  return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R | R2, E, B, E1 | E2> =>
+    new FlatMapStream(stream, f)
+}
 
-            const closeIfComplete: Fx.Fx<R3, E1 | E2 | E3, C> = pipe(
-              Fx.lazy(() => {
-                if (ended && running === 0) {
-                  return pipe(
-                    sink.end,
-                    Fx.flatMap((a) => closeOrWait(scope)(Right(a))),
-                  )
-                }
+export class FlatMapStream<R, E, A, E1, R2, E2, B> implements Stream<R | R2, E, B, E1 | E2> {
+  constructor(readonly stream: Stream<R, E, A, E1>, readonly f: (a: A) => Stream<R2, E2, B>) {}
 
-                return wait(scope)
-              }),
-              Fx.flatMap(Fx.fromExit),
-            )
+  readonly fork: Stream<R | R2, E, B, E1 | E2>['fork'] = <R3, E3, C>(sink: Sink<E, B, R3, E3, C>) =>
+    Fx.lazy(() => {
+      const s = new FlatMapSink(sink, this.f)
+      const fork = this.stream.fork(s)
 
-            const error = (c: Cause<E | E2>): Fx.IO<E1 | E2 | E3, C> =>
-              pipe(
-                Fx.lazy(() => {
-                  ended = true
+      return Fx.Fx(function* () {
+        const env = yield* Fx.getEnv<R | R2 | R3>()
+        const forked = yield* fork
+        const fiber: Fiber<E1 | E2 | E3, C> = Synthetic({
+          id: forked.id,
+          exit: Fx.provide(env)(Fx.attempt(wait(s.future))),
+          inheritFiberRefs: inheritFiberRefs(forked),
+          interruptAs: forked.interruptAs,
+        })
 
-                  return closeOrWait(scope)(Left(c))
-                }),
-                Fx.flatMap(Fx.fromExit),
-              )
+        return fiber
+      })
+    })
+}
 
-            return stream.fork<R2 | R3, E1 | E2 | E3, C>({
-              event: (a) =>
-                Fx.lazy(() => {
-                  running++
+export class FlatMapSink<E, A, R2, E2, B, R3, E3, C> implements Sink<E, A, R2 | R3, E2 | E3, B> {
+  protected running = 0
+  protected ended = false
 
-                  return f(a).fork<R3, E3 | E2 | E1, unknown>({
-                    event: sink.event,
-                    error,
-                    end: Fx.lazy(() => {
-                      running--
+  readonly future = Pending<R2 | R3, E2 | E3, B>()
 
-                      return Fx.forkSync(closeIfComplete)
-                    }),
-                  })
-                }),
-              error,
-              end: Fx.lazy(() => {
-                ended = true
-                return closeIfComplete
-              }),
-            })
-          }),
-        ),
-        Fx.map(({ platform, fiberRefs, scope, fiber }) =>
-          pipe(
-            Fiber.fromScope<E1 | E2 | E3, C>(FiberId.Live(platform), fiberRefs.fork(), scope),
-            Fiber.orElse<E1 | E2 | E3, C>(() => fiber),
-          ),
-        ),
-      ),
+  constructor(readonly sink: Sink<E, C, R2, E2, B>, readonly f: (a: A) => Stream<R3, E3, C>) {}
+
+  readonly event: Sink<E, A, R2 | R3, E2 | E3, B>['event'] = (a) =>
+    Fx.lazy(() =>
+      this.f(a).fork<R2 | R3, E2 | E3, unknown>({
+        event: this.sink.event,
+        error: (e) => {
+          complete(this.future)(Fx.fromCause(e))
+
+          return wait(this.future)
+        },
+        end: Fx.lazy(() => {
+          this.running--
+          this.endIfCompleted()
+
+          return Fx.unit
+        }),
+      }),
     )
+
+  readonly error: Sink<E, A, R2 | R3, E2 | E3, B>['error'] = (e) =>
+    Fx.lazy(() => {
+      this.ended = true
+
+      complete(this.future)(this.sink.error(e))
+
+      return wait(this.future)
+    })
+
+  readonly end: Sink<E, A, R2 | R3, E2 | E3, B>['end'] = Fx.lazy(() => {
+    this.ended = true
+
+    this.endIfCompleted()
+
+    return wait(this.future)
+  })
+
+  protected endIfCompleted() {
+    if (this.ended && this.running === 0) {
+      complete(this.future)(this.sink.end)
+    }
   }
 }

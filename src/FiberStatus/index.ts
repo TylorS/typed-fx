@@ -1,6 +1,6 @@
-import { AnyExit } from '@/Exit/Exit.js'
+import type { Exit } from '@/Exit/Exit.js'
 
-export type FiberStatus = Suspended | Running | Done
+export type FiberStatus<E, A> = Suspended | Running | Done<E, A>
 
 export interface Suspended {
   readonly tag: 'Suspended'
@@ -12,12 +12,12 @@ export interface Running {
 }
 export const Running: Running = { tag: 'Running' }
 
-export interface Done {
+export interface Done<E, A> {
   readonly tag: 'Done'
-  readonly exit: AnyExit
+  readonly exit: Exit<E, A>
 }
 
-export const Done = (exit: AnyExit): Done => ({
+export const Done = <E, A>(exit: Exit<E, A>): Done<E, A> => ({
   tag: 'Done',
   exit,
 })

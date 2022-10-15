@@ -18,10 +18,8 @@ export const CurrentEnv = make(
   },
 )
 
-const emptyRef = make(Fx.unit)
-
 export const CurrentConcurrencyLevel = make(
-  Fx.fromLazy(() => Semaphore(emptyRef, NonNegativeInteger(Infinity))),
+  Fx.fromLazy(() => Semaphore(Fx.unit, NonNegativeInteger(Infinity))),
   {
     join: identity, // Always keep the parent Fiber's concurrency level
   },

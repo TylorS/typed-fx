@@ -1,4 +1,4 @@
-import { flow, pipe } from 'hkt-ts'
+import { pipe } from 'hkt-ts'
 import * as Maybe from 'hkt-ts/Maybe'
 import { NonNegativeInteger } from 'hkt-ts/number'
 import { Scope } from 'ts-morph'
@@ -46,7 +46,7 @@ export function FiberRefs(
       return semaphores.get(ref.id) as Semaphore<R, E, A>
     }
 
-    const semaphore = Lock(ref)
+    const semaphore = Lock(ref.initial)
 
     semaphores.set(ref.id, semaphore)
 
@@ -78,17 +78,17 @@ export function FiberRefs(
       )
     })
 
-  const modify = <R, E, A, R2, E2, B>(
+  const modify: FiberRefs['modify'] = <R, E, A, R2, E2, B>(
     ref: FiberRef<R, E, A>,
     f: (a: A) => Fx.Fx<R2, E2, readonly [B, A]>,
-  ) =>
+  ): Fx.Fx<Exclude<R | R2, Scope>, E | E2, B> =>
     pipe(
       getSemaphore(ref).acquirePermits(NonNegativeInteger(1)),
       Fx.flatMap((a) => f(a)),
       Fx.tapLazy(([, a]) => locals.set(ref, a)),
       Fx.map(([b]) => b),
       scoped,
-    )
+    ) as any
 
   const remove: FiberRefs['delete'] = (ref) => Fx.fromLazy(() => locals.delete(ref))
 
@@ -97,41 +97,23 @@ export function FiberRefs(
     value: A,
     fx: Fx.Fx<R2, E2, B>,
   ) =>
-    pipe(
-      Fx.lazy(() => {
-        const current = locals.get(fiberRef)
+    Fx.lazy(() => {
+      locals.pushLocal(fiberRef, value)
 
-        locals.set(fiberRef, value)
-
-        return pipe(
-          current,
-          Maybe.match(
-            () =>
-              pipe(
-                fx,
-                Fx.tapLazy(() => locals.delete(fiberRef)),
-              ),
-            (a) =>
-              pipe(
-                fx,
-                Fx.tapLazy(() => locals.set(fiberRef, a)),
-              ),
-          ),
-        )
-      }),
-    )
+      return pipe(
+        fx,
+        Fx.ensuring(() => Fx.fromLazy(() => locals.popLocal(fiberRef))),
+      )
+    })
 
   const refs: FiberRefs = {
     locals,
     get,
-    modify: flow(modify, scoped) as FiberRefs['modify'],
+    modify,
     delete: remove,
     locally,
     fork: () => FiberRefs(locals.fork(), initializingFibers),
-    join: (other) =>
-      Fx.fromLazy(() => {
-        locals.join(other.locals)
-      }),
+    join: (other) => Fx.fromLazy(() => locals.join(other.locals)),
   }
 
   return refs
@@ -157,10 +139,11 @@ export function Locals(
   const idToValue = new Map([...initial].map(([k, v]) => [k.id, v]))
 
   const getAll = () => {
-    const map = new Map()
+    const map = new Map<FiberRef<any, any, any>, Stack<any>>()
 
     for (const ref of idToFiberRef.values()) {
-      map.set(ref, idToValue.get(ref.id))
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      map.set(ref, idToValue.get(ref.id)!)
     }
 
     return map
@@ -193,10 +176,8 @@ export function Locals(
     return c
   }
 
-  const pushLocal = <R, E, A>(ref: FiberRef<R, E, A>, value: A) => {
-    idToFiberRef.set(ref.id, ref)
-    idToValue.set(ref.id, idToValue.get(ref.id)?.push(() => value) ?? new Stack(value))
-  }
+  const pushLocal = <R, E, A>(ref: FiberRef<R, E, A>, value: A) =>
+    setStack(ref, idToValue.get(ref.id)?.push(value) ?? new Stack(value))
 
   const popLocal = <R, E, A>(ref: FiberRef<R, E, A>) => {
     const popped = idToValue.get(ref.id)?.pop()
@@ -220,8 +201,8 @@ export function Locals(
     fork: () => {
       const forked = new Map()
 
-      for (const [ref, value] of getAll()) {
-        const maybe = ref.fork(value)
+      for (const [ref, stack] of getAll()) {
+        const maybe = ref.fork(stack.value)
 
         if (Maybe.isJust(maybe)) {
           forked.set(ref, maybe.value)
@@ -231,10 +212,10 @@ export function Locals(
       return Locals(forked)
     },
     join: (other) => {
-      for (const [ref, value] of other.getAll()) {
+      for (const [ref, stack] of other.getAll()) {
         const current = get(ref)
 
-        set(ref, Maybe.isJust(current) ? ref.join(current.value, value) : value)
+        set(ref, Maybe.isJust(current) ? ref.join(current.value, stack.value) : stack.value)
       }
     },
   }

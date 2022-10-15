@@ -3,20 +3,16 @@ import { pipe } from 'hkt-ts/function'
 import * as Fx from './Fx.js'
 
 import { Exit } from '@/Exit/Exit.js'
-import { ConcurrentStrategy, FinalizationStrategy } from '@/Finalizer/Finalizer.js'
 import { Scope } from '@/Scope/Scope.js'
 
 /**
  * Run a Scoped Fx within an isolated Scope, cleaning up those resources as soon as complete.
  */
-export function scoped<R, E, A>(
-  scoped: Fx.Fx<R | Scope, E, A>,
-  strategy: FinalizationStrategy = ConcurrentStrategy,
-): Fx.Fx<Exclude<R, Scope>, E, A> {
+export function scoped<R, E, A>(scoped: Fx.Fx<R | Scope, E, A>): Fx.Fx<Exclude<R, Scope>, E, A> {
   return pipe(
     Fx.getFiberContext,
     Fx.flatMap(({ scope: fiberScope }) => {
-      const scope = fiberScope.fork(strategy)
+      const scope = fiberScope.fork()
 
       return pipe(scoped, Fx.provideService(Scope, scope), Fx.ensuring(scope.close))
     }),

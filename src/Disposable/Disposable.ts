@@ -32,7 +32,7 @@ export function settable(): Settable {
   return new SettableDisposable()
 }
 
-export class SettableDisposable implements Settable {
+class SettableDisposable implements Settable {
   protected disposables = new Set<Disposable>()
   protected disposed = false
 

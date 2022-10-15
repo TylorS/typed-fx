@@ -42,23 +42,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
   implements Fiber.Live<Fx.ErrorsOf<F>, Fx.OutputOf<F>>
 {
   protected _started = false
-  protected _current: Maybe.Maybe<AnyInstruction> = pipe(
-    this.fx,
-    // Ensure this Fiber closes with its Scope
-    Fx.ensuring(
-      this.context.scope.ensuring((exit) =>
-        Fx.fromLazy(() => {
-          this._current = Maybe.Just(Fx.fromExit(exit).instr)
-
-          if (this._status.tag === 'Suspended') {
-            this.setTimer(() => this.loop())
-          }
-        }),
-      ),
-    ),
-    (x) => x.instr,
-    Maybe.Just,
-  )
+  protected _current: Maybe.Maybe<AnyInstruction> = Maybe.Just(this.fx.instr)
 
   protected _status: FiberStatus
   protected _observers: Array<(exit: Exit.Exit<Fx.ErrorsOf<F>, Fx.OutputOf<F>>) => void> = []
@@ -205,6 +189,12 @@ export class FiberRuntime<F extends Fx.AnyFx>
       return this.yieldNow(instr)
     }
 
+    console.log(FiberId.debug(this.id), instr.tag)
+    console.log(
+      'Parent:',
+      Maybe.isJust(this.context.parent) && FiberId.debug(this.context.parent.value.id),
+    )
+
     this.addCustomTrace(instr.__trace)
     this.withSupervisor((s) => s.onInstruction(this, instr))
     ;(this._processors[instr.tag] as (i: typeof instr) => void)(instr)
@@ -222,8 +212,10 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected addCustomTrace(trace?: string) {
     if (trace) {
-      this.pushPopFiberRef(Builtin.CurrentTrace, this.getRuntimeTrace())
-      this.pushPopFiberRef(Builtin.CurrentTrace, Trace.Trace.custom(trace))
+      this.pushPopFiberRef(
+        Builtin.CurrentTrace,
+        Trace.concat(Trace.Trace.custom(trace), this.getRuntimeTrace()),
+      )
     }
   }
 
@@ -294,7 +286,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
       const inner = settable()
       const future = Pending<never, any, any>()
-      const onExit = (exit: Exit.Exit<Fx.ErrorsOf<F>, any>, index: 0 | 1) => {
+      const onExit = (exit: Exit.Exit<any, any>, index: 0 | 1) => {
         complete(future)(
           pipe(
             Fx.fromExit(exit),
@@ -434,7 +426,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
     this._current = Maybe.Just(
       this.context.fiberRefs.locally(
         Builtin.CurrentConcurrencyLevel,
-        Semaphore(FiberRef.make(Fx.unit), instr.concurrencyLevel),
+        Semaphore(Fx.unit, instr.concurrencyLevel),
         instr.fx,
       ).instr,
     )
@@ -519,6 +511,10 @@ export class FiberRuntime<F extends Fx.AnyFx>
 
   protected continueWith(value: any) {
     const frame = this.popFrame()
+
+    // console.log('Instruction:', Maybe.isJust(this._current) && this._current.value.tag)
+    // console.log('Frame:', frame?.tag)
+    // console.log('Value:', value)
 
     // We're at the end of the stack, notify any observers
     if (!frame) {
@@ -621,6 +617,7 @@ export class FiberRuntime<F extends Fx.AnyFx>
       }),
     )
   }
+
   protected withFiberRef<R, E, A, R2, E2, B>(
     ref: FiberRef.FiberRef<R, E, A>,
     f: (a: Stack<A>) => Fx.Fx<R2, E2, B>,
@@ -633,11 +630,11 @@ export class FiberRuntime<F extends Fx.AnyFx>
       return
     }
 
-    this._current = Maybe.Just(
-      pipe(
-        fiberRefs.get(ref),
-        Fx.flatMap((a) => f(new Stack(a))),
-      ).instr,
+    this._current = pipe(
+      fiberRefs.get(ref),
+      Fx.flatMap((a: A) => f(new Stack(a))),
+      (x) => x.instr,
+      Maybe.Just,
     )
   }
 

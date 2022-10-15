@@ -84,10 +84,12 @@ export function intoFiberRef<R2, E2, A>(fiberRef: FiberRef<R2, E2, A>) {
 }
 
 export function last<R, E, A, E1>(stream: Stream<R, E, A, E1>): Fx.Fx<R, E | E1, Maybe<A>> {
-  return pipe(
-    stream,
-    map<A, Maybe<A>>(Just),
-    forkJoin(new Sink.IntoFiberRef(make(Fx.now<Maybe<A>>(Nothing)))),
+  return Fx.lazy(() =>
+    pipe(
+      stream,
+      map<A, Maybe<A>>(Just),
+      forkJoin(new Sink.IntoFiberRef(make(Fx.now<Maybe<A>>(Nothing)))),
+    ),
   )
 }
 

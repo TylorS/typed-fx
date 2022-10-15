@@ -1,11 +1,11 @@
 import { HKT2, Params, Variance, flow, pipe } from 'hkt-ts'
 import * as Either from 'hkt-ts/Either'
 import * as B from 'hkt-ts/Typeclass/Bicovariant'
-import { Bottom2 } from 'hkt-ts/Typeclass/Bottom'
+// import { Bottom2 } from 'hkt-ts/Typeclass/Bottom'
 import * as C from 'hkt-ts/Typeclass/Covariant'
 import { Top2 } from 'hkt-ts/Typeclass/Top'
 
-import { Exit } from './Exit.js'
+import type { Exit } from './Exit.js'
 
 import * as Cause from '@/Cause/index.js'
 
@@ -38,7 +38,8 @@ export const tupled = C.tupled(Covariant)
 export const Top = Either.Top as Top2<ExitHKT>
 export const top = Top.top
 
-export const Bottom: Bottom2<ExitHKT> = {
-  bottom: Either.Left(Cause.Empty),
-}
-export const bottom = Bottom.bottom
+// export const Bottom: Bottom2<ExitHKT> = {
+//   bottom: Either.Left(Cause.Empty),
+// }
+
+// export const bottom = Bottom.bottom

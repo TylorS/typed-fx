@@ -155,7 +155,7 @@ export class Observe<E, A, R2, E2> implements Sink<E, A, R2, E | E2, void> {
 export class IntoFiberRef<E, A, R2, E2> implements Sink<E, A, R2, E | E2, A> {
   constructor(readonly fiberRef: FiberRef<R2, E2, A>) {}
 
-  readonly event: Sink<E, A, R2, E | E2, A>['event'] = Fx.set_(this.fiberRef)
+  readonly event: Sink<E, A, R2, E | E2, A>['event'] = flow(Fx.set_(this.fiberRef))
   readonly error: Sink<E, A, R2, E | E2, A>['error'] = Fx.fromCause
   readonly end = Fx.get(this.fiberRef)
 }

@@ -9,18 +9,16 @@ import { Closed, Closing, Open, ScopeState } from './ScopeState.js'
 
 import { AtomicCounter, decrement, increment } from '@/Atomic/AtomicCounter.js'
 import { Exit, makeSequentialAssociative } from '@/Exit/Exit.js'
-import { FinalizationStrategy, Finalizer } from '@/Finalizer/Finalizer.js'
+import { Finalizer } from '@/Finalizer/Finalizer.js'
 import { Of, flatMap, fromExit, fromLazy, lazy, success, uninterruptable, unit } from '@/Fx/Fx.js'
 
 const { concat: concatExits } = makeSequentialAssociative<any, any>(First)
 
 export class LocalScope implements Closeable {
   protected _state: ScopeState = Open
-  protected _releaseMap = new ReleaseMap(this.strategy)
+  protected _releaseMap = new ReleaseMap()
   protected _refCount = AtomicCounter()
   protected _exit: Maybe.Maybe<Exit<any, any>> = Maybe.Nothing
-
-  constructor(readonly strategy: FinalizationStrategy) {}
 
   get state(): ScopeState {
     return this._state
@@ -36,12 +34,12 @@ export class LocalScope implements Closeable {
     return (exit) => this._releaseMap.release(key, exit)
   }
 
-  readonly fork = (strategy: FinalizationStrategy = this.strategy): LocalScope => {
+  readonly fork = (): LocalScope => {
     if (this.isClosed) {
       throw new Error(`Unable to Fork a Closed Scope`)
     }
 
-    const extended = new LocalScope(strategy)
+    const extended = new LocalScope()
 
     extended.ensuring(() => {
       decrement(this._refCount)
@@ -56,6 +54,8 @@ export class LocalScope implements Closeable {
 
   readonly close = (exit: Exit<any, any>): Of<boolean> =>
     lazy(() => {
+      // console.log(exit)
+
       if (!this.isClosed) {
         this.setExit(exit)
       }

@@ -2,7 +2,6 @@ import { Just, Maybe, Nothing } from 'hkt-ts/Maybe'
 
 import * as FiberId from '@/FiberId/FiberId.js'
 import { FiberRefs } from '@/FiberRefs/FiberRefs.js'
-import { SequentialStrategy } from '@/Finalizer/Finalizer.js'
 import { Console } from '@/Logger/Console.js'
 import { Logger } from '@/Logger/Logger.js'
 import { Platform } from '@/Platform/Platform.js'
@@ -31,7 +30,7 @@ export function FiberContext<Id extends FiberId.FiberId = FiberId.Live>(
     platform = Platform(),
     id = FiberId.Live(platform) as Id,
     fiberRefs = FiberRefs(),
-    scope = new LocalScope(SequentialStrategy),
+    scope = new LocalScope(),
     supervisor = None,
     logger = Console,
     parent = Nothing,

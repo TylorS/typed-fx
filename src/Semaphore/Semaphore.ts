@@ -20,9 +20,10 @@ export interface Semaphore<R, E, A> {
 }
 
 export function Semaphore<R, E, A>(
-  ref: FiberRef<R, E, A>,
+  create: Fx.Fx<R, E, A>,
   maxPermits: NonNegativeInteger,
 ): Semaphore<R, E, A> {
+  const ref = FiberRef.make(create, { name: 'Semaphore: ' + create.instr.__trace })
   const waiting: Array<[requested: NonNegativeInteger, future: Future<R | Scope, E, A>]> = []
   const acquiredPermits = AtomicCounter()
   const remainingPermits = () => NonNegativeInteger(Math.max(0, maxPermits - acquiredPermits.get()))
@@ -31,7 +32,7 @@ export function Semaphore<R, E, A>(
     Fx.fromLazy(() => {
       acquiredPermits.set(NonNegativeInteger(Math.max(0, acquiredPermits.get() - permits)))
 
-      if (waiting.length > 0 && waiting[0][0] <= remainingPermits()) {
+      if (waiting.length > 0 && remainingPermits() >= waiting[0][0]) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const [permits, future] = waiting.shift()!
         complete(future)(acquire(permits))
@@ -74,8 +75,12 @@ export function Semaphore<R, E, A>(
 
 const one = NonNegativeInteger(1)
 
-export function Lock<R, E, A>(ref: FiberRef<R, E, A>) {
-  return Semaphore(ref, one)
+export interface Lock<R, E, A> extends Semaphore<R, E, A> {
+  readonly maxPermits: NonNegativeInteger & 1
+}
+
+export function Lock<R, E, A>(create: Fx.Fx<R, E, A>): Lock<R, E, A> {
+  return Semaphore(create, one) as Lock<R, E, A>
 }
 
 export function acquire<R, E, A>(semaphore: Semaphore<R, E, A>) {

@@ -4,17 +4,17 @@ import { performance } from 'perf_hooks'
 import { pipe } from 'hkt-ts/function'
 
 import { runMain, runMainFiber } from './run.js'
+import { sleep } from './sleep.js'
 
 import * as Fx from './index.js'
 
 import { Env } from '@/Env/Env.js'
-import { FiberId } from '@/FiberId/FiberId.js'
-import { FiberRuntime } from '@/FiberRuntime/FiberRuntime.js'
+import * as FiberId from '@/FiberId/FiberId.js'
 import { RootScheduler } from '@/Scheduler/RootScheduler.js'
 import { Scheduler } from '@/Scheduler/Scheduler.js'
 import { Id } from '@/Service/Id.js'
 import { Delay } from '@/Time/index.js'
-import { Exit, sleep } from '@/index.js'
+import { Exit } from '@/index.js'
 
 describe(new URL(import.meta.url).pathname, () => {
   describe(Fx.Fx.name, () => {
@@ -72,22 +72,33 @@ describe(new URL(import.meta.url).pathname, () => {
     it('asynchronous work allows being interrupted', async () => {
       const fiber = runMainFiber(Fx.never)
 
-      deepStrictEqual(await runMain(fiber.interruptAs(FiberId.None)), Exit.interrupt(FiberId.None))
+      deepStrictEqual(
+        await runMain(fiber.interruptAs(FiberId.FiberId.None)),
+        Exit.interrupt(FiberId.FiberId.None),
+      )
     })
 
-    it('allows marking regions as uninterruptable', async () => {
+    // TODO: Fix this, this test is now causing hanging
+    it.only('allows marking regions as uninterruptable', async () => {
       const value = Math.random()
-      const test = pipe(
-        sleep(Delay(100)),
+      const program = pipe(
+        Fx.fromLazy(() => console.log('starting')),
+        Fx.flatMap(() => sleep(Delay(10))),
+        Fx.tapLazy((x) => console.log('here', x)),
         Fx.flatMap(() => Fx.success(value)),
         Fx.provideService(Scheduler, RootScheduler()),
         Fx.uninterruptable,
       )
 
-      const fiber = new FiberRuntime(test)
-      fiber.startSync()
+      const test = Fx.Fx(function* () {
+        const fiber = yield* Fx.forkSync(program)
+        const cancel = yield* Fx.fork(fiber.interruptAs(FiberId.None))
 
-      deepStrictEqual(await runMain(fiber.interruptAs(FiberId.None)), Exit.success(value))
+        deepStrictEqual(yield* Fx.join(fiber), value)
+        deepStrictEqual(yield* Fx.join(cancel), Exit.success(value))
+      })
+
+      await Fx.runMain(test)
     })
   })
 
@@ -168,8 +179,19 @@ describe(new URL(import.meta.url).pathname, () => {
         return (yield* fib(n - 1)) + (yield* fib(n - 2))
       })
 
-    console.time('Fib25')
-    deepStrictEqual(await runMain(fib(25)), 75025)
-    console.timeEnd('Fib25')
+    console.time('Fx (Generator): Fib25 Construction')
+    const program = fib(25)
+    console.timeEnd('Fx (Generator): Fib25 Construction')
+    const iterations = 3
+    let values = 0
+    for (let i = 0; i < iterations; i++) {
+      console.time('Fib25')
+      const start = performance.now()
+      await runMain(program)
+      values += performance.now() - start
+      console.timeEnd('Fib25')
+    }
+
+    console.log('Fx (Generator): Fib25 Average', values / iterations)
   })
 })

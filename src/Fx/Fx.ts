@@ -116,7 +116,7 @@ export const lazy = <T extends AnyFx>(a: Lazy<T>, __trace?: string): T =>
 
 export const flatMap =
   <A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>, __trace?: string) =>
-  <R, E>(fx: Fx<R, E, A>) =>
+  <R, E>(fx: Fx<R, E, A>): Fx<R2 | R, E2 | E, B> =>
     FlatMap.make(fx, f, __trace)
 
 export const getEnv = <R>(__trace?: string): RIO<R, Env<R>> => GetEnv.make<R>(__trace)
