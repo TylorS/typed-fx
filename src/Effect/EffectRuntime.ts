@@ -55,12 +55,16 @@ export class EffectRuntime<R, E, A> {
     }
 
     this._started = true
-    this.runtimeConfig.supervisor?.onStart?.(this)
+
+    const start = () => {
+      this.runtimeConfig.supervisor?.onStart?.(this)
+      this.loop()
+    }
 
     if (sync) {
-      this.loop()
+      start()
     } else {
-      this.setTimer(() => this.loop())
+      this.setTimer(start)
     }
 
     return true
@@ -127,8 +131,8 @@ export class EffectRuntime<R, E, A> {
   }
 
   protected Provide(instr: Op.Provide) {
-    this._env = this._env?.push(instr.env) ?? new Stack(instr.env)
-    this._op = instr.effect.op
+    this._env = this._env.push(instr.env)
+    this._op = new Op.PopFrame(instr.effect, () => (this._env = this._env.pop() ?? this._env))
   }
 
   protected Fail(instr: Op.Fail) {
@@ -153,6 +157,7 @@ export class EffectRuntime<R, E, A> {
   protected Exit = this.ControlFrame
   protected FlatMap = this.ControlFrame
   protected OrElse = this.ControlFrame
+  protected Pop = this.ControlFrame
   protected Interrupt(frame: Op.InterruptFrame) {
     this._interruptStatus = this._interruptStatus.push(frame.interruptStatus)
     this.ControlFrame(frame)
@@ -219,6 +224,8 @@ export class EffectRuntime<R, E, A> {
       a = frame.f(a)
     } else if (tag === 'Bimap') {
       a = frame.g(a)
+    } else if (tag === 'Pop') {
+      frame.pop()
     }
 
     this.continueWith(a)
@@ -246,6 +253,8 @@ export class EffectRuntime<R, E, A> {
       cause = frame.f(cause)
     } else if (tag === 'Interrupt' && this.shouldInterrupt()) {
       cause = this.getInterruptCause(cause)
+    } else if (tag === 'Pop') {
+      frame.pop()
     }
 
     this.continueWithCause(cause)
@@ -315,7 +324,11 @@ export class EffectRuntime<R, E, A> {
   }
 
   protected shouldInterrupt() {
-    return this.popInterruptStatus() && this._interruptedBy.size > 0 && this._frames.length > 0
+    return (
+      this.popInterruptStatus() &&
+      this._interruptedBy.size > 0 &&
+      !!this._frames.find((f) => f.tag !== 'Pop')
+    )
   }
 
   protected popInterruptStatus() {

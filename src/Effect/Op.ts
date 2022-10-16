@@ -80,6 +80,7 @@ export type ControlFrame =
   | FlatMapFrame
   | OrElseFrame
   | InterruptFrame
+  | PopFrame
 
 export class BimapFrame extends BaseOp {
   readonly tag = 'Bimap'
@@ -170,6 +171,14 @@ export class InterruptFrame extends BaseOp {
   readonly tag = 'Interrupt'
 
   constructor(readonly effect: Effect<any, any, any>, readonly interruptStatus: boolean) {
+    super()
+  }
+}
+
+export class PopFrame extends BaseOp {
+  readonly tag = 'Pop'
+
+  constructor(readonly effect: Effect<any, any, any>, readonly pop: () => void) {
     super()
   }
 }
