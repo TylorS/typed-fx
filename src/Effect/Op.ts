@@ -116,6 +116,10 @@ export class MapFrame extends BaseOp {
       return new Now(f(op.value))
     } else if (tag === 'Lazy') {
       return new Lazy(() => MapFrame.make(op.f(), f))
+    } else if (tag === 'MapLeft') {
+      return new BimapFrame(op.effect, op.f, f)
+    } else if (tag === 'Fail') {
+      return op
     }
 
     return new MapFrame(effect, f)
@@ -126,6 +130,21 @@ export class MapLeftFrame extends BaseOp {
   readonly tag = 'MapLeft'
   constructor(readonly effect: Effect<any, any, any>, readonly f: (a: Cause<any>) => Cause<any>) {
     super()
+  }
+
+  static make(effect: Effect<any, any, any>, f: (a: Cause<any>) => Cause<any>): Op {
+    const op = effect.op
+    const tag = op.tag
+
+    if (tag === 'MapLeft') {
+      return MapLeftFrame.make(op.effect, flow(op.f, f))
+    } else if (tag === 'Now') {
+      return op
+    } else if (tag === 'Map') {
+      return new BimapFrame(op.effect, op.f, f)
+    }
+
+    return new MapLeftFrame(effect, f)
   }
 }
 
@@ -156,6 +175,8 @@ export class FlatMapFrame extends BaseOp {
       return FlatMapFrame.make(op.effect, flow(op.f, f))
     } else if (tag === 'Now') {
       return new Lazy(() => f(op.value))
+    } else if (tag === 'Fail') {
+      return op
     }
 
     return new FlatMapFrame(effect, f)
@@ -170,6 +191,17 @@ export class OrElseFrame extends BaseOp {
     readonly f: (cause: Cause<any>) => Effect<any, any, any>,
   ) {
     super()
+  }
+
+  static make(effect: Effect<any, any, any>, f: (cause: Cause<any>) => Effect<any, any, any>) {
+    const op = effect.op
+    const tag = op.tag
+
+    if (tag === 'Now') {
+      return op
+    }
+
+    return new OrElseFrame(effect, f)
   }
 }
 

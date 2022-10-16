@@ -79,7 +79,7 @@ export function map<A, B>(f: (a: A) => B) {
  */
 export function mapLeft<E, F>(f: (e: E) => F) {
   return <R, A>(effect: Effect<R, E, A>): Effect<R, F, A> => {
-    return new Op.MapLeftFrame(effect, Cause.map(f))
+    return Op.MapLeftFrame.make(effect, Cause.map(f))
   }
 }
 
@@ -88,7 +88,7 @@ export function mapLeft<E, F>(f: (e: E) => F) {
  */
 export function mapLeftCause<E, F>(f: (e: Cause.Cause<E>) => Cause.Cause<F>) {
   return <R, A>(effect: Effect<R, E, A>): Effect<R, F, A> => {
-    return new Op.MapLeftFrame(effect, f)
+    return Op.MapLeftFrame.make(effect, f)
   }
 }
 
@@ -124,7 +124,7 @@ export function flatMap<A, R2, E2, B>(f: (a: A) => Effect<R2, E2, B>) {
  */
 export function orElse<E, R2, E2, B>(f: (cause: E) => Effect<R2, E2, B>) {
   return <R, A>(effect: Effect<R, E, A>): Effect<R | R2, E2, A | B> =>
-    new Op.OrElseFrame(effect, (cause) =>
+    Op.OrElseFrame.make(effect, (cause) =>
       pipe(
         cause,
         Cause.findExpected,
@@ -137,7 +137,8 @@ export function orElse<E, R2, E2, B>(f: (cause: E) => Effect<R2, E2, B>) {
  * Perform an Effect with the Cause of another Effect
  */
 export function orElseCause<E, R2, E2, B>(f: (cause: Cause.Cause<E>) => Effect<R2, E2, B>) {
-  return <R, A>(effect: Effect<R, E, A>): Effect<R | R2, E2, A | B> => new Op.OrElseFrame(effect, f)
+  return <R, A>(effect: Effect<R, E, A>): Effect<R | R2, E2, A | B> =>
+    Op.OrElseFrame.make(effect, f)
 }
 
 /**
