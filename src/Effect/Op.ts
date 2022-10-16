@@ -1,7 +1,7 @@
 import { flow } from 'hkt-ts'
 import type { Either } from 'hkt-ts/Either'
 
-import { Effect } from './Effect.js'
+import type { Effect } from './Effect.js'
 
 import type { Cause } from '@/Cause/Cause.js'
 import type { Disposable } from '@/Disposable/Disposable.js'
@@ -10,7 +10,13 @@ import type { AnyExit } from '@/Exit/Exit.js'
 
 export type Op = AskEnv | Provide | Fail | Now | FromLazy | Lazy | Async | ControlFrame
 
-abstract class BaseOp extends Effect<any, any, any> {
+abstract class BaseOp implements Effect<any, any, any> {
+  readonly __Effect__!: {
+    readonly _R: () => any
+    readonly _E: () => any
+    readonly _A: () => any
+  }
+
   readonly op = this as any as Op;
 
   readonly [Symbol.iterator] = yieldThis

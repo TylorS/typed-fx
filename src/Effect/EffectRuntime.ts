@@ -39,8 +39,8 @@ export class EffectRuntime<R, E, A> {
 
   constructor(
     readonly effect: Effect<R, E, A>,
-    readonly platform: Platform,
     readonly env: Env<R>,
+    readonly platform: Platform = Platform(),
     readonly runtimeConfig: EffectRuntimeConfig = {},
     readonly id: FiberId.FiberId.Live = FiberId.Live(platform),
   ) {}

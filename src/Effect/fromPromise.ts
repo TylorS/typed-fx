@@ -1,7 +1,7 @@
 import { Left } from 'hkt-ts/Either'
 
 import { Effect } from './Effect.js'
-import { async, fail, now } from './ops.js'
+import { async, fromCause, now } from './ops.js'
 
 import { unexpected } from '@/Cause/Cause.js'
 import { settable } from '@/Disposable/Disposable.js'
@@ -12,7 +12,7 @@ export function fromPromise<A>(f: () => Promise<A>): Effect<never, never, A> {
 
     f().then(
       (a) => !inner.isDisposed() && cb(now(a)),
-      (e) => !inner.isDisposed() && cb(fail(unexpected(e))),
+      (e) => !inner.isDisposed() && cb(fromCause(unexpected(e))),
     )
 
     return Left(inner)

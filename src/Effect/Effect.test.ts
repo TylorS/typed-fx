@@ -42,7 +42,7 @@ testSuite.only(import.meta.url, () => {
     let values = 0
     for (let i = 0; i < iterations; i++) {
       console.time('Fib25')
-      const r = new EffectRuntime(program, Platform(), Empty)
+      const r = new EffectRuntime(program, Empty)
 
       await new Promise<void>((resolve) => {
         const start: number = performance.now()
@@ -197,7 +197,7 @@ testSuite.only(import.meta.url, () => {
       const test = Op.async<never, never, number>((cb) =>
         Left(platform.timer.setTimer(() => cb(Op.now(value)), Delay(100))),
       )
-      const r = new EffectRuntime(test, platform, Empty)
+      const r = new EffectRuntime(test, Empty, platform)
 
       r.start()
 
@@ -211,7 +211,7 @@ testSuite.only(import.meta.url, () => {
           Left(platform.timer.setTimer(() => cb(Op.now(value)), Delay(100))),
         ),
       )
-      const r = new EffectRuntime(test, platform, Empty, undefined)
+      const r = new EffectRuntime(test, Empty, platform)
 
       r.start()
 
@@ -227,7 +227,7 @@ testSuite.only(import.meta.url, () => {
         inner.add(platform.timer.setTimer(() => cb(Op.now(value)), Delay(100)))
         return Left(inner)
       })
-      const r = new EffectRuntime(test, platform, Empty)
+      const r = new EffectRuntime(test, Empty, platform)
 
       r.start()
 
@@ -294,7 +294,7 @@ function runMap<E, A, B>(
   platform: Platform,
 ): Promise<B> {
   return new Promise<B>((resolve) => {
-    const r = new EffectRuntime(eff, platform, Empty)
+    const r = new EffectRuntime(eff, Empty, platform)
     r.addObserver((a) => resolve(f(a)))
     r.start()
   })
