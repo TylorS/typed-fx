@@ -41,8 +41,8 @@ export class EffectRuntime<R, E, A> {
     readonly effect: Effect<R, E, A>,
     readonly platform: Platform,
     readonly env: Env<R>,
-    readonly id: FiberId.FiberId.Live = FiberId.Live(platform),
     readonly runtimeConfig: EffectRuntimeConfig = {},
+    readonly id: FiberId.FiberId.Live = FiberId.Live(platform),
   ) {}
 
   get status(): FiberStatus<E, A> {
