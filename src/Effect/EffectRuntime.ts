@@ -151,22 +151,6 @@ export class EffectRuntime<R, E, A> {
     this._op = instr.f().op
   }
 
-  protected Bimap = this.ControlFrame
-  protected Map = this.ControlFrame
-  protected MapLeft = this.ControlFrame
-  protected Exit = this.ControlFrame
-  protected FlatMap = this.ControlFrame
-  protected OrElse = this.ControlFrame
-  protected Pop = this.ControlFrame
-  protected Interrupt(frame: Op.InterruptFrame) {
-    this._interruptStatus = this._interruptStatus.push(frame.interruptStatus)
-    this.ControlFrame(frame)
-  }
-  protected ControlFrame(frame: Op.ControlFrame) {
-    this._op = frame.effect.op
-    this._frames.push(frame)
-  }
-
   protected Async(instr: Op.Async) {
     // Suspend this Runtime, before calling async registration,
     // just in case it returns synchronously.
@@ -198,6 +182,22 @@ export class EffectRuntime<R, E, A> {
 
     inner.add(either.left)
     inner.add(this.addDisposable(inner))
+  }
+
+  protected Bimap = this.ControlFrame
+  protected Map = this.ControlFrame
+  protected MapLeft = this.ControlFrame
+  protected Exit = this.ControlFrame
+  protected FlatMap = this.ControlFrame
+  protected OrElse = this.ControlFrame
+  protected Pop = this.ControlFrame
+  protected Interrupt(frame: Op.InterruptFrame) {
+    this._interruptStatus = this._interruptStatus.push(frame.interruptStatus)
+    this.ControlFrame(frame)
+  }
+  protected ControlFrame(frame: Op.ControlFrame) {
+    this._op = frame.effect.op
+    this._frames.push(frame)
   }
 
   protected continueWith(a: any) {
