@@ -7,6 +7,9 @@ import * as ops from './ops.js'
 import { getCauseError } from '@/Cause/CauseError.js'
 import { sequential, shouldRethrow } from '@/Cause/index.js'
 
+// TODO: Platform
+// TODO: FiberId
+
 export interface Effect<R, E, A> {
   readonly __Effect__: {
     readonly _R: () => R
