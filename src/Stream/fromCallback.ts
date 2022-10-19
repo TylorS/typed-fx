@@ -16,7 +16,7 @@ export function fromCallback<R, E, A, E1 = never>(
     readonly error: (cause: Cause<E>) => void
     readonly end: () => void
   }) => Effect.Effect<R, E1, unknown>,
-): Stream<R, E, A> {
+): Stream<R, E, A, E1> {
   return Stream<R, E, A, E1>(<R3, E3, B>(sink: Sink<E, A, R3, E3, B>) =>
     pipe(
       Effect.runtime<R | R3>(),
