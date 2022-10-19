@@ -21,15 +21,6 @@
         "afterDeclarations": true
       },
       {
-        "transform": "./.tracing-plugin/plugin.cjs",
-        "rewritePaths": [
-          [
-            "^src/",
-            "node_modules/@typed/fx/src/"
-          ]
-        ]
-      },
-      {
         "transform": "@zoltu/typescript-transformer-append-js-extension/output/index.js",
         "after": true
       }

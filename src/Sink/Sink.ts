@@ -1,181 +1,118 @@
-import * as Maybe from 'hkt-ts/Maybe'
-import { Predicate } from 'hkt-ts/Predicate'
-import { Identity } from 'hkt-ts/Typeclass/Identity'
-import { flow, pipe } from 'hkt-ts/function'
-
-import { Cause } from '@/Cause/Cause.js'
-import { FiberRef } from '@/FiberRef/FiberRef.js'
-import * as Fx from '@/Fx/index.js'
+import { Cause } from '@effect/core/io/Cause'
+import * as Effect from '@effect/core/io/Effect'
+import { Layer } from '@effect/core/io/Layer'
+import { flow, pipe } from '@fp-ts/data/Function'
+import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Env } from '@tsplus/stdlib/service/Env'
 
 export interface Sink<E, A, R2, E2, B> {
-  readonly event: (a: A) => Fx.Fx<R2, E2, unknown>
-  readonly error: (cause: Cause<E>) => Fx.Fx<R2, E2, B>
-  readonly end: Fx.Fx<R2, E2, B>
+  readonly event: (value: A) => Effect.Effect<R2, E2, unknown>
+  readonly error: (cause: Cause<E>) => Effect.Effect<R2, E2, B>
+  readonly end: Effect.Effect<R2, E2, B>
 }
 
-export class Drain<E, A, R2, E2, B> implements Sink<E, A, R2, E | E2, B> {
-  constructor(readonly end: Sink<E, A, R2, E | E2, B>['end']) {}
-
-  readonly event: Sink<E, A, R2, E | E2, B>['event'] = () => Fx.unit
-  readonly error: Sink<E, A, R2, E | E2, B>['error'] = Fx.fromCause
+export function Sink<E, A, R2 = never, E2 = E, B = void>(
+  event: Sink<E, A, R2, E2, B>['event'],
+  error: Sink<E, A, R2, E2, B>['error'] = Effect.failCause as any,
+  end: Sink<E, A, R2, E2, B>['end'] = Effect.unit as any,
+): Sink<E, A, R2, E2, B> {
+  return { event, error, end }
 }
 
-export class Filter<E, A, R2, E2, B> implements Sink<E, A, R2, E2, B> {
-  constructor(readonly sink: Sink<E, A, R2, E2, B>, readonly predicate: Predicate<A>) {}
-
-  readonly event: Sink<E, A, R2, E2, B>['event'] = (a) =>
-    this.predicate(a) ? this.sink.event(a) : Fx.unit
-  readonly error = this.sink.error
-  readonly end = this.sink.end
-
-  static make<E, A, R2, E2, B>(
-    sink: Sink<E, A, R2, E2, B>,
-    predicate: Predicate<A>,
-  ): Sink<E, A, R2, E2, B> {
-    if (sink instanceof Filter) {
-      return Filter.make(sink.sink, (a) => sink.predicate(a) && predicate(a))
-    }
-
-    return new Filter(sink, predicate)
-  }
+export function drain<E, A>(): Sink<E, A, never, E, void> {
+  return Sink(() => Effect.unit)
 }
 
-export class Map<E, A, R2, E2, B, C> implements Sink<E, A, R2, E2, B> {
-  constructor(readonly sink: Sink<E, C, R2, E2, B>, readonly f: (a: A) => C) {}
+export function reduce<E, B, A>(b: B, f: (b: B, a: A) => B): Sink<E, A, never, E, B> {
+  let acc = b
 
-  readonly event: Sink<E, A, R2, E2, B>['event'] = flow(this.f, this.sink.event)
-  readonly error = this.sink.error
-  readonly end = this.sink.end
-
-  static make<E, A, R2, E2, B, C>(
-    sink: Sink<E, C, R2, E2, B>,
-    f: (a: A) => C,
-  ): Sink<E, A, R2, E2, B> {
-    if (sink instanceof Map) {
-      return Map.make(sink, flow(sink.f, f))
-    }
-
-    if (sink instanceof Filter) {
-      return FilterMap.make(sink.sink, flow(Maybe.fromPredicate(sink.predicate), Maybe.map(f)))
-    }
-
-    return new Map(sink, f)
-  }
-}
-
-export class FilterMap<E, A, R2, E2, B, C> implements Sink<E, A, R2, E2, B> {
-  constructor(readonly sink: Sink<E, C, R2, E2, B>, readonly f: (a: A) => Maybe.Maybe<C>) {}
-
-  readonly event: Sink<E, A, R2, E2, B>['event'] = flow(
-    this.f,
-    Maybe.match(() => Fx.unit, this.sink.event),
+  return Sink<E, A, never, E, B>(
+    (a: A) => Effect.sync(() => (acc = f(acc, a))),
+    undefined,
+    Effect.sync(() => acc),
   )
-  readonly error = this.sink.error
-  readonly end = this.sink.end
-
-  static make<E, A, R2, E2, B, C>(
-    sink: Sink<E, C, R2, E2, B>,
-    f: (a: A) => Maybe.Maybe<C>,
-  ): Sink<E, A, R2, E2, B> {
-    if (sink instanceof Map) {
-      return FilterMap.make(sink.sink, flow(sink.f, f))
-    }
-
-    if (sink instanceof Filter) {
-      return FilterMap.make(sink.sink, flow(Maybe.fromPredicate(sink.predicate), Maybe.map(f)))
-    }
-
-    if (sink instanceof FilterMap) {
-      return FilterMap.make(sink.sink, flow(sink.f, Maybe.flatMap(f)))
-    }
-
-    return new FilterMap(sink, f)
-  }
 }
 
-export class Scan<E, A, R2, E2, B, C> implements Sink<E, A, R2, E2, B> {
-  protected current = this.seed
+// export namespace Sink {
+//   export type InputErrorOf<T> = T extends Sink<infer R, any, any, any, any> ? R : never
+//   export type EventOf<T> = T extends Sink<any, infer R, any, any, any> ? R : never
+//   export type ResourcesOf<T> = T extends Sink<any, any, infer R, any, any> ? R : never
+//   export type ErrorsOf<T> = T extends Sink<any, any, any, infer R, any> ? R : never
+//   export type OutputOf<T> = T extends Sink<any, any, any, any, infer R> ? R : never
+// }
 
-  constructor(
-    readonly sink: Sink<E, C, R2, E2, B>,
-    readonly seed: C,
-    readonly f: (c: C, a: A) => C,
-  ) {}
-
-  readonly event = (a: A) =>
-    Fx.lazy(() => {
-      const { current, f } = this
-
-      return this.sink.event((this.current = f(current, a)))
-    })
-
-  readonly error = this.sink.error
-  readonly end = this.sink.end
-
-  static make<E, A, R2, E2, B, C>(
-    sink: Sink<E, C, R2, E2, B>,
-    seed: C,
-    f: (c: C, a: A) => C,
-  ): Sink<E, A, R2, E2, B> {
-    // TODO: Fusion with Filter + Map
-
-    return new Scan(sink, seed, f)
-  }
+export function mapInputEvent<A, B>(
+  f: (a: A) => B,
+): <E, R2, E2, C>(sink: Sink<E, B, R2, E2, C>) => Sink<E, A, R2, E2, C> {
+  return (sink) => Sink(flow(f, sink.event), sink.error, sink.end)
 }
 
-export class FilterMapScan<E, A, R2, E2, B> extends Drain<E, A, R2, E, B> {
-  protected current = this.seed
-
-  constructor(
-    readonly sink: Sink<E, B, R2, E2, B>,
-    readonly seed: B,
-    readonly f: (b: B, a: A) => Maybe.Maybe<B>,
-  ) {
-    super(Fx.fromLazy(() => this.current))
-  }
-
-  readonly event = (a: A) =>
-    Fx.fromLazy(() => {
-      const { current, f } = this
-      const maybe = f(current, a)
-
-      if (Maybe.isJust(maybe)) {
-        this.current = maybe.value
-      }
-    })
+export function mapInputEventEffect<A, R3, E3, B>(
+  f: (a: A) => Effect.Effect<R3, E3, B>,
+): <E, R2, E2, C>(sink: Sink<E, B, R2, E2, C>) => Sink<E, A, R2 | R3, E2 | E3, C> {
+  return (sink) => Sink(flow(f, Effect.flatMap(sink.event)), sink.error, sink.end)
 }
 
-export class Observe<E, A, R2, E2> implements Sink<E, A, R2, E | E2, void> {
-  constructor(readonly event: Sink<E, A, R2, E | E2, void>['event']) {}
-
-  readonly error: Sink<E, A, R2, E | E2, void>['error'] = Fx.fromCause
-  readonly end: Sink<E, A, R2, E | E2, void>['end'] = Fx.unit
+export function mapInputCause<E, E2>(
+  f: (e: Cause<E>) => Cause<E2>,
+): <A, R2, E3, B>(sink: Sink<E2, A, R2, E3, B>) => Sink<E, A, R2, E3, B> {
+  return (sink) => Sink(sink.event, flow(f, sink.error), sink.end)
 }
 
-export class IntoFiberRef<E, A, R2, E2> implements Sink<E, A, R2, E | E2, A> {
-  constructor(readonly fiberRef: FiberRef<R2, E2, A>) {}
-
-  readonly event: Sink<E, A, R2, E | E2, A>['event'] = flow(Fx.set_(this.fiberRef))
-  readonly error: Sink<E, A, R2, E | E2, A>['error'] = Fx.fromCause
-  readonly end = Fx.get(this.fiberRef)
+export function mapInputCauseEffect<E, R3, E3, E2>(
+  f: (e: Cause<E>) => Effect.Effect<R3, E3, Cause<E2>>,
+): <A, R2, E4, B>(sink: Sink<E2, A, R2, E4, B>) => Sink<E, A, R2 | R3, E3 | E4, B> {
+  return (sink) => Sink(sink.event, flow(f, Effect.flatMap(sink.error)), sink.end)
 }
 
-export class FoldMap<E, A, B> extends Drain<E, A, never, never, B> {
-  protected current = this.I.id
+export function provideEnvironment<R>(env: Env<R>) {
+  return <E, A, E2, B>(sink: Sink<E, A, R, E2, B>): Sink<E, A, never, E2, B> =>
+    Sink(
+      flow(sink.event, Effect.provideEnvironment(env)),
+      flow(sink.error, Effect.provideEnvironment(env)),
+      Effect.provideEnvironment(env)(sink.end),
+    )
+}
 
-  constructor(readonly f: (a: A) => Maybe.Maybe<B>, readonly I: Identity<B>) {
-    super(Fx.fromLazy(() => this.current))
-  }
+export function provideLayer<R3, E3, R>(layer: Layer<R3, E3, R>) {
+  return <E, A, E2, B>(sink: Sink<E, A, R, E2, B>): Sink<E, A, R3, E3 | E2, B> =>
+    Sink(
+      flow(sink.event, Effect.provideLayer(layer)),
+      flow(sink.error, Effect.provideLayer(layer)),
+      Effect.provideLayer(layer)(sink.end),
+    )
+}
 
-  readonly event = (a: A) =>
-    Fx.fromLazy(() =>
-      pipe(
-        a,
-        this.f,
-        Maybe.match(
-          () => Fx.unit,
-          (b) => (this.current = this.I.concat(this.current, b)),
-        ),
+export function mapOutput<B, C>(
+  f: (b: B) => C,
+): <E, A, R2, E2>(sink: Sink<E, A, R2, E2, B>) => Sink<E, A, R2, E2, C> {
+  return (sink) => Sink(sink.event, flow(sink.error, Effect.map(f)), pipe(sink.end, Effect.map(f)))
+}
+
+export function mapOutputEffect<B, R3, E3, C>(
+  f: (b: B) => Effect.Effect<R3, E3, C>,
+): <E, A, R2, E2>(sink: Sink<E, A, R2, E2, B>) => Sink<E, A, R2 | R3, E2 | E3, C> {
+  return (sink) =>
+    Sink(sink.event, flow(sink.error, Effect.flatMap(f)), pipe(sink.end, Effect.flatMap(f)))
+}
+
+export function mapOutputCause<E2, E3>(f: (e: Cause<E2>) => Cause<E3>) {
+  return <E, A, R2, B>(sink: Sink<E, A, R2, E2, B>): Sink<E, A, R2, E3, B> =>
+    Sink(
+      flow(sink.event, Effect.mapErrorCause(f)),
+      flow(sink.error, Effect.mapErrorCause(f)),
+      pipe(sink.end, Effect.mapErrorCause(f)),
+    )
+}
+
+export function filterMap<A, B>(f: (a: A) => Maybe.Maybe<B>) {
+  return <E, R2, E2, C>(sink: Sink<E, B, R2, E2, C>): Sink<E, A, R2, E2, C> =>
+    Sink(
+      flow(
+        f,
+        Maybe.fold(() => Effect.unit, sink.event),
       ),
+      sink.error,
+      sink.end,
     )
 }

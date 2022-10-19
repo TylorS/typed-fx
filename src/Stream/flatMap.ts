@@ -1,84 +1,65 @@
+import * as Deferred from '@effect/core/io/Deferred'
+import * as Effect from '@effect/core/io/Effect'
+import { Fiber } from '@effect/core/io/Fiber'
+import { pipe } from '@fp-ts/data/Function'
+
 import { Stream } from './Stream.js'
 
-import { Fiber, Synthetic, inheritFiberRefs } from '@/Fiber/Fiber.js'
-import { Pending, complete, wait } from '@/Future/index.js'
-import * as Fx from '@/Fx/index.js'
-import { Sink } from '@/Sink/index.js'
+import * as Sink from '@/Sink/Sink.js'
 
-export function flatMap<A, R2, E2, B>(f: (a: A) => Stream<R2, E2, B>) {
-  return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R | R2, E, B, E1 | E2> =>
+export function flatMap<A, R2, E2, B, E3 = never>(f: (a: A) => Stream<R2, E2, B, E3>) {
+  return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R | R2, E | E2, B, E1 | E3> =>
     new FlatMapStream(stream, f)
 }
 
-export class FlatMapStream<R, E, A, E1, R2, E2, B> implements Stream<R | R2, E, B, E1 | E2> {
-  constructor(readonly stream: Stream<R, E, A, E1>, readonly f: (a: A) => Stream<R2, E2, B>) {}
+export class FlatMapStream<R, E, A, E1, R2, E2, B, E3>
+  implements Stream<R | R2, E | E2, B, E1 | E3>
+{
+  constructor(readonly stream: Stream<R, E, A, E1>, readonly f: (a: A) => Stream<R2, E2, B, E3>) {}
 
-  readonly fork: Stream<R | R2, E, B, E1 | E2>['fork'] = <R3, E3, C>(sink: Sink<E, B, R3, E3, C>) =>
-    Fx.lazy(() => {
-      const s = new FlatMapSink(sink, this.f)
-      const fork = this.stream.fork(s)
+  fork<R4, E4, B4>(
+    sink: Sink.Sink<E | E2, B, R4, E4, B4>,
+  ): Effect.Effect<R | R2 | R4, never, Fiber<E1 | E3 | E4, B4>> {
+    return Effect.suspendSucceed(() => {
+      let ended = false
+      let running = 0
 
-      return Fx.Fx(function* () {
-        const env = yield* Fx.getEnv<R | R2 | R3>()
-        const forked = yield* fork
-        const fiber: Fiber<E1 | E2 | E3, C> = Synthetic({
-          id: forked.id,
-          exit: Fx.provide(env)(Fx.attempt(wait(s.future))),
-          inheritFiberRefs: inheritFiberRefs(forked),
-          interruptAs: forked.interruptAs,
-        })
+      return pipe(
+        Deferred.make<E1 | E3 | E4, B4>(),
+        Effect.flatMap((deferred) => {
+          const endIfComplete = () =>
+            ended && running === 0
+              ? pipe(sink.end, Effect.intoDeferred(deferred), Effect.asUnit)
+              : Effect.unit
 
-        return fiber
-      })
-    })
-}
+          const s: Sink.Sink<E, A, R | R2 | R4, E1 | E3 | E4, B4> = Sink.Sink(
+            (a) =>
+              Effect.suspendSucceed(() => {
+                running++
 
-export class FlatMapSink<E, A, R2, E2, B, R3, E3, C> implements Sink<E, A, R2 | R3, E2 | E3, B> {
-  protected running = 0
-  protected ended = false
+                return this.f(a).fork(
+                  Sink.Sink(
+                    sink.event,
+                    (e) => pipe(e, sink.error, Effect.intoDeferred(deferred), Effect.asUnit),
+                    Effect.suspendSucceed(() => {
+                      running--
+                      return endIfComplete()
+                    }),
+                  ),
+                )
+              }),
+            (e) =>
+              pipe(e, sink.error, Effect.intoDeferred(deferred), Effect.zipRight(deferred.await)),
+            Effect.suspendSucceed(() => {
+              ended = true
 
-  readonly future = Pending<R2 | R3, E2 | E3, B>()
+              return pipe(endIfComplete(), Effect.zipRight(deferred.await))
+            }),
+          )
 
-  constructor(readonly sink: Sink<E, C, R2, E2, B>, readonly f: (a: A) => Stream<R3, E3, C>) {}
-
-  readonly event: Sink<E, A, R2 | R3, E2 | E3, B>['event'] = (a) =>
-    Fx.lazy(() =>
-      this.f(a).fork<R2 | R3, E2 | E3, unknown>({
-        event: this.sink.event,
-        error: (e) => {
-          complete(this.future)(Fx.fromCause(e))
-
-          return wait(this.future)
-        },
-        end: Fx.lazy(() => {
-          this.running--
-          this.endIfCompleted()
-
-          return Fx.unit
+          return this.stream.fork(s)
         }),
-      }),
-    )
-
-  readonly error: Sink<E, A, R2 | R3, E2 | E3, B>['error'] = (e) =>
-    Fx.lazy(() => {
-      this.ended = true
-
-      complete(this.future)(this.sink.error(e))
-
-      return wait(this.future)
+      )
     })
-
-  readonly end: Sink<E, A, R2 | R3, E2 | E3, B>['end'] = Fx.lazy(() => {
-    this.ended = true
-
-    this.endIfCompleted()
-
-    return wait(this.future)
-  })
-
-  protected endIfCompleted() {
-    if (this.ended && this.running === 0) {
-      complete(this.future)(this.sink.end)
-    }
   }
 }
