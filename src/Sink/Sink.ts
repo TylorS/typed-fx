@@ -19,27 +19,13 @@ export function Sink<E, A, R2 = never, E2 = E, B = void>(
   return { event, error, end }
 }
 
-export function drain<E, A>(): Sink<E, A, never, E, void> {
-  return Sink(() => Effect.unit)
+export namespace Sink {
+  export type InputErrorOf<T> = T extends Sink<infer R, any, any, any, any> ? R : never
+  export type EventOf<T> = T extends Sink<any, infer R, any, any, any> ? R : never
+  export type ResourcesOf<T> = T extends Sink<any, any, infer R, any, any> ? R : never
+  export type ErrorsOf<T> = T extends Sink<any, any, any, infer R, any> ? R : never
+  export type OutputOf<T> = T extends Sink<any, any, any, any, infer R> ? R : never
 }
-
-export function reduce<E, B, A>(b: B, f: (b: B, a: A) => B): Sink<E, A, never, E, B> {
-  let acc = b
-
-  return Sink<E, A, never, E, B>(
-    (a: A) => Effect.sync(() => (acc = f(acc, a))),
-    undefined,
-    Effect.sync(() => acc),
-  )
-}
-
-// export namespace Sink {
-//   export type InputErrorOf<T> = T extends Sink<infer R, any, any, any, any> ? R : never
-//   export type EventOf<T> = T extends Sink<any, infer R, any, any, any> ? R : never
-//   export type ResourcesOf<T> = T extends Sink<any, any, infer R, any, any> ? R : never
-//   export type ErrorsOf<T> = T extends Sink<any, any, any, infer R, any> ? R : never
-//   export type OutputOf<T> = T extends Sink<any, any, any, any, infer R> ? R : never
-// }
 
 export function mapInputEvent<A, B>(
   f: (a: A) => B,

@@ -7,7 +7,7 @@ import { Stream } from './Stream.js'
 export function from<A>(collection: Collection<A>): Stream<never, never, A> {
   return Stream<never, never, A>((sink) =>
     pipe(
-      Effect.forEachParDiscard(collection, sink.event),
+      Effect.forEachDiscard(collection, sink.event),
       Effect.flatMap(() => sink.end),
       Effect.fork,
     ),

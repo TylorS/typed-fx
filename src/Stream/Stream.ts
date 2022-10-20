@@ -3,10 +3,40 @@ import * as Effect from '@effect/core/io/Effect'
 import { Fiber } from '@effect/core/io/Fiber'
 import { FiberId } from '@effect/core/io/FiberId'
 import { flow, pipe } from '@fp-ts/data/Function'
+import * as Duration from '@tsplus/stdlib/data/Duration'
 import { Either } from '@tsplus/stdlib/data/Either'
 import { Maybe } from '@tsplus/stdlib/data/Maybe'
 
 import { Sink } from '@/Sink/Sink.js'
+
+/**
+ * ContinueWith / StartWith
+ * BiMap / Map
+ * BiMapEffect / MapEffect
+ * OrElse
+ * Tap
+ * Scan
+ * Loop
+ * ZipItems
+ * WithItems
+ * SwitchMap
+ * ConcatMap
+ * FlatMapConcurrently
+ * Merge / MergeArray
+ * Combine / CombineArray
+ * Zip / ZipArray
+ * Sample / Snapshot
+ * Filter / FilterEffect
+ * SkipRepeats
+ * takeWhile / skipWhile
+ * takeAfter / skipAfter
+ * until / since / during
+ * throttle
+ * debounce
+ * fromPromise
+ * multicast
+ * hold
+ */
 
 export interface Stream<R, E, A, E2 = never> {
   readonly fork: <R3, E3, B>(
@@ -44,12 +74,16 @@ export function fromEffect<R, E, A>(effect: Effect.Effect<R, E, A>): Stream<R, E
 
 export const succeed = flow(Effect.succeed, fromEffect)
 
+export const unit = fromEffect(Effect.unit)
+
 export const fromEither: <E, A>(either: Either<E, A>) => Stream<never, E, A, never> = flow(
   Effect.fromEither,
   fromEffect,
 )
 
 export const async = flow(Effect.async, fromEffect)
+
+export const never = async<never, never, never>(() => void 0)
 
 export const asyncEffect = flow(Effect.asyncEffect, fromEffect)
 
@@ -75,3 +109,12 @@ export const interruptAs: (id: FiberId) => Stream<never, never, never> = flow(
 
 export const fromFiber = flow(Effect.fromFiber, fromEffect)
 export const fromFiberEffect = flow(Effect.fromFiberEffect, fromEffect)
+
+export const at =
+  (delay: Duration.Duration) =>
+  <A>(value: A) =>
+    fromEffect(Effect.delay(delay)(Effect.succeed(value)))
+
+export function suspendSucceed<R, E, A, E1>(f: () => Stream<R, E, A, E1>): Stream<R, E, A, E1> {
+  return Stream((sink) => f().fork(sink))
+}
