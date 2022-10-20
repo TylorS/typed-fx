@@ -110,10 +110,8 @@ export const interruptAs: (id: FiberId) => Stream<never, never, never> = flow(
 export const fromFiber = flow(Effect.fromFiber, fromEffect)
 export const fromFiberEffect = flow(Effect.fromFiberEffect, fromEffect)
 
-export const at =
-  (delay: Duration.Duration) =>
-  <A>(value: A) =>
-    fromEffect(Effect.delay(delay)(Effect.succeed(value)))
+export const at = (delay: Duration.Duration) =>
+  flow(Effect.succeed, Effect.delay(delay), fromEffect)
 
 export function suspendSucceed<R, E, A, E1>(f: () => Stream<R, E, A, E1>): Stream<R, E, A, E1> {
   return Stream((sink) => f().fork(sink))
