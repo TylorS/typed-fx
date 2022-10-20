@@ -1,9 +1,7 @@
 import { Cause } from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
-import { Layer } from '@effect/core/io/Layer'
 import { flow, pipe } from '@fp-ts/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
-import { Env } from '@tsplus/stdlib/service/Env'
 
 export interface Sink<E, A, R2, E2, B> {
   readonly event: (value: A) => Effect.Effect<R2, E2, unknown>
@@ -49,24 +47,6 @@ export function mapInputCauseEffect<E, R3, E3, E2>(
   f: (e: Cause<E>) => Effect.Effect<R3, E3, Cause<E2>>,
 ): <A, R2, E4, B>(sink: Sink<E2, A, R2, E4, B>) => Sink<E, A, R2 | R3, E3 | E4, B> {
   return (sink) => Sink(sink.event, flow(f, Effect.flatMap(sink.error)), sink.end)
-}
-
-export function provideEnvironment<R>(env: Env<R>) {
-  return <E, A, E2, B>(sink: Sink<E, A, R, E2, B>): Sink<E, A, never, E2, B> =>
-    Sink(
-      flow(sink.event, Effect.provideEnvironment(env)),
-      flow(sink.error, Effect.provideEnvironment(env)),
-      Effect.provideEnvironment(env)(sink.end),
-    )
-}
-
-export function provideLayer<R3, E3, R>(layer: Layer<R3, E3, R>) {
-  return <E, A, E2, B>(sink: Sink<E, A, R, E2, B>): Sink<E, A, R3, E3 | E2, B> =>
-    Sink(
-      flow(sink.event, Effect.provideLayer(layer)),
-      flow(sink.error, Effect.provideLayer(layer)),
-      Effect.provideLayer(layer)(sink.end),
-    )
 }
 
 export function mapOutput<B, C>(

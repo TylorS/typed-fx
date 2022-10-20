@@ -3,6 +3,7 @@ import * as Effect from '@effect/core/io/Effect'
 import { Fiber } from '@effect/core/io/Fiber'
 import * as Ref from '@effect/core/io/Ref'
 import { flow, pipe } from '@fp-ts/data/Function'
+import { AssociativeIdentity } from '@tsplus/stdlib/prelude/AssociativeIdentity'
 
 import { Stream } from './Stream.js'
 
@@ -22,7 +23,7 @@ export function drain<R, E, A, E1>(
             pipe(Effect.unit, Effect.intoDeferred(deferred), Effect.asUnit),
           ),
         ),
-        Effect.flatMap(() => deferred.await),
+        Effect.zipRight(deferred.await),
       ),
     ),
     Effect.fork,
@@ -50,7 +51,7 @@ export function observe<A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>) {
               pipe(Effect.unit, Effect.intoDeferred(deferred), Effect.asUnit),
             ),
           ),
-          Effect.flatMap(() => deferred.await),
+          Effect.zipRight(deferred.await),
         ),
       ),
       Effect.fork,
@@ -74,16 +75,8 @@ export function reduce<B, A>(b: B, f: (b: B, a: A) => B) {
                   () => Effect.unit,
                 ),
               ),
-            flow(
-              Effect.failCause,
-              Effect.intoDeferred(deferred),
-              Effect.flatMap(() => deferred.await),
-            ),
-            pipe(
-              ref.get,
-              Effect.intoDeferred(deferred),
-              Effect.flatMap(() => deferred.await),
-            ),
+            flow(Effect.failCause, Effect.intoDeferred(deferred), Effect.zipRight(deferred.await)),
+            pipe(ref.get, Effect.intoDeferred(deferred), Effect.zipRight(deferred.await)),
           ),
         ),
       )
@@ -97,6 +90,15 @@ export function collectAll<R, E, A, E1>(
 ): Effect.Effect<R, E | E1, readonly A[]> {
   return pipe(
     stream,
-    reduce([] as readonly A[], (a, b) => a.concat([b])),
+    reduce([] as readonly A[], (a, b) => a.concat(b)),
   )
+}
+
+export function foldMap<B>(I: AssociativeIdentity<B>) {
+  return <A>(f: (a: A) => B) =>
+    <R, E, E1>(stream: Stream<R, E, A, E1>): Effect.Effect<R, E | E1, B> =>
+      pipe(
+        stream,
+        reduce(I.identity, (b, a) => I.combine(b, f(a))),
+      )
 }

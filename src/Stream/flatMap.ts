@@ -2,6 +2,7 @@ import * as Deferred from '@effect/core/io/Deferred'
 import * as Effect from '@effect/core/io/Effect'
 import { Fiber } from '@effect/core/io/Fiber'
 import { pipe } from '@fp-ts/data/Function'
+import { identity } from '@tsplus/stdlib/data/Function'
 
 import { Stream } from './Stream.js'
 
@@ -10,6 +11,12 @@ import * as Sink from '@/Sink/Sink.js'
 export function flatMap<A, R2, E2, B, E3 = never>(f: (a: A) => Stream<R2, E2, B, E3>) {
   return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R | R2, E | E2, B, E1 | E3> =>
     new FlatMapStream(stream, f)
+}
+
+export function join<R, E, R2, E2, B, E3, E1>(
+  stream: Stream<R, E, Stream<R2, E2, B, E3>, E1>,
+): Stream<R | R2, E | E2, B, E1 | E3> {
+  return pipe(stream, flatMap(identity))
 }
 
 export class FlatMapStream<R, E, A, E1, R2, E2, B, E3>
