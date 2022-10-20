@@ -1,9 +1,9 @@
 import * as Effect from '@effect/core/io/Effect'
+import { fail, succeed } from '@effect/core/io/Exit'
+import { Fiber } from '@effect/core/io/Fiber'
 import * as Scope from '@effect/core/io/Scope'
 import { TSemaphore, withPermitScoped } from '@effect/core/stm/TSemaphore'
 import { pipe } from '@fp-ts/data/Function'
-import { fail, succeed } from 'node_modules/@effect/core/io/Exit.js'
-import { Fiber } from 'node_modules/@effect/core/io/Fiber.js'
 
 import { Stream } from './Stream.js'
 

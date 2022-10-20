@@ -1,8 +1,8 @@
 import * as Effect from '@effect/core/io/Effect'
 import { Fiber } from '@effect/core/io/Fiber'
+import * as Schedule from '@effect/core/io/Schedule'
 import { pipe } from '@fp-ts/data/Function'
 import * as Duration from '@tsplus/stdlib/data/Duration'
-import * as Schedule from 'node_modules/@effect/core/io/Schedule.js'
 
 import { Stream } from './Stream.js'
 

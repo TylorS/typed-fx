@@ -1,9 +1,9 @@
 import { Cause } from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
 import { Exit, isFailure } from '@effect/core/io/Exit'
+import { Fiber } from '@effect/core/io/Fiber'
 import { unsafeForkUnstarted } from '@effect/core/io/Fiber/_internal/runtime'
 import { flow } from '@fp-ts/data/Function'
-import { Fiber } from 'node_modules/@effect/core/io/Fiber.js'
 
 import { Stream } from './Stream.js'
 
