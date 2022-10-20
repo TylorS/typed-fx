@@ -13,20 +13,8 @@ export function drain<R, E, A, E1>(
   stream: Stream<R, E, A, E1>,
 ): Effect.Effect<R, never, Fiber<E | E1, void>> {
   return pipe(
-    Deferred.make<E | E1, void>(),
-    Effect.flatMap((deferred) =>
-      pipe(
-        stream.fork(
-          Sink.Sink(
-            () => Effect.unit,
-            flow(Effect.failCause, Effect.intoDeferred(deferred), Effect.asUnit),
-            pipe(Effect.unit, Effect.intoDeferred(deferred), Effect.asUnit),
-          ),
-        ),
-        Effect.zipRight(deferred.await),
-      ),
-    ),
-    Effect.fork,
+    stream,
+    observe(() => Effect.unit),
   )
 }
 
