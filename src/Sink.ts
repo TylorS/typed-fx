@@ -18,10 +18,10 @@ export function Sink<E, A, R2 = never, E2 = E, B = void>(
 }
 
 export namespace Sink {
-  export type InputErrorOf<T> = T extends Sink<infer R, any, any, any, any> ? R : never
+  export type InputErrorsOf<T> = T extends Sink<infer R, any, any, any, any> ? R : never
   export type EventOf<T> = T extends Sink<any, infer R, any, any, any> ? R : never
   export type ResourcesOf<T> = T extends Sink<any, any, infer R, any, any> ? R : never
-  export type ErrorsOf<T> = T extends Sink<any, any, any, infer R, any> ? R : never
+  export type OutputErrorsOf<T> = T extends Sink<any, any, any, infer R, any> ? R : never
   export type OutputOf<T> = T extends Sink<any, any, any, any, infer R> ? R : never
 }
 
