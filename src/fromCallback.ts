@@ -2,14 +2,10 @@ import { Cause } from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
 import * as Exit from '@effect/core/io/Exit'
 import { unsafeForkUnstarted } from '@effect/core/io/Fiber/_internal/runtime'
-import { pipe } from '@fp-ts/data/Function'
-import { flow } from 'node_modules/@fp-ts/data/Function.js'
+import { flow } from '@fp-ts/data/Function'
 
 import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'
-
-const fromExit = <E, A>(exit: Exit.Exit<E, A>) =>
-  pipe(exit, Exit.fold<E, A, Effect.Effect<never, E, A>>(Effect.failCause, Effect.succeed))
 
 export function make<R, E, A>(
   f: (sink: {
@@ -35,8 +31,8 @@ export function make<R, E, A>(
             unsafeRun(sink.event(a), (exit) =>
               Exit.isFailure(exit) ? cb(Effect.failCause(exit.cause)) : undefined,
             ),
-          error: (e) => unsafeRun(sink.error(e), flow(fromExit, cb)),
-          end: () => unsafeRun(sink.end, flow(fromExit, cb)),
+          error: (e) => unsafeRun(sink.error(e), flow(Effect.done, cb)),
+          end: () => unsafeRun(sink.end, flow(Effect.done, cb)),
         }),
       )
     }),

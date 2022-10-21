@@ -1,6 +1,7 @@
 import * as Deferred from '@effect/core/io/Deferred'
 import * as Effect from '@effect/core/io/Effect'
-import * as Exit from '@effect/core/io/Exit'
+import { Exit } from '@effect/core/io/Exit'
+import * as Fiber from '@effect/core/io/Fiber'
 import * as Ref from '@effect/core/io/Ref'
 import { pipe } from '@fp-ts/data/Function'
 
@@ -34,5 +35,25 @@ export function refCountDeferred<E, A>(initialEnded = false, initialCount = 0) {
   })
 }
 
-export const fromExit = <E, A>(exit: Exit.Exit<E, A>) =>
-  pipe(exit, Exit.fold<E, A, Effect.Effect<never, E, A>>(Effect.failCause, Effect.succeed))
+export function deferredCallback<E, A, R2, E2>(
+  f: (cb: (exit: Exit<E, A>) => Effect.Effect<never, never, never>) => Effect.Effect<R2, E2, A>,
+): Effect.Effect<R2, E | E2, A> {
+  return Effect.scoped(
+    Effect.gen(function* ($) {
+      const deferred = yield* $(Deferred.make<E, A>())
+      const fiber = yield* $(
+        Effect.fork(
+          f((exit) => {
+            deferred.unsafeDone(Effect.done(exit))
+
+            return Effect.never
+          }),
+        ),
+      )
+
+      yield* $(Effect.addFinalizer(Fiber.interrupt(fiber)))
+
+      return yield* $(Effect.race(deferred.await)(Fiber.join(fiber)))
+    }),
+  )
+}

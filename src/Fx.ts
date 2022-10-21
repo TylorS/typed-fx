@@ -4,11 +4,6 @@ import { Sink } from './Sink.js'
 
 /**
  * TODOS:
- * Periodic
- * loop / scan
- * zipItems / withItems
- * TSemaphore integration
- * flatMapConcurrently
  * combine / combineAll
  * zip / zipAll
  * snapshot / sample
@@ -20,7 +15,6 @@ import { Sink } from './Sink.js'
  * until
  * since
  * during
- * Schedule integration
  * throttle
  * debounce
  * orElse / orElseEffect

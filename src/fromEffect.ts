@@ -1,5 +1,6 @@
 import * as Cause from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
+import { Exit } from '@effect/core/io/Exit'
 import { LazyArg, flow, pipe } from '@fp-ts/data/Function'
 import { Either } from '@tsplus/stdlib/data/Either'
 import { Maybe } from '@tsplus/stdlib/data/Maybe'
@@ -25,11 +26,24 @@ export class FromEffectFx<R, E, A> implements Fx<R, E, A> {
 export const succeed = flow(Effect.succeed, fromEffect)
 
 export const fail = flow(Effect.fail, fromEffect)
+export const die = flow(Effect.die, fromEffect)
+export const dieMessage = flow(Effect.dieMessage, fromEffect)
+export const dieSync: <A>(f: LazyArg<A>) => Fx<never, never, never> = flow(
+  Effect.dieSync,
+  fromEffect,
+)
 
 export const failCause: <E>(cause: Cause.Cause<E>) => Fx<never, E, never, never> = flow(
   Effect.failCause,
   fromEffect,
 )
+
+export const fromEither: <E, A>(either: Either<E, A>) => Fx<never, E, A> = flow(
+  Effect.fromEither,
+  fromEffect,
+)
+
+export const done: <E, A>(exit: Exit<E, A>) => Fx<never, E, A> = flow(Effect.done, fromEffect)
 
 export const async = flow(Effect.async, fromEffect)
 
