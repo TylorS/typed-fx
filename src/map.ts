@@ -1,5 +1,5 @@
 import * as Effect from '@effect/core/io/Effect'
-import { flow, pipe } from '@fp-ts/data/Function'
+import { flow, identity, pipe } from '@fp-ts/data/Function'
 import { Predicate } from '@fp-ts/data/Predicate'
 import { Refinement } from '@fp-ts/data/Refinement'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
@@ -10,6 +10,14 @@ import { FromEffectStream } from './fromEffect.js'
 
 export function map<A, B>(f: (a: A) => B) {
   return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R, E, B, E1> => MapStream.make(stream, f)
+}
+
+export function as<B>(b: B) {
+  return <R, E, A, E1>(stream: Stream<R, E, A, E1>): Stream<R, E, B, E1> => map(() => b)(stream)
+}
+
+export function asUnit<R, E, A, E1>(stream: Stream<R, E, A, E1>): Stream<R, E, void, E1> {
+  return as<void>(undefined)(stream)
 }
 
 export class MapStream<R, E, A, B, E1> implements Stream<R, E, B, E1> {
@@ -53,6 +61,12 @@ export function filter<A>(
 
 export function filter<A>(predicate: Predicate<A>) {
   return filterMap((a: A) => Maybe.fromPredicate(a, predicate))
+}
+
+export function compact<R, E, A, E1>(
+  stream: Stream<R, E, Maybe.Maybe<A>, E1>,
+): Stream<R, E, A, E1> {
+  return pipe(stream, filterMap(identity))
 }
 
 export class FilterMapStream<R, E, A, E1, B> implements Stream<R, E, B, E1> {

@@ -5,6 +5,9 @@ specifiers:
   '@esbuild-kit/esm-loader': ^2.4.2
   '@fp-ts/core': ^0.0.5
   '@fp-ts/data': ^0.0.3
+  '@most/core': ^1.6.1
+  '@most/scheduler': ^1.3.0
+  '@most/types': ^1.1.0
   '@tsplus/stdlib': ^0.2.8
   '@types/benchmark': ^2.1.2
   '@types/mocha': ^9.1.1
@@ -28,6 +31,7 @@ specifiers:
   lint-staged: ^12.5.0
   mocha: ^10.0.0
   prettier: ^2.7.1
+  rxjs: ^7.5.7
   source-map-support: ^0.5.21
   ts-patch: ^2.0.2
   tsconfig-paths: ^4.1.0
@@ -45,6 +49,9 @@ dependencies:
 
 devDependencies:
   '@esbuild-kit/esm-loader': 2.4.2
+  '@most/core': 1.6.1
+  '@most/scheduler': 1.3.0
+  '@most/types': 1.1.0
   '@types/benchmark': 2.1.2
   '@types/mocha': 9.1.1
   '@types/node': 17.0.45
@@ -67,6 +74,7 @@ devDependencies:
   lint-staged: 12.5.0
   mocha: 10.0.0
   prettier: 2.7.1
+  rxjs: 7.5.7
   source-map-support: 0.5.21
   ts-patch: 2.0.2_typescript@4.7.4
   tsconfig-paths: 4.1.0
@@ -190,6 +198,37 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.0
       '@jridgewell/sourcemap-codec': 1.4.14
+    dev: true
+
+  /@most/core/1.6.1:
+    resolution: {integrity: sha512-H989BS6v9QxSZRGPZlbomXTRpUU60iy76AHJoPveKtj27bE0Pv3mwMENRzNZijJK9ntUwhoJ0SYCoXaMCYuWEQ==}
+    dependencies:
+      '@most/disposable': 1.3.0
+      '@most/prelude': 1.8.0
+      '@most/scheduler': 1.3.0
+      '@most/types': 1.1.0
+    dev: true
+
+  /@most/disposable/1.3.0:
+    resolution: {integrity: sha512-0lCve1GmWlZrvTGQpMgTFTHH6uRtzM31jyYTIN7303XX4KoLCLWw9L6hfTYLLBtge6s+QyiBQVokAhy2GjNAUQ==}
+    dependencies:
+      '@most/prelude': 1.8.0
+      '@most/types': 1.1.0
+    dev: true
+
+  /@most/prelude/1.8.0:
+    resolution: {integrity: sha512-t1CcURpZzfmBA6fEWwqmCqeNzWAj1w2WqEmCk/2yXMe/p8Ut000wFmVKMy8A1Rl9VVxZEZ5nBHd/pU0dR4bv/w==}
+    dev: true
+
+  /@most/scheduler/1.3.0:
+    resolution: {integrity: sha512-bbJGyhbZxNqlkVjP8+YT9wIVMvYnpzWOzV8jZueqlTH2PJWewH2f54YziZn7/wWa6AJdN03H1vb8Tbi9GcA/cw==}
+    dependencies:
+      '@most/prelude': 1.8.0
+      '@most/types': 1.1.0
+    dev: true
+
+  /@most/types/1.1.0:
+    resolution: {integrity: sha512-v2trqAWu1jqP4Yd/CyI1O6mAeJyygK1uJOrFRpNPkPZIaYw4khA4EQe4WzcyOFKuXdiP8qAqaxGtXXJJ2LZdXg==}
     dev: true
 
   /@nodelib/fs.scandir/2.1.5:
@@ -673,7 +712,7 @@ packages:
       chalk: 4.1.2
       date-fns: 2.29.2
       lodash: 4.17.21
-      rxjs: 7.5.6
+      rxjs: 7.5.7
       shell-quote: 1.7.3
       spawn-command: 0.0.2-1
       supports-color: 8.1.1
@@ -1926,7 +1965,7 @@ packages:
       log-update: 4.0.0
       p-map: 4.0.0
       rfdc: 1.3.0
-      rxjs: 7.5.6
+      rxjs: 7.5.7
       through: 2.3.8
       wrap-ansi: 7.0.0
     dev: true
@@ -2321,8 +2360,8 @@ packages:
       queue-microtask: 1.2.3
     dev: true
 
-  /rxjs/7.5.6:
-    resolution: {integrity: sha512-dnyv2/YsXhnm461G+R/Pe5bWP41Nm6LBXEYWI6eiFP4fiwx6WRI/CD0zbdVAudd9xwLEF2IDcKXLHit0FYjUzw==}
+  /rxjs/7.5.7:
+    resolution: {integrity: sha512-z9MzKh/UcOqB3i20H6rtrlaE/CgjLOvheWK/9ILrbhROGTweAi1BaFsTT9FbwZi5Trr1qNRs+MXkhmR06awzQA==}
     dependencies:
       tslib: 2.4.0
     dev: true
