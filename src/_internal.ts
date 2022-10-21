@@ -42,7 +42,7 @@ export function deferredCallback<E, A, R2, E2>(
     Effect.gen(function* ($) {
       const deferred = yield* $(Deferred.make<E, A>())
       const fiber = yield* $(
-        Effect.fork(
+        Effect.forkScoped(
           f((exit) => {
             deferred.unsafeDone(Effect.done(exit))
 
