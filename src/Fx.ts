@@ -5,14 +5,10 @@ import { Sink } from './Sink.js'
 /**
  * TODOS:
  * Periodic
- * tap / tapEffect
- * tapError / tapErrorEffect
- * tapEnd / tapEndEffect
  * loop / scan
  * zipItems / withItems
  * TSemaphore integration
  * flatMapConcurrently
- * mergeAll
  * combine / combineAll
  * zip / zipAll
  * snapshot / sample

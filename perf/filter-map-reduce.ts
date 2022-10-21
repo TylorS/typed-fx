@@ -7,11 +7,11 @@ import * as rxjs from 'rxjs'
 import {
   array,
   effectTsStreamTest,
+  fxEffectTest,
   iterations,
   mostStreamTest,
   runPerformanceTest,
   rxjsObservableTest,
-  streamEffectTest,
 } from './_internal.js'
 
 import * as Stream from '@/index.js'
@@ -23,7 +23,7 @@ const add = (x: number, y: number): number => x + y
 runPerformanceTest({
   name: 'filter -> map -> reduce ' + iterations + ' integers',
   cases: [
-    streamEffectTest(() =>
+    fxEffectTest(() =>
       pipe(
         Stream.from(array),
         Stream.filter(filterEvens),

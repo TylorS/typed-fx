@@ -24,30 +24,25 @@ export function mergeAll<R2, E2, B, E3>(fx: Iterable<Fx<R2, E2, B, E3>>): Fx<R2,
 export function mergeAll<R2, E2, B, E3>(fx: Iterable<Fx<R2, E2, B, E3>>): Fx<R2, E2, B, E3> {
   return Fx(<R4, E4, C>(sink: Sink<E2, B, R4, E4, C>) =>
     Effect.gen(function* ($) {
-      const deferred = yield* $(refCountDeferred<E3 | E4, C>(true))
+      const array = Array.from(fx)
+      const deferred = yield* $(refCountDeferred<E3 | E4, C>(true, array.length))
 
-      const run = (fx: Fx<R2 | R4, E2, B, E3 | E4>) =>
-        pipe(
-          deferred.increment,
-          Effect.zipRight(
-            Effect.fork(
-              fx.run(
-                Sink(
-                  sink.event,
-                  flow(sink.error, deferred.error),
-                  pipe(
-                    deferred.decrement,
-                    Effect.flatMap(() => deferred.endIfComplete(sink.end)),
-                  ),
+      yield* $(
+        Effect.forEachDiscard(array, (fx) =>
+          Effect.fork(
+            fx.run(
+              Sink(
+                sink.event,
+                flow(sink.error, deferred.error),
+                pipe(
+                  deferred.decrement,
+                  Effect.flatMap(() => deferred.endIfComplete(sink.end)),
                 ),
               ),
             ),
           ),
-        )
-
-      for (const _ of fx) {
-        yield* $(run(_))
-      }
+        ),
+      )
 
       return yield* $(deferred.await)
     }),

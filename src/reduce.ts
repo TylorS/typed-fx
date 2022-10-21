@@ -42,7 +42,7 @@ export function reduce<B, A>(seed: B, f: (b: B, a: A) => B) {
 export function collectAll<R, E, A, E1>(
   fx: Fx<R, E, A, E1>,
 ): Effect.Effect<R, E | E1, readonly A[]> {
-  return reduce_(fx, [] as readonly A[], (b, a) => b.concat(a))
+  return reduce_(fx, [] as readonly A[], (b, a) => b.concat([a]))
 }
 
 function reduce_<R, E, A, E1, B>(fx: Fx<R, E, A, E1>, seed: B, f: (b: B, a: A) => B) {

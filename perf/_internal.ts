@@ -8,7 +8,7 @@ import * as MT from '@most/types'
 import benchmark, { Suite } from 'benchmark'
 import * as RxJS from 'rxjs'
 
-import * as Stream from '@/index.js'
+import * as Fx from '@/index.js'
 
 export function parseIterations() {
   const i = parseInt(process.argv[2], 10)
@@ -108,16 +108,16 @@ export function runPerformanceTest(test: PerformanceTest) {
   runSuite(suite)
 }
 
-export function streamTest<E, A, E1>(init: () => Stream.Fx<never, E, A, E1>) {
+export function fxTest<E, A, E1>(init: () => Fx.Fx<never, E, A, E1>) {
   return PerformanceTestCase(
-    'Fx/Stream',
-    () => Stream.drainNow(init()),
+    'Fx',
+    () => Fx.drainNow(init()),
     (fx, deferred) => Effect.unsafeRunAsyncWith(fx, () => deferred.resolve()),
   )
 }
 
-export function streamEffectTest<E, A>(init: () => Effect.Effect<never, E, A>) {
-  return PerformanceTestCase('Fx/Stream', init, (e, deferred) => {
+export function fxEffectTest<E, A>(init: () => Effect.Effect<never, E, A>) {
+  return PerformanceTestCase('Fx', init, (e, deferred) => {
     Effect.unsafeRunPromise(e).then(() => deferred.resolve())
   })
 }

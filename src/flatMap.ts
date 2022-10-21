@@ -23,7 +23,7 @@ export class FlatMapFx<R, E, A, E1, R2, E2, B, E3> implements Fx<R2 | R, E | E2,
           Sink(
             (a) =>
               pipe(
-                deferred.increment,
+                deferred.increment, // Increment ref count
                 Effect.zipRight(
                   Effect.fork(
                     f(a).run(
@@ -31,7 +31,7 @@ export class FlatMapFx<R, E, A, E1, R2, E2, B, E3> implements Fx<R2 | R, E | E2,
                         sink.event,
                         flow(sink.error, deferred.error),
                         pipe(
-                          deferred.decrement,
+                          deferred.decrement, // Decrement ref count
                           Effect.flatMap(() => deferred.endIfComplete(sink.end)),
                         ),
                       ),
@@ -42,7 +42,7 @@ export class FlatMapFx<R, E, A, E1, R2, E2, B, E3> implements Fx<R2 | R, E | E2,
             flow(sink.error, deferred.error, Effect.zipRight(deferred.await)),
             Effect.suspendSucceed(() =>
               pipe(
-                deferred.end,
+                deferred.end, // Track that the "outer" stream has completed
                 Effect.flatMap(() => deferred.endIfComplete(sink.end)),
                 Effect.zipRight(deferred.await),
               ),
