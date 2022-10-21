@@ -3,40 +3,34 @@ import { Fiber, interrupt } from '@effect/core/io/Fiber'
 import { makeSynchronized } from '@effect/core/io/Ref'
 import { flow, pipe } from '@fp-ts/data/Function'
 
+import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'
-import { Stream } from './Stream.js'
 import { refCountDeferred } from './_internal.js'
 
-export function switchMap<A, R2, E2, B, E3>(f: (a: A) => Stream<R2, E2, B, E3>) {
-  return <R, E, E1>(self: Stream<R, E, A, E1>): Stream<R | R2, E | E2, B, E1 | E3> =>
-    new SwitchMapStream(self, f)
+export function switchMap<A, R2, E2, B, E3>(f: (a: A) => Fx<R2, E2, B, E3>) {
+  return <R, E, E1>(self: Fx<R, E, A, E1>): Fx<R | R2, E | E2, B, E1 | E3> =>
+    new SwitchMapFx(self, f)
 }
 
-export class SwitchMapStream<R, E, A, E1, R2, E2, B, E3>
-  implements Stream<R2 | R, E | E2, B, E1 | E3>
-{
-  constructor(readonly self: Stream<R, E, A, E1>, readonly f: (a: A) => Stream<R2, E2, B, E3>) {}
+export class SwitchMapFx<R, E, A, E1, R2, E2, B, E3> implements Fx<R2 | R, E | E2, B, E1 | E3> {
+  constructor(readonly self: Fx<R, E, A, E1>, readonly f: (a: A) => Fx<R2, E2, B, E3>) {}
 
   run<R3, E4, C>(sink: Sink<E | E2, B, R3, E4, C>): Effect.Effect<R2 | R | R3, E1 | E3 | E4, C> {
     const { self, f } = this
 
-    return Effect.gen(function* ($) {
-      const deferred = yield* $(refCountDeferred<E1 | E3 | E4, C>())
-      const ref = yield* $(makeSynchronized<Fiber<E1 | E3 | E4, any> | null>(() => null))
-
-      return yield* $(
+    return pipe(
+      refCountDeferred<E1 | E3 | E4, C>(),
+      Effect.map((deferred) => ({ deferred } as const)),
+      Effect.bind('ref', () => makeSynchronized<Fiber<E1 | E3 | E4, any> | null>(() => null)),
+      Effect.flatMap(({ deferred, ref }) =>
         self.run(
           Sink(
             (a) =>
               ref.updateEffect((current) =>
-                Effect.gen(function* ($) {
-                  if (current) {
-                    yield* $(interrupt(current))
-                  }
-
-                  yield* $(deferred.increment)
-
-                  return yield* $(
+                pipe(
+                  current ? interrupt(current) : Effect.unit,
+                  Effect.zipRight(deferred.increment),
+                  Effect.zipRight(
                     pipe(
                       f(a).run(
                         Sink(
@@ -51,8 +45,8 @@ export class SwitchMapStream<R, E, A, E1, R2, E2, B, E3>
                       Effect.onInterrupt(() => deferred.decrement),
                       Effect.fork,
                     ),
-                  )
-                }),
+                  ),
+                ),
               ),
             flow(sink.error, deferred.error, Effect.zipRight(deferred.await)),
             Effect.suspendSucceed(() =>
@@ -64,7 +58,7 @@ export class SwitchMapStream<R, E, A, E1, R2, E2, B, E3>
             ),
           ),
         ),
-      )
-    })
+      ),
+    )
   }
 }

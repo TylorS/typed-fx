@@ -1,5 +1,5 @@
-import { Stream } from './Stream.js'
+import { Fx } from './Fx.js'
 
-export function empty<A>(): Stream<unknown, never, A, never> {
-  return Stream((sink) => sink.end)
+export function empty<A>(): Fx<unknown, never, A, never> {
+  return Fx((sink) => sink.end)
 }

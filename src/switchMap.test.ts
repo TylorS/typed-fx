@@ -11,7 +11,7 @@ import { switchMap } from './switchMap.js'
 
 describe(import.meta.url, () => {
   describe('switchMap', () => {
-    it('chains the latest inner stream', async () => {
+    it('chains the latest inner fx', async () => {
       const values = [1, 2, 3]
       const test = pipe(
         from(values),

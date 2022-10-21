@@ -13,7 +13,7 @@ import * as Stream from '@/index.js'
 export function parseIterations() {
   const i = parseInt(process.argv[2], 10)
 
-  return Number.isNaN(i) ? 1000 : i
+  return Number.isNaN(i) ? 10000 : i
 }
 
 export const iterations = parseIterations()
@@ -108,12 +108,18 @@ export function runPerformanceTest(test: PerformanceTest) {
   runSuite(suite)
 }
 
-export function fxTest<E, A>(init: () => Stream.Stream<never, E, A>) {
+export function streamTest<E, A, E1>(init: () => Stream.Fx<never, E, A, E1>) {
   return PerformanceTestCase(
     'Fx/Stream',
     () => Stream.drainNow(init()),
     (fx, deferred) => Effect.unsafeRunAsyncWith(fx, () => deferred.resolve()),
   )
+}
+
+export function streamEffectTest<E, A>(init: () => Effect.Effect<never, E, A>) {
+  return PerformanceTestCase('Fx/Stream', init, (e, deferred) => {
+    Effect.unsafeRunPromise(e).then(() => deferred.resolve())
+  })
 }
 
 export function mostStreamTest<A>(init: () => MT.Stream<A>) {
@@ -129,12 +135,6 @@ export function rxjsObservableTest<A>(init: () => RxJS.Observable<A>) {
     observable.subscribe({
       complete: () => deferred.resolve(),
     })
-  })
-}
-
-export function effectTsTest<E, A>(init: () => Effect.Effect<never, E, A>) {
-  return PerformanceTestCase('Effect', init, (e, deferred) => {
-    Effect.unsafeRunPromise(e).then(() => deferred.resolve())
   })
 }
 

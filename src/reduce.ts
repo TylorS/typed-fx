@@ -3,66 +3,66 @@ import { makeRef } from '@effect/core/io/Ref'
 import { pipe } from '@fp-ts/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
+import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'
-import { Stream } from './Stream.js'
-import { FilterMapStream, MapStream } from './map.js'
+import { FilterMapFx, MapFx } from './map.js'
 
 export function reduceFilterMap<R, E, A, E1, B>(seed: B, f: (b: B, a: A) => Maybe.Maybe<B>) {
-  return (stream: Stream<R, E, A, E1>): Effect.Effect<R, E1 | E, B> => {
-    return reduceFilterMap_(stream, seed, f)
+  return (fx: Fx<R, E, A, E1>): Effect.Effect<R, E1 | E, B> => {
+    return reduceFilterMap_(fx, seed, f)
   }
 }
 
 export function reduce<B, A>(seed: B, f: (b: B, a: A) => B) {
-  return <R, E, E1>(stream: Stream<R, E, A, E1>): Effect.Effect<R, E | E1, B> => {
-    if (stream instanceof FilterMapStream) {
+  return <R, E, E1>(fx: Fx<R, E, A, E1>): Effect.Effect<R, E | E1, B> => {
+    if (fx instanceof FilterMapFx) {
       return pipe(
-        stream.stream,
+        fx.fx,
         reduceFilterMap(seed, (b, a) =>
           pipe(
             a,
-            stream.f,
+            fx.f,
             Maybe.map((a2) => f(b, a2)),
           ),
         ),
       )
     }
 
-    if (stream instanceof MapStream) {
+    if (fx instanceof MapFx) {
       return pipe(
-        stream.stream,
-        reduce(seed, (b, a) => f(b, stream.f(a))),
+        fx.fx,
+        reduce(seed, (b, a) => f(b, fx.f(a))),
       )
     }
 
-    return reduce_(stream, seed, f)
+    return reduce_(fx, seed, f)
   }
 }
 
 export function collectAll<R, E, A, E1>(
-  stream: Stream<R, E, A, E1>,
+  fx: Fx<R, E, A, E1>,
 ): Effect.Effect<R, E | E1, readonly A[]> {
-  return reduce_(stream, [] as readonly A[], (b, a) => b.concat(a))
+  return reduce_(fx, [] as readonly A[], (b, a) => b.concat(a))
 }
 
-function reduce_<R, E, A, E1, B>(stream: Stream<R, E, A, E1>, seed: B, f: (b: B, a: A) => B) {
+function reduce_<R, E, A, E1, B>(fx: Fx<R, E, A, E1>, seed: B, f: (b: B, a: A) => B) {
   return pipe(
     makeRef<B>(() => seed),
     Effect.flatMap((ref) =>
-      stream.run(Sink((a) => ref.update((b) => f(b, a)), Effect.failCause, ref.get)),
+      fx.run(Sink((a) => ref.update((b) => f(b, a)), Effect.failCause, ref.get)),
     ),
   )
 }
 
 function reduceFilterMap_<R, E, A, E1, B>(
-  stream: Stream<R, E, A, E1>,
+  fx: Fx<R, E, A, E1>,
   seed: B,
   f: (b: B, a: A) => Maybe.Maybe<B>,
 ) {
   return pipe(
     makeRef<B>(() => seed),
     Effect.flatMap((ref) =>
-      stream.run(
+      fx.run(
         Sink(
           (a) =>
             ref.modify((b) => [

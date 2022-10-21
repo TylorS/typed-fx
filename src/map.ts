@@ -4,86 +4,80 @@ import { Predicate } from '@fp-ts/data/Predicate'
 import { Refinement } from '@fp-ts/data/Refinement'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
+import { Fx } from './Fx.js'
 import * as Sink from './Sink.js'
-import { Stream } from './Stream.js'
-import { FromEffectStream } from './fromEffect.js'
+import { FromEffectFx } from './fromEffect.js'
 
 export function map<A, B>(f: (a: A) => B) {
-  return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R, E, B, E1> => MapStream.make(stream, f)
+  return <R, E, E1>(fx: Fx<R, E, A, E1>): Fx<R, E, B, E1> => MapFx.make(fx, f)
 }
 
 export function as<B>(b: B) {
-  return <R, E, A, E1>(stream: Stream<R, E, A, E1>): Stream<R, E, B, E1> => map(() => b)(stream)
+  return <R, E, A, E1>(fx: Fx<R, E, A, E1>): Fx<R, E, B, E1> => map(() => b)(fx)
 }
 
-export function asUnit<R, E, A, E1>(stream: Stream<R, E, A, E1>): Stream<R, E, void, E1> {
-  return as<void>(undefined)(stream)
+export function asUnit<R, E, A, E1>(fx: Fx<R, E, A, E1>): Fx<R, E, void, E1> {
+  return as<void>(undefined)(fx)
 }
 
-export class MapStream<R, E, A, B, E1> implements Stream<R, E, B, E1> {
-  constructor(readonly stream: Stream<R, E, A, E1>, readonly f: (a: A) => B) {}
+export class MapFx<R, E, A, B, E1> implements Fx<R, E, B, E1> {
+  constructor(readonly fx: Fx<R, E, A, E1>, readonly f: (a: A) => B) {}
 
   run<R2, E2, C>(sink: Sink.Sink<E, B, R2, E2, C>): Effect.Effect<R | R2, E1 | E2, C> {
-    return this.stream.run(Sink.mapInputEvent(this.f)(sink))
+    return this.fx.run(Sink.mapInputEvent(this.f)(sink))
   }
 
-  static make = <R, E, A, B, E1>(
-    stream: Stream<R, E, A, E1>,
-    f: (a: A) => B,
-  ): Stream<R, E, B, E1> => {
-    if (stream instanceof MapStream) {
-      return new MapStream(stream.stream, flow(stream.f, f))
+  static make = <R, E, A, B, E1>(fx: Fx<R, E, A, E1>, f: (a: A) => B): Fx<R, E, B, E1> => {
+    if (fx instanceof MapFx) {
+      return new MapFx(fx.fx, flow(fx.f, f))
     }
 
-    if (stream instanceof FromEffectStream) {
-      return new FromEffectStream(pipe(stream.effect, Effect.map(f)))
+    if (fx instanceof FromEffectFx) {
+      return new FromEffectFx(pipe(fx.effect, Effect.map(f)))
     }
 
-    if (stream instanceof FilterMapStream) {
-      return FilterMapStream.make(stream.stream, flow(stream.f, Maybe.map(f)))
+    if (fx instanceof FilterMapFx) {
+      return FilterMapFx.make(fx.fx, flow(fx.f, Maybe.map(f)))
     }
 
-    return new MapStream(stream, f)
+    return new MapFx(fx, f)
   }
 }
 
 export function filterMap<A, B>(f: (a: A) => Maybe.Maybe<B>) {
-  return <R, E, E1>(stream: Stream<R, E, A, E1>): Stream<R, E, B, E1> =>
-    FilterMapStream.make(stream, f)
+  return <R, E, E1>(fx: Fx<R, E, A, E1>): Fx<R, E, B, E1> => FilterMapFx.make(fx, f)
 }
 
 export function filter<A, B extends A>(
   predicate: Refinement<A, B>,
-): <R, E, E1>(stream: Stream<R, E, A, E1>) => Stream<R, E, B, E1>
+): <R, E, E1>(fx: Fx<R, E, A, E1>) => Fx<R, E, B, E1>
 export function filter<A>(
   predicate: Predicate<A>,
-): <R, E, E1>(stream: Stream<R, E, A, E1>) => Stream<R, E, A, E1>
+): <R, E, E1>(fx: Fx<R, E, A, E1>) => Fx<R, E, A, E1>
 
 export function filter<A>(predicate: Predicate<A>) {
   return filterMap((a: A) => Maybe.fromPredicate(a, predicate))
 }
 
-export function compact<R, E, A, E1>(
-  stream: Stream<R, E, Maybe.Maybe<A>, E1>,
-): Stream<R, E, A, E1> {
-  return pipe(stream, filterMap(identity))
+export function compact<R, E, A, E1>(fx: Fx<R, E, Maybe.Maybe<A>, E1>): Fx<R, E, A, E1> {
+  return pipe(fx, filterMap(identity))
 }
 
-export class FilterMapStream<R, E, A, E1, B> implements Stream<R, E, B, E1> {
-  constructor(readonly stream: Stream<R, E, A, E1>, readonly f: (a: A) => Maybe.Maybe<B>) {}
+export class FilterMapFx<R, E, A, E1, B> implements Fx<R, E, B, E1> {
+  constructor(readonly fx: Fx<R, E, A, E1>, readonly f: (a: A) => Maybe.Maybe<B>) {}
 
   run<R2, E2, C>(sink: Sink.Sink<E, B, R2, E2, C>): Effect.Effect<R | R2, E1 | E2, C> {
-    return this.stream.run(pipe(sink, Sink.filterMap(this.f)))
+    return this.fx.run(pipe(sink, Sink.filterMap(this.f)))
   }
 
   static make = <R, E, A, E1, B>(
-    stream: Stream<R, E, A, E1>,
+    fx: Fx<R, E, A, E1>,
     f: (a: A) => Maybe.Maybe<B>,
-  ): Stream<R, E, B, E1> => {
-    if (stream instanceof FilterMapStream) {
-      return new FilterMapStream(stream.stream, flow(stream.f, Maybe.flatMap(f)))
+  ): Fx<R, E, B, E1> => {
+    if (fx instanceof FilterMapFx) {
+      return new FilterMapFx(fx.fx, flow(fx.f, Maybe.flatMap(f)))
     }
 
-    return new FilterMapStream(stream, f)
+    return new FilterMapFx(fx, f)
   }
 }

@@ -5,8 +5,8 @@ import { unsafeForkUnstarted } from '@effect/core/io/Fiber/_internal/runtime'
 import { pipe } from '@fp-ts/data/Function'
 import { flow } from 'node_modules/@fp-ts/data/Function.js'
 
+import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'
-import { Stream } from './Stream.js'
 
 const fromExit = <E, A>(exit: Exit.Exit<E, A>) =>
   pipe(exit, Exit.fold<E, A, Effect.Effect<never, E, A>>(Effect.failCause, Effect.succeed))
@@ -17,8 +17,8 @@ export function make<R, E, A>(
     readonly error: (cause: Cause<E>) => void
     readonly end: () => void
   }) => Effect.Canceler<R>,
-): Stream<R, E, A> {
-  return Stream<R, E, A>(<R2, E2, B>(sink: Sink<E, A, R2, E2, B>) =>
+): Fx<R, E, A> {
+  return Fx<R, E, A>(<R2, E2, B>(sink: Sink<E, A, R2, E2, B>) =>
     Effect.withFiberRuntime<R | R2, E2, B>((fiber, status) => {
       const unsafeRun = <R, E, A>(
         eff: Effect.Effect<R, E, A>,

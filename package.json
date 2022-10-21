@@ -20,7 +20,9 @@
     "preversion": "npm test",
     "postversion": "npm run build && npm publish --access=public",
     "prepare": "ts-patch install -s",
-    "perf:stream:filter-map-reduce": "node --loader @esbuild-kit/esm-loader perf/filter-map-reduce.ts"
+    "perf:stream:filter-map-reduce": "node --loader @esbuild-kit/esm-loader perf/filter-map-reduce.ts",
+    "perf:stream:flatMap": "node --loader @esbuild-kit/esm-loader perf/flatMap.ts",
+    "perf:stream:switchMap": "node --loader @esbuild-kit/esm-loader perf/switchMap.ts"
   },
   "keywords": [
     "Fx",

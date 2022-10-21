@@ -12,7 +12,7 @@ import { collectAll } from './reduce.js'
 
 describe(import.meta.url, () => {
   describe('merge', () => {
-    it('merges 2 streams together', async () => {
+    it('merges 2 fx together', async () => {
       const values = [1, 2, 3]
       const test = pipe(
         from(values),

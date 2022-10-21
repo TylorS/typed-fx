@@ -9,7 +9,7 @@ import { collectAll } from './reduce.js'
 
 describe(import.meta.url, () => {
   describe('flatMap', () => {
-    it('chains streams together', async () => {
+    it('chains fx together', async () => {
       const values = [1, 2, 3]
       const test = pipe(
         from(values),

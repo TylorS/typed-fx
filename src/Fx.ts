@@ -32,17 +32,17 @@ import { Sink } from './Sink.js'
  * hold
  */
 
-export interface Stream<R, E, A, E1 = never> {
+export interface Fx<R, E, A, E1 = never> {
   readonly run: <R2, E2, B>(sink: Sink<E, A, R2, E2, B>) => Effect.Effect<R | R2, E1 | E2, B>
 }
 
-export function Stream<R, E, A, E1 = never>(run: Stream<R, E, A, E1>['run']): Stream<R, E, A, E1> {
+export function Fx<R, E, A, E1 = never>(run: Fx<R, E, A, E1>['run']): Fx<R, E, A, E1> {
   return { run }
 }
 
-export namespace Stream {
-  export type ResourcesOf<T> = T extends Stream<infer R, any, any, any> ? R : never
-  export type ErrorsOf<T> = T extends Stream<any, infer E, any, any> ? E : never
-  export type OutputOf<T> = T extends Stream<any, any, infer A, any> ? A : never
-  export type ReturnErrorsOf<T> = T extends Stream<any, any, any, infer E1> ? E1 : never
+export namespace Fx {
+  export type ResourcesOf<T> = T extends Fx<infer R, any, any, any> ? R : never
+  export type ErrorsOf<T> = T extends Fx<any, infer E, any, any> ? E : never
+  export type OutputOf<T> = T extends Fx<any, any, infer A, any> ? A : never
+  export type ReturnErrorsOf<T> = T extends Fx<any, any, any, infer E1> ? E1 : never
 }
