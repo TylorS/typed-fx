@@ -4,7 +4,6 @@ import { Sink } from './Sink.js'
 
 /**
  * TODOS:
- * combine / combineAll
  * zip / zipAll
  * snapshot / sample
  * until

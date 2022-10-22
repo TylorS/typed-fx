@@ -1,3 +1,4 @@
+export * from './combine.js'
 export * from './continueWith.js'
 export * from './debounce.js'
 export * from './delay.js'
