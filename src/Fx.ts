@@ -7,16 +7,11 @@ import { Sink } from './Sink.js'
  * combine / combineAll
  * zip / zipAll
  * snapshot / sample
- * slice / take / skip
- * takeWhile / skipWhile
- * takeUntil / skipUntil
- * takeAfter / skipAfter
  * until
  * since
  * during
  * throttle
  * debounce
- * hold
  */
 
 export interface Fx<R, E, A, E1 = never> {
