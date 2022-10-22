@@ -16,7 +16,6 @@ import { Sink } from './Sink.js'
  * during
  * throttle
  * debounce
- * multicast
  * hold
  */
 

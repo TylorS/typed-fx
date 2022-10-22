@@ -3,7 +3,11 @@ import * as Effect from '@effect/core/io/Effect'
 import { Exit } from '@effect/core/io/Exit'
 import * as Fiber from '@effect/core/io/Fiber'
 import * as Ref from '@effect/core/io/Ref'
+import * as Schedule from '@effect/core/io/Schedule'
 import { pipe } from '@fp-ts/data/Function'
+import * as Duration from '@tsplus/stdlib/data/Duration'
+
+export const asap = Schedule.delayed(() => Duration.millis(0))(Schedule.once)
 
 export function refCountDeferred<E, A>(initialEnded = false, initialCount = 0) {
   return Effect.gen(function* ($) {
