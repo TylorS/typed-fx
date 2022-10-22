@@ -10,8 +10,6 @@ import { Sink } from './Sink.js'
  * until
  * since
  * during
- * throttle
- * debounce
  */
 
 export interface Fx<R, E, A, E1 = never> {
