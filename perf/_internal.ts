@@ -8,13 +8,12 @@ import * as MT from '@most/types'
 import benchmark, { Suite } from 'benchmark'
 import * as RxJS from 'rxjs'
 
-import * as Fx from '@/Fx/index.js'
-import * as Stream from '@/Stream/index.js'
+import * as Fx from '@/index.js'
 
 export function parseIterations() {
   const i = parseInt(process.argv[2], 10)
 
-  return Number.isNaN(i) ? 1000 : i
+  return Number.isNaN(i) ? 10000 : i
 }
 
 export const iterations = parseIterations()
@@ -109,20 +108,18 @@ export function runPerformanceTest(test: PerformanceTest) {
   runSuite(suite)
 }
 
-export function fxTest<E, A>(init: () => Fx.Fx<never, E, A>) {
-  return PerformanceTestCase('Fx', init, (fx, deferred) => {
-    Fx.runMain(fx).then(() => deferred.resolve())
-  })
+export function fxTest<E, A, E1>(init: () => Fx.Fx<never, E, A, E1>) {
+  return PerformanceTestCase(
+    'Fx',
+    () => Fx.drainNow(init()),
+    (fx, deferred) => Effect.unsafeRunAsyncWith(fx, () => deferred.resolve()),
+  )
 }
 
-export function fxStreamTest<E, A>(init: () => Stream.Stream<never, E, A>) {
-  return PerformanceTestCase(
-    'Fx/Stream',
-    () => Stream.drain(init()),
-    (fx, deferred) => {
-      Fx.runMain(fx).then(() => deferred.resolve())
-    },
-  )
+export function fxEffectTest<E, A>(init: () => Effect.Effect<never, E, A>) {
+  return PerformanceTestCase('Fx', init, (e, deferred) => {
+    Effect.unsafeRunPromise(e).then(() => deferred.resolve())
+  })
 }
 
 export function mostStreamTest<A>(init: () => MT.Stream<A>) {
@@ -138,12 +135,6 @@ export function rxjsObservableTest<A>(init: () => RxJS.Observable<A>) {
     observable.subscribe({
       complete: () => deferred.resolve(),
     })
-  })
-}
-
-export function effectTsTest<E, A>(init: () => Effect.Effect<never, E, A>) {
-  return PerformanceTestCase('Effect', init, (e, deferred) => {
-    Effect.unsafeRunPromise(e).then(() => deferred.resolve())
   })
 }
 
