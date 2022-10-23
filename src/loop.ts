@@ -13,26 +13,25 @@ export function scan<A, B>(seed: A, f: (a: A, b: B) => A) {
 }
 
 class LoopFx<R, E, E1, A, B, C> implements Fx<R, E, C, E1> {
-  protected acc: A
-
   constructor(
     readonly fx: Fx<R, E, B, E1>,
     readonly seed: A,
     readonly f: (a: A, b: B) => readonly [C, A],
-  ) {
-    this.acc = seed
-  }
+  ) {}
 
-  readonly run: Fx<R, E, C, E1>['run'] = (sink) =>
-    this.fx.run(
+  readonly run: Fx<R, E, C, E1>['run'] = (sink) => {
+    let acc = this.seed
+
+    return this.fx.run(
       Sink(
         (b) => {
-          const [c, a] = this.f(this.acc, b)
-          this.acc = a
+          const [c, a] = this.f(acc, b)
+          acc = a
           return sink.event(c)
         },
         sink.error,
         sink.end,
       ),
     )
+  }
 }
