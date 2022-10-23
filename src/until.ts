@@ -1,5 +1,5 @@
 import * as Effect from '@effect/core/io/Effect'
-import { flow } from 'node_modules/@fp-ts/data/Function.js'
+import { flow } from '@fp-ts/data/Function'
 
 import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'
