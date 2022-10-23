@@ -1,7 +1,7 @@
 import * as Cause from '@effect/core/io/Cause'
+import { Effect } from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 import * as Either from '@tsplus/stdlib/data/Either'
-import { Effect } from 'node_modules/@effect/core/io/Effect.js'
 
 import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'

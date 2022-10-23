@@ -7,12 +7,12 @@ import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'
 import { refCountDeferred, tupleRef } from './_internal.js'
 
-export function combine<R2, E2, B, E3>(other: Fx<R2, E2, B, E3>) {
+export function zip<R2, E2, B, E3>(other: Fx<R2, E2, B, E3>) {
   return <R, E, A, E1>(self: Fx<R, E, A, E1>): Fx<R | R2, E | E2, readonly [A, B], E1 | E3> =>
-    combineAll([self, other])
+    zipAll([self, other])
 }
 
-export function combineAll<FX extends ReadonlyArray<Fx<any, any, any, any>>>(
+export function zipAll<FX extends ReadonlyArray<Fx<any, any, any, any>>>(
   fx: readonly [...FX],
 ): Fx<
   Fx.ResourcesOf<FX[number]>,
@@ -21,11 +21,11 @@ export function combineAll<FX extends ReadonlyArray<Fx<any, any, any, any>>>(
   Fx.ReturnErrorsOf<FX[number]>
 >
 
-export function combineAll<R2, E2, B, E3>(
+export function zipAll<R2, E2, B, E3>(
   fx: Iterable<Fx<R2, E2, B, E3>>,
 ): Fx<R2, E2, ReadonlyArray<B>, E3>
 
-export function combineAll<R2, E2, B, E3>(
+export function zipAll<R2, E2, B, E3>(
   fx: Iterable<Fx<R2, E2, B, E3>>,
 ): Fx<R2, E2, ReadonlyArray<B>, E3> {
   return Fx(<R4, E4, C>(sink: Sink<E2, ReadonlyArray<B>, R4, E4, C>) =>
@@ -40,11 +40,18 @@ export function combineAll<R2, E2, B, E3>(
       const emitIfReady = pipe(
         ref.get,
         Effect.map((as) => as.filter(Maybe.isSome).map((x) => x.value)),
-        Effect.flatMap((bs) => (bs.length === array.length ? sink.event(bs) : Effect.unit)),
+        Effect.flatMap((bs) =>
+          bs.length === array.length
+            ? pipe(
+                sink.event(bs),
+                Effect.flatMap(() => ref.set(Array(array.length).fill(Maybe.none))),
+              )
+            : Effect.unit,
+        ),
       )
 
       yield* $(
-        Effect.forEachParWithIndex(array, (fx, i) =>
+        Effect.forEachWithIndex(array, (fx, i) =>
           Effect.fork(
             fx.run(
               Sink(

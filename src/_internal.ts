@@ -6,6 +6,7 @@ import * as Ref from '@effect/core/io/Ref'
 import * as Schedule from '@effect/core/io/Schedule'
 import { pipe } from '@fp-ts/data/Function'
 import * as Duration from '@tsplus/stdlib/data/Duration'
+import { isSome } from '@tsplus/stdlib/data/Maybe'
 
 export const asap = Schedule.delayed(() => Duration.millis(0))(Schedule.once)
 
@@ -60,4 +61,68 @@ export function deferredCallback<E, A, R2, E2>(
       return yield* $(Effect.race(deferred.await)(Fiber.join(fiber)))
     }),
   )
+}
+
+type RefOutput<T> = T extends Ref.Ref<infer R> ? R : never
+
+export function tupleRef<Refs extends ReadonlyArray<Ref.Ref<any>>>(
+  refs: readonly [...Refs],
+): Ref.Ref<{ readonly [K in keyof Refs]: RefOutput<Refs[K]> }> {
+  const get = Effect.gen(function* ($) {
+    const result: any[] = []
+
+    for (const ref of refs) {
+      result.push(yield* $(ref.get))
+    }
+
+    return result as unknown as { readonly [K in keyof Refs]: RefOutput<Refs[K]> }
+  })
+
+  const set = (a: { readonly [K in keyof Refs]: RefOutput<Refs[K]> }) =>
+    Effect.gen(function* ($) {
+      let i = 0
+      for (const ref of refs) {
+        yield* $(ref.set(a[i++]))
+      }
+    })
+
+  const tupledRef = {
+    [Ref.RefSym]: Ref.RefSym,
+    get,
+    set,
+    update: (f) =>
+      pipe(
+        get,
+        Effect.flatMap((a) => set(f(a))),
+      ),
+    updateSome: (f) =>
+      pipe(
+        get,
+        Effect.map(f),
+        Effect.flatMap((a) => (isSome(a) ? set(a.value) : Effect.unit)),
+      ),
+    modify: (f) =>
+      pipe(
+        get,
+        Effect.map(f),
+        Effect.flatMap(([b, a]) => pipe(a, set, Effect.as(b))),
+      ),
+    modifySome: (fallback, f) =>
+      pipe(
+        get,
+        Effect.map(f),
+        Effect.flatMap((maybe) =>
+          isSome(maybe)
+            ? pipe(maybe.value[1], set, Effect.as(maybe.value[0]))
+            : Effect.succeed(fallback),
+        ),
+      ),
+    getAndSet: (a) => pipe(get, Effect.zipLeft(set(a))),
+    getAndUpdate: (f) => pipe(get, Effect.zipLeft(tupledRef.update(f))),
+    getAndUpdateSome: (f) => pipe(get, Effect.zipLeft(tupledRef.updateSome(f))),
+    updateAndGet: (f) => pipe(tupledRef.update(f), Effect.zipRight(get)),
+    updateSomeAndGet: (f) => pipe(tupledRef.updateSome(f), Effect.zipRight(get)),
+  } as Ref.Ref<{ readonly [K in keyof Refs]: RefOutput<Refs[K]> }>
+
+  return tupledRef
 }
