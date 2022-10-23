@@ -2,15 +2,6 @@ import * as Effect from '@effect/core/io/Effect'
 
 import { Sink } from './Sink.js'
 
-/**
- * TODOS:
- * zip / zipAll
- * snapshot / sample
- * until
- * since
- * during
- */
-
 export interface Fx<R, E, A, E1 = never> {
   readonly run: <R2, E2, B>(sink: Sink<E, A, R2, E2, B>) => Effect.Effect<R | R2, E1 | E2, B>
 }

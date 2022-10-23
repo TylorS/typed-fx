@@ -1,6 +1,8 @@
 import * as Effect from '@effect/core/io/Effect'
-import { isFailure } from '@effect/core/io/Exit'
+import * as Exit from '@effect/core/io/Exit'
 import * as Schedule from '@effect/core/io/Schedule'
+import { millis } from '@tsplus/stdlib/data/Duration'
+import { isRight } from '@tsplus/stdlib/data/Either'
 
 import { Fx } from './Fx.js'
 import { Sink } from './Sink.js'
@@ -14,22 +16,22 @@ export function scheduled<S, R2, Out>(schedule: Schedule.Schedule<S, R2, any, Ou
       Effect.gen(function* ($) {
         const clock = yield* $(Effect.clock)
 
-        let [s, , decision] = yield* $(
-          schedule.step(yield* $(clock.currentTime), undefined, schedule.initial),
-        )
+        let now = yield* $(clock.currentTime)
+        let [s, , decision] = yield* $(schedule.step(now, undefined, schedule.initial))
 
         while (decision._tag === 'Continue') {
+          yield* $(clock.sleep(millis((Schedule.Intervals.start(decision.intervals) - now) as any)))
+
           const exit = yield* $(Effect.exit(effect))
 
-          if (isFailure(exit)) {
+          if (Exit.isFailure(exit)) {
             return yield* $(sink.error(exit.cause))
           }
 
           yield* $(sink.event(exit.value))
 
-          const [s2, , decision2] = yield* $(
-            schedule.step(yield* $(clock.currentTime), exit.value, s),
-          )
+          now = yield* $(clock.currentTime)
+          const [s2, , decision2] = yield* $(schedule.step(now, exit.value, s))
 
           s = s2
           decision = decision2
@@ -49,33 +51,24 @@ export function scheduledOut<S, R2, A, Out>(schedule: Schedule.Schedule<S, R2, A
   return <R, E>(effect: Effect.Effect<R, E, A>): Fx<R | R2, E, Out> =>
     Fx(<R3, E3, B>(sink: Sink<E, Out, R3, E3, B>) =>
       Effect.gen(function* ($) {
-        const clock = yield* $(Effect.clock)
+        const d = yield* $(Schedule.driver(schedule))
 
-        let exit = yield* $(Effect.exit(effect))
+        let inputExit = yield* $(Effect.exit(effect))
 
-        if (isFailure(exit)) {
-          return yield* $(sink.error(exit.cause))
+        if (Exit.isFailure(inputExit)) {
+          return yield* $(sink.error(inputExit.cause))
         }
 
-        let [s, , decision] = yield* $(
-          schedule.step(yield* $(clock.currentTime), exit.value, schedule.initial),
-        )
+        let outputEither = yield* $(Effect.either(d.next(inputExit.value)))
 
-        while (decision._tag === 'Continue') {
-          exit = yield* $(Effect.exit(effect))
+        while (isRight(outputEither)) {
+          inputExit = yield* $(Effect.exit(effect))
 
-          if (isFailure(exit)) {
-            return yield* $(sink.error(exit.cause))
+          if (Exit.isFailure(inputExit)) {
+            return yield* $(sink.error(inputExit.cause))
           }
 
-          const [s2, out, decision2] = yield* $(
-            schedule.step(yield* $(clock.currentTime), exit.value, s),
-          )
-
-          yield* $(sink.event(out))
-
-          s = s2
-          decision = decision2
+          outputEither = yield* $(Effect.either(d.next(inputExit.value)))
         }
 
         return yield* $(sink.end)

@@ -35,6 +35,7 @@ export function refCountDeferred<E, A>(initialEnded = false, initialCount = 0) {
       increment,
       decrement,
       refCount,
+      ended: ended.get,
       end: ended.set(true),
     }
   })
