@@ -52,6 +52,7 @@ export function during<R2, E2, R3, E3, B, E4, E5>(signal: Fx<R2, E2, Fx<R3, E3, 
             ),
           ),
         )
+
         return yield* $(deferred.await)
       }),
     )

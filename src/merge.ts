@@ -34,10 +34,7 @@ export function mergeAll<R2, E2, B, E3>(fx: Iterable<Fx<R2, E2, B, E3>>): Fx<R2,
               Sink(
                 sink.event,
                 flow(sink.error, deferred.error),
-                pipe(
-                  deferred.decrement,
-                  Effect.flatMap(() => deferred.endIfComplete(sink.end)),
-                ),
+                pipe(deferred.decrement, Effect.zipRight(deferred.endIfComplete(sink.end))),
               ),
             ),
           ),

@@ -32,3 +32,6 @@ export const withRuntimeFlags = (updated: RuntimeFlagsPatch) =>
 export const scoped = transform(Effect.scoped)
 
 export const withClock = (clock: Clock) => transform(Effect.withClock(clock))
+
+export const uninterruptible = transform(Effect.uninterruptible)
+export const interruptible = transform(Effect.interruptible)

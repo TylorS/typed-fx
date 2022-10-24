@@ -10,10 +10,10 @@ import { collectAll } from './reduce.js'
 describe(import.meta.url, () => {
   describe('delay', () => {
     it('adds a delay to an event', async () => {
+      const start = performance.now()
       const value = Math.random()
       const delayMs = 100
       const test = at(Duration.millis(delayMs))(value)
-      const start = performance.now()
       const events = await pipe(test, collectAll, unsafeRunPromise)
       const end = performance.now()
 
