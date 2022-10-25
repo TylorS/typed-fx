@@ -12,6 +12,12 @@ export function Push<R, E, A>(run: Push<R, E, A>['run']): Push<R, E, A> {
   }
 }
 
+export namespace Push {
+  export type ResourcesOf<T> = T extends Push<infer R, any, any> ? R : never
+  export type ErrorsOf<T> = T extends Push<any, infer E, any> ? E : never
+  export type OutputOf<T> = T extends Push<any, any, infer A> ? A : never
+}
+
 export interface Emitter<E, A, R = never, E1 = never> {
   readonly emit: (a: A) => Effect<R, E1, unknown>
   readonly failCause: (e: Cause<E>) => Effect<R, E1, unknown>
