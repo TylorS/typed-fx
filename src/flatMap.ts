@@ -1,5 +1,5 @@
 import * as Effect from '@effect/core/io/Effect'
-import { flow, pipe } from '@fp-ts/data/Function'
+import { pipe } from '@fp-ts/data/Function'
 
 import { Emitter, Push } from './Push.js'
 import { withDynamicCountdownLatch } from './_internal.js'
@@ -17,13 +17,7 @@ export function flatMap<A, R2, E2, B>(f: (a: A) => Push<R2, E2, B>) {
                   increment,
                   Effect.flatMap(() =>
                     Effect.forkScoped(
-                      f(a).run(
-                        Emitter(
-                          emitter.emit,
-                          flow(emitter.failCause, Effect.zipRight(Effect.interrupt)),
-                          pipe(latch.countDown, Effect.zipRight(Effect.interrupt)),
-                        ),
-                      ),
+                      f(a).run(Emitter(emitter.emit, emitter.failCause, latch.countDown)),
                     ),
                   ),
                 ),
