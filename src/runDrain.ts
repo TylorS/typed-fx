@@ -17,5 +17,6 @@ export function runDrain<R, E, A>(push: Push<R, E, A>): Effect.Effect<R, E, void
         Effect.zipRight(deferred.await),
       ),
     ),
+    Effect.scoped,
   )
 }

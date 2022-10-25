@@ -1,8 +1,9 @@
 import { Cause } from '@effect/core/io/Cause'
 import { Effect } from '@effect/core/io/Effect'
+import { Scope } from '@effect/core/io/Scope'
 
 export interface Push<R, E, A> {
-  run<R2, E2>(emitter: Emitter<E, A, R2, E2>): Effect<R | R2, E2, unknown>
+  run<R2, E2>(emitter: Emitter<E, A, R2, E2>): Effect<R | R2 | Scope, E2, unknown>
 }
 
 export function Push<R, E, A>(run: Push<R, E, A>['run']): Push<R, E, A> {

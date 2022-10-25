@@ -18,5 +18,6 @@ export function runObserve<A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>) 
           Effect.zipRight(deferred.await),
         ),
       ),
+      Effect.scoped,
     )
 }

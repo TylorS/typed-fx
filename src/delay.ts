@@ -1,0 +1,16 @@
+import * as Effect from '@effect/core/io/Effect'
+import { flow } from '@fp-ts/data/Function'
+import * as Duration from '@tsplus/stdlib/data/Duration'
+
+import { Push } from './Push.js'
+
+export function delay(duration: Duration.Duration) {
+  return <R, E, A>(push: Push<R, E, A>): Push<R, E, A> =>
+    Push((emitter) =>
+      push.run({
+        event: flow(Effect.succeed, Effect.delay(duration), Effect.flatMap(emitter.event)),
+        error: emitter.error,
+        end: emitter.end,
+      }),
+    )
+}
