@@ -8,9 +8,9 @@ import { withDynamicCountdownLatch } from './_internal.js'
 
 export function switchMap<A, R2, E2, B>(f: (a: A) => Push<R2, E2, B>) {
   return <R, E>(push: Push<R, E, A>): Push<R | R2, E | E2, B> =>
-    Push(<R3, E3>(emitter: Emitter<E | E2, B, R3, E3>) =>
+    Push(<R3>(emitter: Emitter<R3, E | E2, B>) =>
       pipe(
-        Ref.makeSynchronized<Fiber.Fiber<E3, unknown> | null>(() => null),
+        Ref.makeSynchronized<Fiber.Fiber<never, unknown> | null>(() => null),
         Effect.flatMap((ref) =>
           withDynamicCountdownLatch(
             1,

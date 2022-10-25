@@ -2,10 +2,16 @@ import {
   CountdownLatch,
   CountdownLatchInternal,
 } from '@effect/core/concurrent/CountdownLatch/definition'
+import * as Cause from '@effect/core/io/Cause'
 import * as Deferred from '@effect/core/io/Deferred'
 import * as Effect from '@effect/core/io/Effect'
 import * as Ref from '@effect/core/io/Ref'
+import * as Schedule from '@effect/core/io/Schedule'
 import { pipe } from '@fp-ts/data/Function'
+import * as Duration from '@tsplus/stdlib/data/Duration'
+import * as Maybe from '@tsplus/stdlib/data/Maybe'
+
+export const asap = Schedule.delayed(() => Duration.millis(0))(Schedule.once)
 
 export const EARLY_EXIT_FAILURE = Symbol('EarlyExitFailure')
 export interface EarlyExitFailure {
@@ -17,17 +23,23 @@ export function isEarlyExitFailure(u: unknown): u is EarlyExitFailure {
   return typeof u === 'object' && u !== null && (u as any).sym === EARLY_EXIT_FAILURE
 }
 
-export const exitEarly = Effect.fail(EarlyExitFailure)
+export const exitEarly = Effect.die(EarlyExitFailure)
 
 export const onEarlyExitFailure =
   <R2, E2, B>(handler: Effect.Effect<R2, E2, B>) =>
-  <R, E, A>(
-    effect: Effect.Effect<R, E | EarlyExitFailure, A>,
-  ): Effect.Effect<R | R2, E | E2, A | B> =>
+  <R, E, A>(effect: Effect.Effect<R, E, A>): Effect.Effect<R | R2, E | E2, A | B> =>
     pipe(
       effect,
-      Effect.foldEffect<EarlyExitFailure | E, A, R2, E2 | E, B | A, never, E2 | E, B | A>(
-        (e) => (isEarlyExitFailure(e) ? handler : Effect.fail(e)),
+      Effect.foldCauseEffect<E, A, R | R2, E | E2, A | B, R | R2, E | E2, A | B>(
+        (e) =>
+          pipe(
+            e,
+            Cause.dieMaybe,
+            Maybe.fold(
+              () => Effect.failCause(e),
+              (d) => (isEarlyExitFailure(d) ? handler : Effect.failCause(e)),
+            ),
+          ),
         Effect.succeed,
       ),
     )

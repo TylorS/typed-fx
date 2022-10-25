@@ -11,3 +11,5 @@ export function fromEffect<R, E, A>(effect: Effect.Effect<R, E, A>): Push<R, E, 
     ),
   )
 }
+
+export const succeed = flow(Effect.succeed, fromEffect)

@@ -1,9 +1,11 @@
 import { Cause } from '@effect/core/io/Cause'
-import { Effect } from '@effect/core/io/Effect'
+import * as Effect from '@effect/core/io/Effect'
 import { Scope } from '@effect/core/io/Scope'
+import { flow, pipe } from '@fp-ts/data/Function'
+import { Env } from '@tsplus/stdlib/service/Env'
 
 export interface Push<R, E, A> {
-  run<R2, E2>(emitter: Emitter<E, A, R2, E2>): Effect<R | R2 | Scope, E2, unknown>
+  run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope, never, unknown>
 }
 
 export function Push<R, E, A>(run: Push<R, E, A>['run']): Push<R, E, A> {
@@ -18,20 +20,31 @@ export namespace Push {
   export type OutputOf<T> = T extends Push<any, any, infer A> ? A : never
 }
 
-export interface Emitter<E, A, R = never, E1 = never> {
-  readonly emit: (a: A) => Effect<R, E1, unknown>
-  readonly failCause: (e: Cause<E>) => Effect<R, E1, unknown>
-  readonly end: Effect<R, E1, unknown>
+export interface Emitter<R, E, A> {
+  readonly emit: (a: A) => Effect.Effect<R, never, unknown>
+  readonly failCause: (e: Cause<E>) => Effect.Effect<R, never, unknown>
+  readonly end: Effect.Effect<R, never, unknown>
 }
 
-export function Emitter<E, A, R = never, E1 = never>(
-  event: Emitter<E, A, R, E1>['emit'],
-  error: Emitter<E, A, R, E1>['failCause'],
-  end: Emitter<E, A, R, E1>['end'],
-): Emitter<E, A, R, E1> {
+export function Emitter<R, E, A>(
+  emit: Emitter<R, E, A>['emit'],
+  failCause: Emitter<R, E, A>['failCause'],
+  end: Emitter<R, E, A>['end'],
+): Emitter<R, E, A> {
   return {
-    emit: event,
-    failCause: error,
+    emit,
+    failCause,
     end,
+  }
+}
+
+export namespace Emitter {
+  export function provideEnvironment<R>(env: Env<R>) {
+    return <E, A>(emitter: Emitter<R, E, A>): Emitter<never, E, A> =>
+      Emitter(
+        flow(emitter.emit, Effect.provideEnvironment(env)),
+        flow(emitter.failCause, Effect.provideEnvironment(env)),
+        pipe(emitter.end, Effect.provideEnvironment(env)),
+      )
   }
 }
