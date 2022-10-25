@@ -7,6 +7,31 @@ import * as Effect from '@effect/core/io/Effect'
 import * as Ref from '@effect/core/io/Ref'
 import { pipe } from '@fp-ts/data/Function'
 
+export const EARLY_EXIT_FAILURE = Symbol('EarlyExitFailure')
+export interface EarlyExitFailure {
+  readonly sym: typeof EARLY_EXIT_FAILURE
+}
+export const EarlyExitFailure: EarlyExitFailure = { sym: EARLY_EXIT_FAILURE }
+
+export function isEarlyExitFailure(u: unknown): u is EarlyExitFailure {
+  return typeof u === 'object' && u !== null && (u as any).sym === EARLY_EXIT_FAILURE
+}
+
+export const exitEarly = Effect.fail(EarlyExitFailure)
+
+export const onEarlyExitFailure =
+  <R2, E2, B>(handler: Effect.Effect<R2, E2, B>) =>
+  <R, E, A>(
+    effect: Effect.Effect<R, E | EarlyExitFailure, A>,
+  ): Effect.Effect<R | R2, E | E2, A | B> =>
+    pipe(
+      effect,
+      Effect.foldEffect<EarlyExitFailure | E, A, R2, E2 | E, B | A, never, E2 | E, B | A>(
+        (e) => (isEarlyExitFailure(e) ? handler : Effect.fail(e)),
+        Effect.succeed,
+      ),
+    )
+
 /**
  * A small wrapper around CountdownLatch which enables incrementing
  * the latch count dynamically

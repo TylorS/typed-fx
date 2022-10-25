@@ -30,5 +30,22 @@ describe(import.meta.url, () => {
 
       deepStrictEqual(result, Chunk.from([1, 2, 3, 1, 2, 3, 1, 2, 3]))
     })
+
+    it('interrupts inner fibers when they emit their end signal', async () => {
+      const result = await pipe(
+        Push.fromIterable([1, 2, 3]),
+        Push.flatMap((n) =>
+          n === 1
+            ? Push.take(4)(
+                Push.fromIterable([n, n + 10, n + 20, n + 30, n + 40, n + 50, n + 60, n + 70]),
+              )
+            : Push.fromIterable([n, n, n]),
+        ),
+        Push.runCollect,
+        Effect.unsafeRunPromise,
+      )
+
+      deepStrictEqual(result, Chunk.from([1, 11, 21, 31, 2, 2, 2, 3, 3, 3]))
+    })
   })
 })
