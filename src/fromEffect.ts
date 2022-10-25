@@ -7,7 +7,7 @@ export function fromEffect<R, E, A>(effect: Effect.Effect<R, E, A>): Push<R, E, 
   return Push((emitter) =>
     pipe(
       effect,
-      Effect.foldCauseEffect(emitter.error, flow(emitter.event, Effect.zipRight(emitter.end))),
+      Effect.foldCauseEffect(emitter.failCause, flow(emitter.emit, Effect.zipRight(emitter.end))),
     ),
   )
 }

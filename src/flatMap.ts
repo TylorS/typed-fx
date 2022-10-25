@@ -15,19 +15,19 @@ export function flatMap<A, R2, E2, B>(f: (a: A) => Push<R2, E2, B>) {
               (a) =>
                 pipe(
                   increment,
-                  Effect.flatMap(() => {
-                    return Effect.forkScoped(
+                  Effect.flatMap(() =>
+                    Effect.forkScoped(
                       f(a).run(
                         Emitter(
-                          emitter.event,
-                          flow(emitter.error, Effect.zipRight(Effect.interrupt)),
+                          emitter.emit,
+                          flow(emitter.failCause, Effect.zipRight(Effect.interrupt)),
                           pipe(latch.countDown, Effect.zipRight(Effect.interrupt)),
                         ),
                       ),
-                    )
-                  }),
+                    ),
+                  ),
                 ),
-              emitter.error,
+              emitter.failCause,
               latch.countDown,
             ),
           ),

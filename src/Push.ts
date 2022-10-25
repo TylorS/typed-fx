@@ -13,19 +13,19 @@ export function Push<R, E, A>(run: Push<R, E, A>['run']): Push<R, E, A> {
 }
 
 export interface Emitter<E, A, R = never, E1 = never> {
-  readonly event: (a: A) => Effect<R, E1, unknown>
-  readonly error: (e: Cause<E>) => Effect<R, E1, unknown>
+  readonly emit: (a: A) => Effect<R, E1, unknown>
+  readonly failCause: (e: Cause<E>) => Effect<R, E1, unknown>
   readonly end: Effect<R, E1, unknown>
 }
 
 export function Emitter<E, A, R = never, E1 = never>(
-  event: Emitter<E, A, R, E1>['event'],
-  error: Emitter<E, A, R, E1>['error'],
+  event: Emitter<E, A, R, E1>['emit'],
+  error: Emitter<E, A, R, E1>['failCause'],
   end: Emitter<E, A, R, E1>['end'],
 ): Emitter<E, A, R, E1> {
   return {
-    event,
-    error,
+    emit: event,
+    failCause: error,
     end,
   }
 }

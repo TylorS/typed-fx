@@ -11,8 +11,8 @@ export function runObserve<A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>) 
       Effect.flatMap((deferred) =>
         pipe(
           push.run({
-            event: f,
-            error: (e) => deferred.failCause(() => e),
+            emit: f,
+            failCause: (e) => deferred.failCause(() => e),
             end: deferred.succeed(undefined),
           }),
           Effect.zipRight(deferred.await),

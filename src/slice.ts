@@ -21,11 +21,11 @@ export function slice(skip: number, take: number) {
                 }
 
                 return pipe(
-                  emitter.event(a),
+                  emitter.emit(a),
                   Effect.flatMap(() => (--toTake === 0 ? exitEarly : Effect.unit)),
                 )
               },
-              emitter.error,
+              emitter.failCause,
               emitter.end,
             ),
           )

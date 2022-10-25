@@ -8,8 +8,8 @@ export function delay(duration: Duration.Duration) {
   return <R, E, A>(push: Push<R, E, A>): Push<R, E, A> =>
     Push((emitter) =>
       push.run({
-        event: flow(Effect.succeed, Effect.delay(duration), Effect.flatMap(emitter.event)),
-        error: emitter.error,
+        emit: flow(Effect.succeed, Effect.delay(duration), Effect.flatMap(emitter.emit)),
+        failCause: emitter.failCause,
         end: emitter.end,
       }),
     )
