@@ -6,7 +6,6 @@ import { Scope } from '@effect/core/io/Scope'
  * TODOS:
  * combine
  * zip
- * snapshot/sample
  * until
  * since
  * during
