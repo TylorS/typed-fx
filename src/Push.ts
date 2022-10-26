@@ -4,8 +4,6 @@ import { Scope } from '@effect/core/io/Scope'
 
 /**
  * TODOS:
- * Tap
- * zipItems / withItems
  * combine
  * zip
  * snapshot/sample
