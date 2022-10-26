@@ -5,24 +5,15 @@ import { Scope } from '@effect/core/io/Scope'
 /**
  * TODOS:
  * Tap
- * MapError
- * OrElse/Effect
- * loop / scan / Effect
  * zipItems / withItems
  * combine
  * zip
  * snapshot/sample
- * takeWhile
- * skipWhile
- * skipAfter
- * takeUntil
- * skipUntil
  * until
  * since
  * during
  * throttle
  * debounce
- * Operator Fusion
  */
 
 export interface Push<R, E, A> {
