@@ -1,4 +1,5 @@
 export * from './continueWith.js'
+export * from './debounce.js'
 export * from './delay.js'
 export * from './filterLoop.js'
 export * from './filterMap.js'
