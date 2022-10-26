@@ -5,7 +5,6 @@ import { Scope } from '@effect/core/io/Scope'
 /**
  * TODOS:
  * scheduling, periodic
- * ContinueWith / StartWith
  * Map / As
  * Tap
  * MapError
@@ -27,6 +26,7 @@ import { Scope } from '@effect/core/io/Scope'
  * during
  * throttle
  * debounce
+ * Operator Fusion
  */
 
 export interface Push<R, E, A> {
