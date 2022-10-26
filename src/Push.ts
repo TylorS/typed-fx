@@ -12,8 +12,6 @@ import { Scope } from '@effect/core/io/Scope'
  * combine
  * zip
  * snapshot/sample
- * filter
- * skipRepeats
  * takeWhile
  * skipWhile
  * skipAfter
