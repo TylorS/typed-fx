@@ -1,14 +1,10 @@
 import { Cause } from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
 import { Scope } from '@effect/core/io/Scope'
-import { flow, pipe } from '@fp-ts/data/Function'
-import { Env } from '@tsplus/stdlib/service/Env'
 
 /**
  * TODOS:
- * Provide *
- * empty, never, periodic
- * Effect constructors failure/success
+ * scheduling, periodic
  * ContinueWith / StartWith
  * Map / As
  * Tap
@@ -71,13 +67,4 @@ export namespace Emitter {
   export type ResourcesOf<T> = T extends Emitter<infer R, any, any> ? R : never
   export type ErrorsOf<T> = T extends Emitter<any, infer E, any> ? E : never
   export type OutputOf<T> = T extends Emitter<any, any, infer A> ? A : never
-
-  export function provideEnvironment<R>(env: Env<R>) {
-    return <E, A>(emitter: Emitter<R, E, A>): Emitter<never, E, A> =>
-      Emitter(
-        flow(emitter.emit, Effect.provideEnvironment(env)),
-        flow(emitter.failCause, Effect.provideEnvironment(env)),
-        pipe(emitter.end, Effect.provideEnvironment(env)),
-      )
-  }
 }

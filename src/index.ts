@@ -1,3 +1,4 @@
+export * from './continueWith.js'
 export * from './delay.js'
 export * from './flatMap.js'
 export * from './flatMapConcurrently.js'

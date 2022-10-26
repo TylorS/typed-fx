@@ -13,5 +13,5 @@ export function delay(duration: Duration.Duration) {
 }
 
 export function at(duration: Duration.Duration) {
-  return <A>(value: A) => delay(duration)(succeed(value))
+  return flow(succeed, delay(duration))
 }

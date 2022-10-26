@@ -27,16 +27,13 @@ export function provideEnvironment<R>(env: Env<R>) {
 export function provideSomeLayer<RI, E2, RO>(layer: Layer.Layer<RI, E2, RO>) {
   return <R, E, A>(push: Push<R | RO, E, A>): Push<RI | Exclude<R, RO>, E | E2, A> =>
     Push(<R2>(emitter: Emitter<R2, E | E2, A>) =>
-      Effect.acquireUseReleaseExit(
-        Scope.make,
-        (scope) =>
-          pipe(
-            layer,
-            Layer.buildWithScope(scope),
-            Effect.flatMap((ro) => pipe(push, provideSomeEnvironment(ro)).run(emitter)),
-            Effect.foldCauseEffect((c) => emitter.failCause(c), Effect.succeed),
-          ),
-        (scope, exit) => pipe(scope, Scope.close(exit)),
+      Effect.scopeWith((scope) =>
+        pipe(
+          layer,
+          Layer.buildWithScope(scope),
+          Effect.flatMap((ro) => pipe(push, provideSomeEnvironment(ro)).run(emitter)),
+          Effect.foldCauseEffect((c) => emitter.failCause(c), Effect.succeed),
+        ),
       ),
     )
 }

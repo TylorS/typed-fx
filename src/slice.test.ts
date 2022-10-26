@@ -16,7 +16,7 @@ describe(import.meta.url, () => {
         Effect.unsafeRunPromise,
       )
 
-      deepStrictEqual(result, Chunk.from([4, 5, 6, 7]))
+      deepStrictEqual(result, [4, 5, 6, 7])
     })
   })
 })

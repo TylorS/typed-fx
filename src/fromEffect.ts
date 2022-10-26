@@ -8,6 +8,7 @@ import { LazyArg, flow, pipe } from '@fp-ts/data/Function'
 import { Either } from '@tsplus/stdlib/data/Either'
 import { Maybe } from '@tsplus/stdlib/data/Maybe'
 import { Env } from '@tsplus/stdlib/service/Env'
+import { Tag } from '@tsplus/stdlib/service/Tag'
 
 import { Push } from './Push.js'
 
@@ -93,6 +94,8 @@ export const asyncMaybe: <R, E, A>(
 export const clock: Push<never, never, Clock> = fromEffect(Effect.clock)
 
 export const environment = <R>(): Push<R, never, Env<R>> => fromEffect(Effect.environment<R>())
+
+export const service = <R>(tag: Tag<R>): Push<R, never, R> => fromEffect(Effect.service<R>(tag))
 
 export const environmentWith = flow(Effect.environmentWith, fromEffect)
 export const environmentWithEffect = flow(Effect.environmentWithEffect, fromEffect)

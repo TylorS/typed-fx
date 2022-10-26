@@ -3,7 +3,6 @@ import { deepStrictEqual } from 'assert'
 import * as Effect from '@effect/core/io/Effect'
 import * as Fiber from '@effect/core/io/Fiber'
 import { pipe } from '@fp-ts/data/Function'
-import * as Chunk from '@tsplus/stdlib/collections/Chunk'
 import * as Duration from '@tsplus/stdlib/data/Duration'
 
 import * as Fx from './index.js'
@@ -37,14 +36,14 @@ describe(import.meta.url, () => {
 
         const c = yield* $(Effect.fork(Fx.runCollect(fx)))
 
-        deepStrictEqual(yield* $(Fiber.join(a)), Chunk.from([value, value + 1, value + 2]))
-        deepStrictEqual(yield* $(Fiber.join(b)), Chunk.from([value, value + 1, value + 2]))
-        deepStrictEqual(yield* $(Fiber.join(c)), Chunk.from([value + 1, value + 2]))
+        deepStrictEqual(yield* $(Fiber.join(a)), [value, value + 1, value + 2])
+        deepStrictEqual(yield* $(Fiber.join(b)), [value, value + 1, value + 2])
+        deepStrictEqual(yield* $(Fiber.join(c)), [value + 1, value + 2])
 
         deepStrictEqual(started, 1)
       })
 
-      await Effect.unsafeRunPromise(test)
+      await Effect.unsafeRunPromise(Effect.scoped(test))
     })
   })
 })

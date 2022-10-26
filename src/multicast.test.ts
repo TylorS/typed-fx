@@ -1,8 +1,7 @@
 import { deepStrictEqual } from 'assert'
 
-import { unsafeRunPromise } from '@effect/core/io/Effect'
+import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
-import * as Chunk from '@tsplus/stdlib/collections/Chunk'
 import * as Duration from '@tsplus/stdlib/data/Duration'
 
 import * as Push from './index.js'
@@ -29,13 +28,23 @@ describe(import.meta.url, () => {
         }),
         Push.multicast,
       )
-      const events = pipe(test, Push.runCollect, unsafeRunPromise)
-      const events2 = pipe(test, Push.runCollect, unsafeRunPromise)
+      const events = pipe(test, Push.runCollect, Effect.scoped, Effect.unsafeRunPromise)
+      const events2 = pipe(test, Push.runCollect, Effect.scoped, Effect.unsafeRunPromise)
 
-      deepStrictEqual(
-        await events,
-        Chunk.from([1, 1 + 1, 2, 2 + 1, 3, 3 + 1, 1 * 1, 2 * 2, 3 * 3, 1 ** 1, 2 ** 2, 3 ** 3]),
-      )
+      deepStrictEqual(await events, [
+        1,
+        1 + 1,
+        2,
+        2 + 1,
+        3,
+        3 + 1,
+        1 * 1,
+        2 * 2,
+        3 * 3,
+        1 ** 1,
+        2 ** 2,
+        3 ** 3,
+      ])
 
       deepStrictEqual(await events, await events2)
 
