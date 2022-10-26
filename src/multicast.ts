@@ -24,12 +24,8 @@ export class Multicast<R, E, A> implements Push<R, E, A>, Emitter<never, E, A> {
   protected fiber: Fiber.Fiber<never, unknown> | undefined
 
   constructor(readonly push: Push<R, E, A>) {
-    this.run = this.run.bind(this)
     this.emit = this.emit.bind(this)
     this.failCause = this.failCause.bind(this)
-    this.runEvent = this.runEvent.bind(this)
-    this.runFailCause = this.runFailCause.bind(this)
-    this.runEnd = this.runEnd.bind(this)
   }
 
   run<RO>(emitter: Emitter<RO, E, A>): Effect.Effect<R | RO | Scope, never, unknown> {

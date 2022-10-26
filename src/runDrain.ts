@@ -11,7 +11,7 @@ export function runDrain<R, E, A>(push: Push<R, E, A>): Effect.Effect<R, E, void
       pipe(
         push.run({
           emit: () => Effect.unit,
-          failCause: (e) => deferred.failCause(() => e),
+          failCause: deferred.failCauseSync,
           end: deferred.succeed(undefined),
         }),
         Effect.zipRight(deferred.await),

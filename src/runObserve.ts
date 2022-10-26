@@ -13,12 +13,9 @@ export function runObserve<A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>) 
           Emitter(
             flow(
               f,
-              Effect.foldCauseEffect(
-                (e) => deferred.failCause(() => e),
-                () => Effect.unit,
-              ),
+              Effect.foldCauseEffect(deferred.failCauseSync, () => Effect.unit),
             ),
-            (e) => deferred.failCause(() => e),
+            deferred.failCauseSync,
             deferred.succeed(undefined),
           ),
         ),

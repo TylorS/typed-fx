@@ -68,6 +68,10 @@ export function Emitter<R, E, A>(
 }
 
 export namespace Emitter {
+  export type ResourcesOf<T> = T extends Emitter<infer R, any, any> ? R : never
+  export type ErrorsOf<T> = T extends Emitter<any, infer E, any> ? E : never
+  export type OutputOf<T> = T extends Emitter<any, any, infer A> ? A : never
+
   export function provideEnvironment<R>(env: Env<R>) {
     return <E, A>(emitter: Emitter<R, E, A>): Emitter<never, E, A> =>
       Emitter(
