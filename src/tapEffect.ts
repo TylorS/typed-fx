@@ -20,3 +20,5 @@ export const tapEffect =
         ),
       ),
     )
+
+export const tap = <A>(f: (a: A) => unknown) => tapEffect((a: A) => Effect.sync(() => f(a)))
