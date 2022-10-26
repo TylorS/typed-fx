@@ -4,6 +4,35 @@ import { Scope } from '@effect/core/io/Scope'
 import { flow, pipe } from '@fp-ts/data/Function'
 import { Env } from '@tsplus/stdlib/service/Env'
 
+/**
+ * TODOS:
+ * Provide *
+ * empty, never, periodic
+ * Effect constructors failure/success
+ * ContinueWith / StartWith
+ * Map / As
+ * Tap
+ * MapError
+ * OrElse/Effect
+ * loop / scan / Effect
+ * zipItems / withItems
+ * combine
+ * zip
+ * snapshot/sample
+ * filter
+ * skipRepeats
+ * takeWhile
+ * skipWhile
+ * skipAfter
+ * takeUntil
+ * skipUntil
+ * until
+ * since
+ * during
+ * throttle
+ * debounce
+ */
+
 export interface Push<R, E, A> {
   run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope, never, unknown>
 }
