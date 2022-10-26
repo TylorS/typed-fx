@@ -12,8 +12,6 @@ import { Scope } from '@effect/core/io/Scope'
  * until
  * since
  * during
- * throttle
- * debounce
  */
 
 export interface Push<R, E, A> {
