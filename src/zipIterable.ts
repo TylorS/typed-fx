@@ -4,8 +4,6 @@ import { pipe } from 'node_modules/@fp-ts/data/Function.js'
 import { Emitter, Push } from './Push.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'
 
-// TODO: Natively support iterator until done:true
-
 export function zipIterable<A, B, C>(iterable: Iterable<A>, f: (a: A, b: B) => C) {
   return <R, E>(push: Push<R, E, B>): Push<R, E, C> => zipIterable_(push, iterable, f)
 }
@@ -23,18 +21,24 @@ export function zipIterable_<R, E, A, B, C>(
   return Push((emitter) =>
     pipe(
       Effect.suspendSucceed(() => {
-        const array = Array.from(iterable)
-        let i = 0
+        const iterator = iterable[Symbol.iterator]()
+        let result = iterator.next()
+
+        if (result.done) {
+          return emitter.end
+        }
 
         return push.run(
           Emitter(
             (b) => {
-              const a = array[i++]
+              const a = result.value
               const c = f(a, b)
+
+              result = iterator.next()
 
               return pipe(
                 emitter.emit(c),
-                Effect.flatMap((x) => (i === array.length ? exitEarly : Effect.succeed(x))),
+                Effect.flatMap((x) => (result.done ? exitEarly : Effect.succeed(x))),
               )
             },
             emitter.failCause,
