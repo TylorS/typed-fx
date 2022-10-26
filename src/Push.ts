@@ -4,8 +4,7 @@ import { Scope } from '@effect/core/io/Scope'
 
 /**
  * TODOS:
- * scheduling, periodic
- * Map / As
+ * periodic
  * Tap
  * MapError
  * OrElse/Effect
