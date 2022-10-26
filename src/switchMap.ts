@@ -23,7 +23,13 @@ export function switchMap<A, R2, E2, B>(f: (a: A) => Push<R2, E2, B>) {
                         fiber ? Fiber.interrupt(fiber) : increment,
                         Effect.flatMap(() =>
                           Effect.forkScoped(
-                            f(a).run(Emitter(emitter.emit, emitter.failCause, latch.countDown)),
+                            f(a).run(
+                              Emitter(
+                                emitter.emit,
+                                (e) => pipe(ref.set(null), Effect.zipRight(emitter.failCause(e))),
+                                pipe(ref.set(null), Effect.zipRight(latch.countDown)),
+                              ),
+                            ),
                           ),
                         ),
                       ),
