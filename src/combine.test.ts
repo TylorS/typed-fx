@@ -19,7 +19,7 @@ describe(import.meta.url, () => {
           ),
         ),
       )
-      const events = await pipe(test, Push.runCollect, Effect.scoped, Effect.unsafeRunPromise)
+      const events = await pipe(test, Push.runCollect, Effect.unsafeRunPromise)
 
       deepStrictEqual(events, [
         [1 + 1, 1 * 1],

@@ -13,7 +13,6 @@ describe(import.meta.url, () => {
         Push.fromIterable([1, 2, 3]),
         Push.flatMap((n) => Push.fromIterable([n, n, n])),
         Push.runCollect,
-        Effect.scoped,
         Effect.unsafeRunPromise,
       )
 
@@ -25,7 +24,6 @@ describe(import.meta.url, () => {
         Push.fromIterable([1, 2, 3]),
         Push.flatMap((n) => Push.delay(Duration.millis(10))(Push.fromIterable([n, n, n]))),
         Push.runCollect,
-        Effect.scoped,
         Effect.unsafeRunPromise,
       )
 
@@ -43,7 +41,6 @@ describe(import.meta.url, () => {
             : Push.fromIterable([n, n, n]),
         ),
         Push.runCollect,
-        Effect.scoped,
         Effect.unsafeRunPromise,
       )
 

@@ -14,7 +14,6 @@ describe(import.meta.url, () => {
             Push.fromIterable([1, 2]),
             Push.continueWith(() => Push.fromIterable([3, 4])),
             Push.runCollect,
-            Effect.scoped,
           ),
         )
 

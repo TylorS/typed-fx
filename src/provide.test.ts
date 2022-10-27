@@ -19,7 +19,6 @@ describe(import.meta.url, () => {
             Push.flatMap((s) => Push.fromIterable([s, s])),
             Push.provideService(Scope.Scope.Tag, scope),
             Push.runCollect,
-            Effect.scoped,
           ),
         )
 
@@ -45,7 +44,6 @@ describe(import.meta.url, () => {
             Push.flatMap((s) => Push.succeed(s.foo)),
             Push.provideLayer(Effect.toLayer(Foo.Tag)(Effect.succeed(new Foo(value)))),
             Push.runCollect,
-            Effect.scoped,
           ),
         )
 

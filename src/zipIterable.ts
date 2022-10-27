@@ -1,5 +1,5 @@
 import * as Effect from '@effect/core/io/Effect'
-import { pipe } from 'node_modules/@fp-ts/data/Function.js'
+import { identity, pipe } from '@fp-ts/data/Function'
 
 import { Emitter, Push } from './Push.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'
@@ -9,8 +9,7 @@ export function zipIterable<A, B, C>(iterable: Iterable<A>, f: (a: A, b: B) => C
 }
 
 export function withIterable<A>(iterable: Iterable<A>) {
-  return <R, E, B>(push: Push<R, E, B>): Push<R, E, readonly [A, B]> =>
-    zipIterable_(push, iterable, (a, b) => [a, b])
+  return <R, E, B>(push: Push<R, E, B>): Push<R, E, A> => zipIterable_(push, iterable, identity)
 }
 
 export function zipIterable_<R, E, A, B, C>(

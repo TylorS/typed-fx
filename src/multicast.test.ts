@@ -28,8 +28,8 @@ describe(import.meta.url, () => {
         }),
         Push.multicast,
       )
-      const events = pipe(test, Push.runCollect, Effect.scoped, Effect.unsafeRunPromise)
-      const events2 = pipe(test, Push.runCollect, Effect.scoped, Effect.unsafeRunPromise)
+      const events = pipe(test, Push.runCollect, Effect.unsafeRunPromise)
+      const events2 = pipe(test, Push.runCollect, Effect.unsafeRunPromise)
 
       deepStrictEqual(await events, [
         1,

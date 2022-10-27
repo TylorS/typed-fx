@@ -15,7 +15,6 @@ describe(import.meta.url, () => {
           Push.mergeAll([Push.succeed(a), Push.at(Duration.millis(50))(a * a)]),
         ),
         Push.runCollect,
-        Effect.scoped,
       )
 
       const events = await Effect.unsafeRunPromise(test)

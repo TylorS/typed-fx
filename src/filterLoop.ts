@@ -4,6 +4,7 @@ import { pipe } from '@tsplus/stdlib/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
 import { Emitter, Push } from './Push.js'
+import { startWith } from './continueWith.js'
 import { FilterMap, Map } from './filterMap.js'
 
 export function loop<A, B, C>(seed: A, f: (a: A, b: B) => readonly [A, C]) {
@@ -18,6 +19,7 @@ export function scan<A, B>(seed: A, f: (a: A, b: B) => A) {
         const c = f(a, b)
         return [c, c]
       }),
+      startWith(seed),
     )
 }
 
@@ -35,6 +37,7 @@ export function filterScan<A, B>(seed: A, f: (a: A, b: B) => Maybe.Maybe<A>) {
           Maybe.map((c) => [c, c]),
         ),
       ),
+      startWith(seed),
     )
 }
 

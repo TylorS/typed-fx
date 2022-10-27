@@ -9,12 +9,7 @@ import * as Push from './index.js'
 describe(import.meta.url, () => {
   describe('debounce', () => {
     it('favors the latest overlapping event', async () => {
-      const test = pipe(
-        Push.fromIterable([1, 2, 3]),
-        Push.debounce(millis(100)),
-        Push.runCollect,
-        Effect.scoped,
-      )
+      const test = pipe(Push.fromIterable([1, 2, 3]), Push.debounce(millis(100)), Push.runCollect)
 
       deepStrictEqual(await Effect.unsafeRunPromise(test), [3])
     })

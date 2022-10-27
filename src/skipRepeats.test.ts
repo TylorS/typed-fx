@@ -8,7 +8,7 @@ import * as Push from './index.js'
 
 describe(import.meta.url, () => {
   describe(Push.skipRepeats.name, () => {
-    it('provides a service to the Push', async () => {
+    it('skips repeating values', async () => {
       const test = Effect.gen(function* ($) {
         const result = yield* $(
           pipe(
@@ -16,7 +16,6 @@ describe(import.meta.url, () => {
             Push.flatMap((n) => Push.fromIterable([n, n, n])),
             Push.skipRepeats(Equivalence.strict<number>()),
             Push.runCollect,
-            Effect.scoped,
           ),
         )
 
