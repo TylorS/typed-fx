@@ -6,7 +6,7 @@ import { millis } from '@tsplus/stdlib/data/Duration'
 
 import * as Fx from './index.js'
 
-describe.only(import.meta.url, () => {
+describe(import.meta.url, () => {
   describe(Fx.until.name, () => {
     it('runs a stream until a signal is emitted to stop', async () => {
       const test = pipe(Fx.periodic(millis(20)), Fx.until(Fx.at(millis(200))(null)), Fx.runCollect)
