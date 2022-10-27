@@ -33,11 +33,7 @@ export const onEarlyExitFailure =
             Cause.dieMaybe,
             Maybe.fold(
               () => Effect.failCause(e),
-              (d) => {
-                console.log('exitEarly', d)
-
-                return isEarlyExitFailure(d) ? handler : Effect.failCause(e)
-              },
+              (d) => (isEarlyExitFailure(d) ? handler : Effect.failCause(e)),
             ),
           ),
         Effect.succeed,

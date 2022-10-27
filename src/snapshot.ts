@@ -44,7 +44,7 @@ function snapshot_<R, E, A, R2, E2, B, R3, E3, C>(
               pipe(
                 ref.get,
                 Maybe.fold(
-                  () => (console.log('no ref'), Effect.unit),
+                  () => Effect.unit,
                   (b) => emitter.emit(f(b, a)),
                 ),
               ),
