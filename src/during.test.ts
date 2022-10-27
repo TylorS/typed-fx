@@ -12,12 +12,12 @@ describe(import.meta.url, () => {
       const test = pipe(
         Fx.periodic(millis(10)),
         Fx.scan(0, (x) => x + 1),
-        Fx.during(Fx.at(millis(50))(Fx.at(millis(50))(null))),
+        Fx.during(Fx.at(millis(50))(Fx.at(millis(55))(null))),
         Fx.runCollect,
       )
       const events = await Effect.unsafeRunPromise(test)
 
-      deepStrictEqual(events, [5, 6, 7, 8])
+      deepStrictEqual(events, [5, 6, 7, 8, 9])
     })
   })
 })
