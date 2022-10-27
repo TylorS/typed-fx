@@ -23,7 +23,7 @@ export class Map<R, E, A, B> implements Push<R, E, B> {
 
   static make = <R, E, A, B>(push: Push<R, E, A>, f: (a: A) => B): Push<R, E, B> => {
     if (push instanceof Map) {
-      return new Map(push.push, flow(push.f, f))
+      return Map.make(push.push, flow(push.f, f))
     }
 
     if (push instanceof FilterMap) {
@@ -60,11 +60,11 @@ export class FilterMap<R, E, A, B> implements Push<R, E, B> {
 
   static make<R, E, A, B>(push: Push<R, E, A>, f: (a: A) => Maybe.Maybe<B>): Push<R, E, B> {
     if (push instanceof Map) {
-      return new FilterMap(push.push, flow(push.f, f))
+      return FilterMap.make(push.push, flow(push.f, f))
     }
 
     if (push instanceof FilterMap) {
-      return new FilterMap(push.push, flow(push.f, Maybe.flatMap(f)))
+      return FilterMap.make(push.push, flow(push.f, Maybe.flatMap(f)))
     }
 
     return new FilterMap(push, f)

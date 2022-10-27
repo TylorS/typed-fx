@@ -74,7 +74,7 @@ export class Loop<R, E, A, B, C> implements Push<R, E, C> {
     f: (a: A, b: B) => readonly [A, C],
   ): Push<R, E, C> {
     if (push instanceof FilterMap) {
-      return new FilterLoop(push.push, seed, (a, x) =>
+      return FilterLoop.make(push.push, seed, (a, x) =>
         pipe(
           x,
           push.f,
@@ -84,7 +84,7 @@ export class Loop<R, E, A, B, C> implements Push<R, E, C> {
     }
 
     if (push instanceof Map) {
-      return new Loop(push.push, seed, (a, x) => f(a, push.f(x)))
+      return Loop.make(push.push, seed, (a, x) => f(a, push.f(x)))
     }
 
     return new Loop(push, seed, f)
@@ -125,7 +125,7 @@ export class FilterLoop<R, E, A, B, C> implements Push<R, E, C> {
     f: (a: A, b: B) => Maybe.Maybe<readonly [A, C]>,
   ): Push<R, E, C> {
     if (push instanceof FilterMap) {
-      return new FilterLoop(push.push, seed, (a, x) =>
+      return FilterLoop.make(push.push, seed, (a, x) =>
         pipe(
           x,
           push.f,
@@ -135,7 +135,7 @@ export class FilterLoop<R, E, A, B, C> implements Push<R, E, C> {
     }
 
     if (push instanceof Map) {
-      return new FilterLoop(push.push, seed, (a, x) => f(a, push.f(x)))
+      return FilterLoop.make(push.push, seed, (a, x) => f(a, push.f(x)))
     }
 
     return new FilterLoop(push, seed, f)

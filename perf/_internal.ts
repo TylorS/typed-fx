@@ -108,10 +108,14 @@ export function runPerformanceTest(test: PerformanceTest) {
   runSuite(suite)
 }
 
-export function fxTest<E, A, E1>(init: () => Fx.Fx<never, E, A, E1>) {
+export function fxTest<E, A>(init: () => Fx.Push<never, E, A>) {
   return PerformanceTestCase(
     'Fx',
-    () => Fx.drainNow(init()),
+    () => {
+      const push = init()
+
+      return Fx.runDrain(push)
+    },
     (fx, deferred) => Effect.unsafeRunAsyncWith(fx, () => deferred.resolve()),
   )
 }

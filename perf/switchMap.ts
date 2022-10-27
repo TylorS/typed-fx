@@ -4,7 +4,7 @@ import * as rxjs from 'rxjs'
 
 import {
   array,
-  fxEffectTest,
+  fxTest,
   iterations,
   mostStreamTest,
   runPerformanceTest,
@@ -20,8 +20,12 @@ const add = (x: number, y: number): number => x + y
 runPerformanceTest({
   name: 'switchMap ' + iterations + ' integers',
   cases: [
-    fxEffectTest(() =>
-      pipe(Stream.from(nestedArray), Stream.switchMap(Stream.from), Stream.reduce(0, add)),
+    fxTest(() =>
+      pipe(
+        Stream.fromIterable(nestedArray),
+        Stream.switchMap(Stream.fromIterable),
+        Stream.scan(0, add),
+      ),
     ),
     mostStreamTest(() =>
       pipe(

@@ -21,14 +21,14 @@ const addOne = (x: number) => x + 1
 const add = (x: number, y: number): number => x + y
 
 runPerformanceTest({
-  name: 'filter -> map -> reduce ' + iterations + ' integers',
+  name: 'filter -> map -> scan ' + iterations + ' integers',
   cases: [
     fxEffectTest(() =>
       pipe(
-        Stream.from(array),
+        Stream.fromIterable(array),
         Stream.filter(filterEvens),
         Stream.map(addOne),
-        Stream.reduce(0, add),
+        Stream.runReduce(0, add),
       ),
     ),
     mostStreamTest(() =>
