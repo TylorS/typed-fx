@@ -2,13 +2,6 @@ import { Cause } from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
 import { Scope } from '@effect/core/io/Scope'
 
-/**
- * TODOS:
- * until
- * since
- * during
- */
-
 export interface Fx<R, E, A> {
   run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope, never, unknown>
 }
