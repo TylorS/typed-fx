@@ -7,7 +7,7 @@ import { millis } from '@tsplus/stdlib/data/Duration'
 import * as Fx from './index.js'
 
 describe(import.meta.url, () => {
-  describe('debounce', () => {
+  describe(Fx.throttle.name, () => {
     it('favors the first overlapping event', async () => {
       const test = pipe(Fx.fromIterable([1, 2, 3]), Fx.throttle(millis(100)), Fx.runCollect)
 
