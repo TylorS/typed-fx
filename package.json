@@ -16,7 +16,7 @@
     "mocha": "mocha 'src/**/*.test.ts'",
     "coverage": "c8 --include 'src/**/*' --all npm run mocha",
     "typecheck": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit -p ./tsconfig.build.esm.json",
-    "test": "concurrently npm:eslint npm:mocha npm:typecheck",
+    "test": "npm run mocha && concurrently npm:eslint npm:typecheck",
     "preversion": "npm test",
     "postversion": "npm run build && npm publish --access=public",
     "prepare": "ts-patch install -s",
