@@ -7,6 +7,7 @@ import { Scope } from '@effect/core/io/Scope'
  * until
  * since
  * during
+ * fromCallback
  */
 
 export interface Push<R, E, A> {
