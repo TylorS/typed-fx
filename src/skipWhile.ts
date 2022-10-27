@@ -3,24 +3,24 @@ import * as Ref from '@effect/core/io/Ref'
 import { pipe } from '@fp-ts/data/Function'
 import { Predicate, not } from '@tsplus/stdlib/data/Predicate'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 import { onEarlyExitFailure } from './_internal.js'
 
 export function skipWhile<A>(predicate: Predicate<A>) {
-  return <R, E>(push: Push<R, E, A>): Push<R, E, A> => skipWhile_(push, predicate)
+  return <R, E>(fx: Fx<R, E, A>): Fx<R, E, A> => skipWhile_(fx, predicate)
 }
 
 export function skipUntil<A>(predicate: Predicate<A>) {
   return skipWhile(not(predicate))
 }
 
-function skipWhile_<R, E, A>(push: Push<R, E, A>, predicate: Predicate<A>): Push<R, E, A> {
-  return Push((emitter) =>
+function skipWhile_<R, E, A>(fx: Fx<R, E, A>, predicate: Predicate<A>): Fx<R, E, A> {
+  return Fx((emitter) =>
     pipe(
       Ref.makeRef<boolean>(() => false),
       Effect.flatMap((ref) =>
         pipe(
-          push.run(
+          fx.run(
             Emitter(
               (a) =>
                 pipe(

@@ -6,11 +6,11 @@ import { Scope } from '@effect/core/io/Scope'
 import { pipe } from '@fp-ts/data/Function'
 import { Env } from '@tsplus/stdlib/service/Env'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 import { asap } from './_internal.js'
 
-export function multicast<R, E, A>(push: Push<R, E, A>): Push<R, E, A> {
-  return new Multicast(push)
+export function multicast<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
+  return new Multicast(fx)
 }
 
 export interface MulticastObserver<E, A> {
@@ -19,11 +19,11 @@ export interface MulticastObserver<E, A> {
   readonly deferred: Deferred.Deferred<never, void>
 }
 
-export class Multicast<R, E, A> implements Push<R, E, A>, Emitter<never, E, A> {
+export class Multicast<R, E, A> implements Fx<R, E, A>, Emitter<never, E, A> {
   protected observers: MulticastObserver<E, A>[] = []
   protected fiber: Fiber.Fiber<never, unknown> | undefined
 
-  constructor(readonly push: Push<R, E, A>) {
+  constructor(readonly fx: Fx<R, E, A>) {
     this.emit = this.emit.bind(this)
     this.failCause = this.failCause.bind(this)
   }
@@ -39,7 +39,7 @@ export class Multicast<R, E, A> implements Push<R, E, A>, Emitter<never, E, A> {
           return this.fiber
             ? Effect.unit
             : pipe(
-                this.push.run(this),
+                this.fx.run(this),
                 Effect.schedule(asap),
                 Effect.forkScoped,
                 Effect.tap((fiber) => Effect.sync(() => (this.fiber = fiber))),

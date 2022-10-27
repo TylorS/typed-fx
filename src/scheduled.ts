@@ -4,14 +4,14 @@ import * as Schedule from '@effect/core/io/Schedule'
 import { millis } from '@tsplus/stdlib/data/Duration'
 import { isRight } from '@tsplus/stdlib/data/Either'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 
 /**
  * Schedules an Effect to run, emitting the result of the Effect to the emmiter
  */
 export function scheduled<S, R2, Out>(schedule: Schedule.Schedule<S, R2, any, Out>) {
-  return <R, E, A>(effect: Effect.Effect<R, E, A>): Push<R | R2, E, A> =>
-    Push(
+  return <R, E, A>(effect: Effect.Effect<R, E, A>): Fx<R | R2, E, A> =>
+    Fx(
       <R3>(emitter: Emitter<R3, E, A>): Effect.Effect<R | R2 | R3, never, unknown> =>
         Effect.gen(function* ($) {
           const clock = yield* $(Effect.clock)
@@ -50,8 +50,8 @@ export function scheduled<S, R2, Out>(schedule: Schedule.Schedule<S, R2, any, Ou
  * TODO: Needs a better name
  */
 export function scheduledOut<S, R2, A, Out>(schedule: Schedule.Schedule<S, R2, A, Out>) {
-  return <R, E>(effect: Effect.Effect<R, E, A>): Push<R | R2, E, Out> =>
-    Push(<R3>(sink: Emitter<R3, E, Out>) =>
+  return <R, E>(effect: Effect.Effect<R, E, A>): Fx<R | R2, E, Out> =>
+    Fx(<R3>(sink: Emitter<R3, E, Out>) =>
       Effect.gen(function* ($) {
         const d = yield* $(Schedule.driver(schedule))
 

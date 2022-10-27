@@ -1,15 +1,15 @@
 import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 
-import { Push } from './Push.js'
+import { Fx } from './Fx.js'
 import { runObserve } from './runObserve.js'
 
-export function runCollect<R, E, A>(push: Push<R, E, A>): Effect.Effect<R, E, ReadonlyArray<A>> {
+export function runCollect<R, E, A>(fx: Fx<R, E, A>): Effect.Effect<R, E, ReadonlyArray<A>> {
   return pipe(
     Effect.sync<A[]>(() => []),
     Effect.flatMap((values) =>
       pipe(
-        push,
+        fx,
         runObserve((a) => Effect.sync(() => values.push(a))),
         Effect.map(() => values),
       ),

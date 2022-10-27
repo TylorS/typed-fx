@@ -1,23 +1,23 @@
 import * as Effect from '@effect/core/io/Effect'
 import { identity, pipe } from '@fp-ts/data/Function'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'
 
 export function zipIterable<A, B, C>(iterable: Iterable<A>, f: (a: A, b: B) => C) {
-  return <R, E>(push: Push<R, E, B>): Push<R, E, C> => zipIterable_(push, iterable, f)
+  return <R, E>(fx: Fx<R, E, B>): Fx<R, E, C> => zipIterable_(fx, iterable, f)
 }
 
 export function withIterable<A>(iterable: Iterable<A>) {
-  return <R, E, B>(push: Push<R, E, B>): Push<R, E, A> => zipIterable_(push, iterable, identity)
+  return <R, E, B>(fx: Fx<R, E, B>): Fx<R, E, A> => zipIterable_(fx, iterable, identity)
 }
 
-export function zipIterable_<R, E, A, B, C>(
-  push: Push<R, E, B>,
+function zipIterable_<R, E, A, B, C>(
+  fx: Fx<R, E, B>,
   iterable: Iterable<A>,
   f: (a: A, b: B) => C,
-): Push<R, E, C> {
-  return Push((emitter) =>
+): Fx<R, E, C> {
+  return Fx((emitter) =>
     pipe(
       Effect.suspendSucceed(() => {
         const iterator = iterable[Symbol.iterator]()
@@ -27,7 +27,7 @@ export function zipIterable_<R, E, A, B, C>(
           return emitter.end
         }
 
-        return push.run(
+        return fx.run(
           Emitter(
             (b) => {
               const a = result.value

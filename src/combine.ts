@@ -2,28 +2,26 @@ import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 import { withDynamicCountdownLatch } from './_internal.js'
 
-export function combine<R2, E2, B>(second: Push<R2, E2, B>) {
-  return <R, E, A>(first: Push<R, E, A>): Push<R | R2, E | E2, readonly [A, B]> =>
+export function combine<R2, E2, B>(second: Fx<R2, E2, B>) {
+  return <R, E, A>(first: Fx<R, E, A>): Fx<R | R2, E | E2, readonly [A, B]> =>
     combineAll([first, second])
 }
 
-export function combineAll<Pushes extends ReadonlyArray<Push<any, any, any>>>(
-  pushes: readonly [...Pushes],
-): Push<
-  Push.ResourcesOf<Pushes[number]>,
-  Push.ErrorsOf<Pushes[number]>,
-  { readonly [K in keyof Pushes]: Push.OutputOf<Pushes[K]> }
+export function combineAll<FX extends ReadonlyArray<Fx<any, any, any>>>(
+  fx: readonly [...FX],
+): Fx<
+  Fx.ResourcesOf<FX[number]>,
+  Fx.ErrorsOf<FX[number]>,
+  { readonly [K in keyof FX]: Fx.OutputOf<FX[K]> }
 >
 
-export function combineAll<R, E, A>(iterable: Iterable<Push<R, E, A>>): Push<R, E, ReadonlyArray<A>>
+export function combineAll<R, E, A>(iterable: Iterable<Fx<R, E, A>>): Fx<R, E, ReadonlyArray<A>>
 
-export function combineAll<R, E, A>(
-  iterable: Iterable<Push<R, E, A>>,
-): Push<R, E, ReadonlyArray<A>> {
-  return Push((emitter) =>
+export function combineAll<R, E, A>(iterable: Iterable<Fx<R, E, A>>): Fx<R, E, ReadonlyArray<A>> {
+  return Fx((emitter) =>
     Effect.suspendSucceed(() => {
       const array = Array.from(iterable)
 
@@ -39,9 +37,9 @@ export function combineAll<R, E, A>(
             return withDynamicCountdownLatch(
               array.length,
               ({ latch }) =>
-                Effect.forEachWithIndex(array, (push, i) =>
+                Effect.forEachWithIndex(array, (fx, i) =>
                   Effect.forkScoped(
-                    push.run(
+                    fx.run(
                       Emitter(
                         (a) =>
                           pipe(

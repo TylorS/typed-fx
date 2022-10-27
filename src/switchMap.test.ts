@@ -4,15 +4,15 @@ import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 import * as Duration from '@tsplus/stdlib/data/Duration'
 
-import * as Push from './index.js'
+import * as Fx from './index.js'
 
 describe(import.meta.url, () => {
-  describe(Push.switchMap.name, () => {
+  describe(Fx.switchMap.name, () => {
     it('allows chaining multiple synchronous streams', async () => {
       const result = await pipe(
-        Push.fromIterable([1, 2, 3]),
-        Push.switchMap((n) => Push.fromIterable([n, n, n])),
-        Push.runCollect,
+        Fx.fromIterable([1, 2, 3]),
+        Fx.switchMap((n) => Fx.fromIterable([n, n, n])),
+        Fx.runCollect,
 
         Effect.unsafeRunPromise,
       )
@@ -22,9 +22,9 @@ describe(import.meta.url, () => {
 
     it('allows chaining multiple asynchronous streams', async () => {
       const result = await pipe(
-        Push.fromIterable([1, 2, 3]),
-        Push.switchMap((n) => Push.delay(Duration.millis(10))(Push.fromIterable([n, n, n]))),
-        Push.runCollect,
+        Fx.fromIterable([1, 2, 3]),
+        Fx.switchMap((n) => Fx.delay(Duration.millis(10))(Fx.fromIterable([n, n, n]))),
+        Fx.runCollect,
 
         Effect.unsafeRunPromise,
       )

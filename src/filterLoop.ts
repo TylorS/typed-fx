@@ -3,18 +3,18 @@ import { Scope } from '@effect/core/io/Scope'
 import { pipe } from '@tsplus/stdlib/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 import { startWith } from './continueWith.js'
 import { FilterMap, Map } from './filterMap.js'
 
 export function loop<A, B, C>(seed: A, f: (a: A, b: B) => readonly [A, C]) {
-  return <R, E>(push: Push<R, E, B>): Push<R, E, C> => Loop.make(push, seed, f)
+  return <R, E>(fx: Fx<R, E, B>): Fx<R, E, C> => Loop.make(fx, seed, f)
 }
 
 export function scan<A, B>(seed: A, f: (a: A, b: B) => A) {
-  return <R, E>(push: Push<R, E, B>): Push<R, E, A> =>
+  return <R, E>(fx: Fx<R, E, B>): Fx<R, E, A> =>
     pipe(
-      push,
+      fx,
       loop(seed, (a, b) => {
         const c = f(a, b)
         return [c, c]
@@ -24,13 +24,13 @@ export function scan<A, B>(seed: A, f: (a: A, b: B) => A) {
 }
 
 export function filterLoop<A, B, C>(seed: A, f: (a: A, b: B) => Maybe.Maybe<readonly [A, C]>) {
-  return <R, E>(push: Push<R, E, B>): Push<R, E, C> => FilterLoop.make(push, seed, f)
+  return <R, E>(fx: Fx<R, E, B>): Fx<R, E, C> => FilterLoop.make(fx, seed, f)
 }
 
 export function filterScan<A, B>(seed: A, f: (a: A, b: B) => Maybe.Maybe<A>) {
-  return <R, E>(push: Push<R, E, B>): Push<R, E, A> =>
+  return <R, E>(fx: Fx<R, E, B>): Fx<R, E, A> =>
     pipe(
-      push,
+      fx,
       filterLoop(seed, (a, b) =>
         pipe(
           f(a, b),
@@ -41,9 +41,9 @@ export function filterScan<A, B>(seed: A, f: (a: A, b: B) => Maybe.Maybe<A>) {
     )
 }
 
-export class Loop<R, E, A, B, C> implements Push<R, E, C> {
+export class Loop<R, E, A, B, C> implements Fx<R, E, C> {
   constructor(
-    readonly push: Push<R, E, B>,
+    readonly fx: Fx<R, E, B>,
     readonly seed: A,
     readonly f: (a: A, b: B) => readonly [A, C],
   ) {}
@@ -52,7 +52,7 @@ export class Loop<R, E, A, B, C> implements Push<R, E, C> {
     return Effect.suspendSucceed(() => {
       let acc = this.seed
 
-      return this.push.run(
+      return this.fx.run(
         Emitter(
           (b: B) => {
             const [a, c] = this.f(acc, b)
@@ -69,31 +69,31 @@ export class Loop<R, E, A, B, C> implements Push<R, E, C> {
   }
 
   static make<R, E, A, B, C>(
-    push: Push<R, E, B>,
+    fx: Fx<R, E, B>,
     seed: A,
     f: (a: A, b: B) => readonly [A, C],
-  ): Push<R, E, C> {
-    if (push instanceof FilterMap) {
-      return FilterLoop.make(push.push, seed, (a, x) =>
+  ): Fx<R, E, C> {
+    if (fx instanceof FilterMap) {
+      return FilterLoop.make(fx.fx, seed, (a, x) =>
         pipe(
           x,
-          push.f,
+          fx.f,
           Maybe.map((b) => f(a, b)),
         ),
       )
     }
 
-    if (push instanceof Map) {
-      return Loop.make(push.push, seed, (a, x) => f(a, push.f(x)))
+    if (fx instanceof Map) {
+      return Loop.make(fx.fx, seed, (a, x) => f(a, fx.f(x)))
     }
 
-    return new Loop(push, seed, f)
+    return new Loop(fx, seed, f)
   }
 }
 
-export class FilterLoop<R, E, A, B, C> implements Push<R, E, C> {
+export class FilterLoop<R, E, A, B, C> implements Fx<R, E, C> {
   constructor(
-    readonly push: Push<R, E, B>,
+    readonly fx: Fx<R, E, B>,
     readonly seed: A,
     readonly f: (a: A, b: B) => Maybe.Maybe<readonly [A, C]>,
   ) {}
@@ -102,7 +102,7 @@ export class FilterLoop<R, E, A, B, C> implements Push<R, E, C> {
     return Effect.suspendSucceed(() => {
       let acc = this.seed
 
-      return this.push.run(
+      return this.fx.run(
         Emitter(
           (b: B) =>
             pipe(
@@ -120,24 +120,24 @@ export class FilterLoop<R, E, A, B, C> implements Push<R, E, C> {
   }
 
   static make<R, E, A, B, C>(
-    push: Push<R, E, B>,
+    fx: Fx<R, E, B>,
     seed: A,
     f: (a: A, b: B) => Maybe.Maybe<readonly [A, C]>,
-  ): Push<R, E, C> {
-    if (push instanceof FilterMap) {
-      return FilterLoop.make(push.push, seed, (a, x) =>
+  ): Fx<R, E, C> {
+    if (fx instanceof FilterMap) {
+      return FilterLoop.make(fx.fx, seed, (a, x) =>
         pipe(
           x,
-          push.f,
+          fx.f,
           Maybe.flatMap((b) => f(a, b)),
         ),
       )
     }
 
-    if (push instanceof Map) {
-      return FilterLoop.make(push.push, seed, (a, x) => f(a, push.f(x)))
+    if (fx instanceof Map) {
+      return FilterLoop.make(fx.fx, seed, (a, x) => f(a, fx.f(x)))
     }
 
-    return new FilterLoop(push, seed, f)
+    return new FilterLoop(fx, seed, f)
   }
 }

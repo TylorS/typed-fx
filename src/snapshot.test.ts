@@ -4,18 +4,18 @@ import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 import * as Duration from '@tsplus/stdlib/data/Duration'
 
-import * as Push from './index.js'
+import * as Fx from './index.js'
 
 describe(import.meta.url, () => {
-  describe(Push.snapshot.name, () => {
-    it('provides a service to the Push', async () => {
+  describe(Fx.snapshot.name, () => {
+    it('provides a service to the Fx', async () => {
       const test = Effect.gen(function* ($) {
         const result = yield* $(
           pipe(
-            Push.fromIterable([1, 2, 3]),
-            Push.delay(Duration.millis(10)),
-            Push.snapshot(Push.succeed(10), (x, y) => x * y),
-            Push.runCollect,
+            Fx.fromIterable([1, 2, 3]),
+            Fx.delay(Duration.millis(10)),
+            Fx.snapshot(Fx.succeed(10), (x, y) => x * y),
+            Fx.runCollect,
           ),
         )
 
@@ -26,15 +26,15 @@ describe(import.meta.url, () => {
     })
   })
 
-  describe(Push.sample.name, () => {
-    it('provides a service to the Push', async () => {
+  describe(Fx.sample.name, () => {
+    it('provides a service to the Fx', async () => {
       const test = Effect.gen(function* ($) {
         const result = yield* $(
           pipe(
-            Push.fromIterable([1, 2, 3]),
-            Push.delay(Duration.millis(10)),
-            Push.sample(Push.succeed(1)),
-            Push.runCollect,
+            Fx.fromIterable([1, 2, 3]),
+            Fx.delay(Duration.millis(10)),
+            Fx.sample(Fx.succeed(1)),
+            Fx.runCollect,
           ),
         )
 

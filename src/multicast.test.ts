@@ -4,7 +4,7 @@ import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 import * as Duration from '@tsplus/stdlib/data/Duration'
 
-import * as Push from './index.js'
+import * as Fx from './index.js'
 
 describe(import.meta.url, () => {
   describe('multicast', () => {
@@ -12,24 +12,22 @@ describe(import.meta.url, () => {
       const values = [1, 2, 3]
       let started = 0
       const test = pipe(
-        Push.suspendSucceed(() => {
+        Fx.suspendSucceed(() => {
           started++
           return pipe(
-            Push.fromIterable(values),
-            Push.flatMap((a) =>
+            Fx.fromIterable(values),
+            Fx.flatMap((a) =>
               pipe(
-                Push.fromIterable([a, a + 1]),
-                Push.merge(
-                  pipe(Push.fromIterable([a * a, a ** a]), Push.delay(Duration.millis(50))),
-                ),
+                Fx.fromIterable([a, a + 1]),
+                Fx.merge(pipe(Fx.fromIterable([a * a, a ** a]), Fx.delay(Duration.millis(50)))),
               ),
             ),
           )
         }),
-        Push.multicast,
+        Fx.multicast,
       )
-      const events = pipe(test, Push.runCollect, Effect.unsafeRunPromise)
-      const events2 = pipe(test, Push.runCollect, Effect.unsafeRunPromise)
+      const events = pipe(test, Fx.runCollect, Effect.unsafeRunPromise)
+      const events2 = pipe(test, Fx.runCollect, Effect.unsafeRunPromise)
 
       deepStrictEqual(await events, [
         1,

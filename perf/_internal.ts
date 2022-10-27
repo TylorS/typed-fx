@@ -108,7 +108,7 @@ export function runPerformanceTest(test: PerformanceTest, cb: () => void) {
   runSuite(suite, cb)
 }
 
-export function fxTest<E, A>(init: () => Fx.Push<never, E, A>) {
+export function fxTest<E, A>(init: () => Fx.Fx<never, E, A>) {
   return PerformanceTestCase(
     'Fx',
     () => {

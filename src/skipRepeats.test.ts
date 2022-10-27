@@ -4,18 +4,18 @@ import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 import * as Equivalence from '@tsplus/stdlib/prelude/Equivalence'
 
-import * as Push from './index.js'
+import * as Fx from './index.js'
 
 describe(import.meta.url, () => {
-  describe(Push.skipRepeats.name, () => {
+  describe(Fx.skipRepeats.name, () => {
     it('skips repeating values', async () => {
       const test = Effect.gen(function* ($) {
         const result = yield* $(
           pipe(
-            Push.fromIterable([1, 2, 3]),
-            Push.flatMap((n) => Push.fromIterable([n, n, n])),
-            Push.skipRepeats(Equivalence.strict<number>()),
-            Push.runCollect,
+            Fx.fromIterable([1, 2, 3]),
+            Fx.flatMap((n) => Fx.fromIterable([n, n, n])),
+            Fx.skipRepeats(Equivalence.strict<number>()),
+            Fx.runCollect,
           ),
         )
 

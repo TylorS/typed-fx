@@ -5,20 +5,20 @@ import * as Scope from '@effect/core/io/Scope'
 import { pipe } from '@fp-ts/data/Function'
 import { Tag } from '@tsplus/stdlib/service/Tag'
 
-import * as Push from './index.js'
+import * as Fx from './index.js'
 
 describe(import.meta.url, () => {
-  describe(Push.provideService.name, () => {
-    it('provides a service to the Push', async () => {
+  describe(Fx.provideService.name, () => {
+    it('provides a service to the Fx', async () => {
       const test = Effect.gen(function* ($) {
         const scope = yield* $(Scope.make)
 
         const result = yield* $(
           pipe(
-            Push.service(Scope.Scope.Tag),
-            Push.flatMap((s) => Push.fromIterable([s, s])),
-            Push.provideService(Scope.Scope.Tag, scope),
-            Push.runCollect,
+            Fx.service(Scope.Scope.Tag),
+            Fx.flatMap((s) => Fx.fromIterable([s, s])),
+            Fx.provideService(Scope.Scope.Tag, scope),
+            Fx.runCollect,
           ),
         )
 
@@ -29,8 +29,8 @@ describe(import.meta.url, () => {
     })
   })
 
-  describe(Push.provideLayer.name, () => {
-    it('provides a layer to the Push', async () => {
+  describe(Fx.provideLayer.name, () => {
+    it('provides a layer to the Fx', async () => {
       const test = Effect.gen(function* ($) {
         const value = `${Math.random()}`
         class Foo {
@@ -40,10 +40,10 @@ describe(import.meta.url, () => {
 
         const result = yield* $(
           pipe(
-            Push.service(Foo.Tag),
-            Push.flatMap((s) => Push.succeed(s.foo)),
-            Push.provideLayer(Effect.toLayer(Foo.Tag)(Effect.succeed(new Foo(value)))),
-            Push.runCollect,
+            Fx.service(Foo.Tag),
+            Fx.flatMap((s) => Fx.succeed(s.foo)),
+            Fx.provideLayer(Effect.toLayer(Foo.Tag)(Effect.succeed(new Foo(value)))),
+            Fx.runCollect,
           ),
         )
 

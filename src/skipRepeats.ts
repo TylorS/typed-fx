@@ -4,17 +4,17 @@ import { pipe } from '@fp-ts/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 import { Equivalence } from '@tsplus/stdlib/prelude/Equivalence'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 
 export function skipRepeats<A>(E: Equivalence<A>) {
   const equals = Maybe.getEquivalence(E).equals
 
-  return <R, E>(push: Push<R, E, A>): Push<R, E, A> =>
-    Push((sink) =>
+  return <R, E>(fx: Fx<R, E, A>): Fx<R, E, A> =>
+    Fx((sink) =>
       pipe(
         makeRef<Maybe.Maybe<A>>(() => Maybe.none),
         Effect.flatMap((ref) =>
-          push.run(
+          fx.run(
             Emitter(
               (a) =>
                 Effect.flatten(

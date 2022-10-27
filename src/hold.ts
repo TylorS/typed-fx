@@ -6,12 +6,12 @@ import { Scope } from '@effect/core/io/Scope'
 import { pipe } from '@fp-ts/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 import { asap } from './_internal.js'
 import { Multicast, MulticastObserver } from './multicast.js'
 
-export function hold<R, E, A>(push: Push<R, E, A>): Push<R, E, A> {
-  return new Hold(push)
+export function hold<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
+  return new Hold(fx)
 }
 
 export class Hold<R, E, A> extends Multicast<R, E, A> {
@@ -19,8 +19,8 @@ export class Hold<R, E, A> extends Multicast<R, E, A> {
   protected _pendingEmitters: Array<readonly [Emitter<unknown, E, A>, A[]]> = []
   protected _scheduledFiber: Fiber.RealFiber<any, any> | undefined
 
-  constructor(readonly push: Push<R, E, A>) {
-    super(push)
+  constructor(readonly fx: Fx<R, E, A>) {
+    super(fx)
   }
 
   run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope, never, unknown> {

@@ -5,13 +5,12 @@ import { RuntimeFlagsPatch } from '@effect/core/io/RuntimeFlags/patch'
 import { Scope } from '@effect/core/io/Scope'
 import * as TSemaphore from '@effect/core/stm/TSemaphore'
 
-import { Push } from './Push.js'
+import { Fx } from './Fx.js'
 
 export function transform<R2 = never>(
   f: <R, E, A>(effect: Effect.Effect<R, E, A>) => Effect.Effect<R | R2, E, A>,
 ) {
-  return <R, E, A>(push: Push<R, E, A>): Push<R | R2, E, A> =>
-    Push((emitter) => f(push.run(emitter)))
+  return <R, E, A>(fx: Fx<R, E, A>): Fx<R | R2, E, A> => Fx((emitter) => f(fx.run(emitter)))
 }
 
 export function withParallelism(parallelism: number) {

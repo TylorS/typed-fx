@@ -1,5 +1,5 @@
-import { Push } from './Push.js'
+import { Fx } from './Fx.js'
 
-export function suspendSucceed<R, E, A>(f: () => Push<R, E, A>): Push<R, E, A> {
-  return Push((emitter) => f().run(emitter))
+export function suspendSucceed<R, E, A>(f: () => Fx<R, E, A>): Fx<R, E, A> {
+  return Fx((emitter) => f().run(emitter))
 }

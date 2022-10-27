@@ -1,12 +1,15 @@
 import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 
-import { Emitter, Push } from './Push.js'
+import { Emitter, Fx } from './Fx.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'
 
+// TODO: Commutation with map
+// TODO: Fusion with other slices
+
 export function slice(skip: number, take: number) {
-  return <R, E, A>(push: Push<R, E, A>): Push<R, E, A> =>
-    Push((emitter) =>
+  return <R, E, A>(push: Fx<R, E, A>): Fx<R, E, A> =>
+    Fx((emitter) =>
       pipe(
         Effect.suspendSucceed(() => {
           let toSkip = skip
