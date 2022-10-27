@@ -6,12 +6,8 @@ import * as Cause from '@effect/core/io/Cause'
 import * as Deferred from '@effect/core/io/Deferred'
 import * as Effect from '@effect/core/io/Effect'
 import * as Ref from '@effect/core/io/Ref'
-import * as Schedule from '@effect/core/io/Schedule'
 import { pipe } from '@fp-ts/data/Function'
-import * as Duration from '@tsplus/stdlib/data/Duration'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
-
-export const asap = Schedule.delayed(() => Duration.millis(0))(Schedule.once)
 
 export const EARLY_EXIT_FAILURE = Symbol('EarlyExitFailure')
 export interface EarlyExitFailure {
@@ -37,7 +33,11 @@ export const onEarlyExitFailure =
             Cause.dieMaybe,
             Maybe.fold(
               () => Effect.failCause(e),
-              (d) => (isEarlyExitFailure(d) ? handler : Effect.failCause(e)),
+              (d) => {
+                console.log('exitEarly', d)
+
+                return isEarlyExitFailure(d) ? handler : Effect.failCause(e)
+              },
             ),
           ),
         Effect.succeed,

@@ -15,7 +15,7 @@ function since_<R, E, A, R2, E2, B>(fx: Fx<R, E, A>, signal: Fx<R2, E2, B>): Fx<
       Effect.sync(() => new AtomicReference(false)),
       Effect.tap((ref) =>
         pipe(
-          signal.run(Emitter(() => exitEarly, emitter.failCause, exitEarly)),
+          signal.run(Emitter(() => exitEarly, emitter.failCause, Effect.unit)),
           onEarlyExitFailure(Effect.sync(() => ref.set(true))),
           Effect.forkScoped,
         ),

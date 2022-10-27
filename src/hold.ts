@@ -4,10 +4,10 @@ import * as Fiber from '@effect/core/io/Fiber'
 import * as FiberId from '@effect/core/io/FiberId'
 import { Scope } from '@effect/core/io/Scope'
 import { pipe } from '@fp-ts/data/Function'
+import * as Duration from '@tsplus/stdlib/data/Duration'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
 import { Emitter, Fx } from './Fx.js'
-import { asap } from './_internal.js'
 import { Multicast, MulticastObserver } from './multicast.js'
 
 export function hold<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
@@ -88,7 +88,7 @@ export class Hold<R, E, A> extends Multicast<R, E, A> {
     return pipe(
       interrupt,
       Effect.flatMap(() => this.flushPending()),
-      Effect.schedule(asap),
+      Effect.delay(Duration.millis(0)),
       Effect.forkScoped,
       Effect.tap((fiber: Fiber.RealFiber<any, any>) =>
         Effect.sync(() => (this._scheduledFiber = fiber)),

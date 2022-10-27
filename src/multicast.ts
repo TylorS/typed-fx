@@ -4,10 +4,10 @@ import * as Effect from '@effect/core/io/Effect'
 import * as Fiber from '@effect/core/io/Fiber'
 import { Scope } from '@effect/core/io/Scope'
 import { pipe } from '@fp-ts/data/Function'
+import * as Duration from '@tsplus/stdlib/data/Duration'
 import { Env } from '@tsplus/stdlib/service/Env'
 
 import { Emitter, Fx } from './Fx.js'
-import { asap } from './_internal.js'
 
 export function multicast<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
   return new Multicast(fx)
@@ -39,7 +39,7 @@ export class Multicast<R, E, A> implements Fx<R, E, A>, Emitter<never, E, A> {
           ? Effect.unit
           : pipe(
               this.fx.run(this),
-              Effect.schedule(asap),
+              Effect.delay(Duration.millis(0)),
               Effect.forkScoped,
               Effect.tap((fiber) => Effect.sync(() => (this.fiber = fiber))),
             )
