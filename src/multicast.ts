@@ -32,20 +32,19 @@ export class Multicast<R, E, A> implements Fx<R, E, A>, Emitter<never, E, A> {
     return pipe(
       Effect.environment<RO>(),
       Effect.zip(Deferred.make<never, void>()),
-      Effect.tap(([env, deferred]) =>
-        Effect.suspendSucceed(() => {
-          this.observers.push({ emitter, env, deferred })
+      Effect.tap(([env, deferred]) => {
+        this.observers.push({ emitter, env, deferred })
 
-          return this.fiber
-            ? Effect.unit
-            : pipe(
-                this.fx.run(this),
-                Effect.schedule(asap),
-                Effect.forkScoped,
-                Effect.tap((fiber) => Effect.sync(() => (this.fiber = fiber))),
-              )
-        }),
-      ),
+        return this.fiber
+          ? Effect.unit
+          : pipe(
+              this.fx.run(this),
+              Effect.schedule(asap),
+              Effect.forkScoped,
+              Effect.tap((fiber) => Effect.sync(() => (this.fiber = fiber))),
+            )
+      }),
+
       Effect.flatMap(([, deferred]) => deferred.await),
     )
   }

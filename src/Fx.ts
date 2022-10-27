@@ -7,7 +7,6 @@ import { Scope } from '@effect/core/io/Scope'
  * until
  * since
  * during
- * fromCallback
  */
 
 export interface Fx<R, E, A> {

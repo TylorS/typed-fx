@@ -1,5 +1,5 @@
 import * as TSemaphore from '@effect/core/stm/TSemaphore'
-import { flow, pipe } from 'node_modules/@fp-ts/data/Function.js'
+import { flow, pipe } from '@fp-ts/data/Function'
 
 import { Fx } from './Fx.js'
 import { flatMap } from './flatMap.js'
