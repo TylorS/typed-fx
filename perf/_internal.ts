@@ -26,31 +26,34 @@ export function runSuite(suite: Suite, cb: () => void) {
     .on('complete', () => {
       logComplete()
       cb()
-      suite.abort()
     })
     .run({ defer: false })
 }
+
+const longestLibrary = 13
+const longestOps = 10
 
 function logResults(e: any) {
   const t = e.target
 
   if (t.failure) {
+    console.log(`| ${t.name} | FAILED | ${e.target.failure} |`)
+
     console.error(padl(10, t.name) + 'FAILED: ' + e.target.failure)
   } else {
-    const result =
-      padl(18, t.name) +
-      padr(13, t.hz.toFixed(2) + ' op/s') +
-      ' \xb1' +
-      padr(7, t.stats.rme.toFixed(2) + '%') +
-      padr(15, ' (' + t.stats.sample.length + ' samples)')
-
-    console.log(result)
+    console.log(
+      `| ${padl(longestLibrary, t.name)} | ${padl(longestOps, t.hz.toFixed(2))} | ${padl(
+        6,
+        t.stats.rme.toFixed(2) + '%',
+      )} | ${padl(3, t.stats.sample.length)}      |`,
+    )
   }
 }
 
 function logStart(this: any) {
-  console.log(this.name)
-  console.log('-------------------------------------------------------')
+  console.log('### ' + this.name)
+  console.log(`| Library       | Ops/sec    | ±      | Samples |
+| --------------|------------|--------|---------|`)
 }
 
 function logComplete() {
@@ -64,12 +67,12 @@ function padl(n: number, s: string) {
   return s
 }
 
-function padr(n: number, s: string) {
-  while (s.length < n) {
-    s = ' ' + s
-  }
-  return s
-}
+// function padr(n: number, s: string) {
+//   while (s.length < n) {
+//     s = ' ' + s
+//   }
+//   return s
+// }
 
 export interface PerformanceTest {
   readonly name: string

@@ -12,23 +12,29 @@ If you need strict performance no matter what, none of these abstractions should
 
 ## Test Results
 
-filter -> map -> scan 10000 integers
--------------------------------------------------------
-Fx                 3932.81 op/s ±  8.22%   (82 samples)
-@most/core        353745.06 op/s ± 13.42%   (60 samples)
-RxJS @7            2253.41 op/s ±  1.41%   (89 samples)
-Effect/Stream        67.57 op/s ± 75.41%   (37 samples)
+### filter -> map -> scan 10000 integers
+| Library       | Ops/sec    | ±      | Samples |
+| --------------|------------|--------|---------|
+| Fx            | 3801.43    | 5.81%  | 82      |
+| @most/core    | 384094.58  | 12.96% | 64      |
+| RxJS @7       | 2255.04    | 12.60% | 87      |
+| Effect/Stream | 91.50      | 29.12% | 41      |
 -------------------------------------------------------
 
-flatMap 10000 x 10000 integers
+### flatMap 10000 x 10000 integers
+| Library       | Ops/sec    | ±      | Samples |
+| --------------|------------|--------|---------|
+| Fx            | 6474.91    | 11.85% | 76      |
+| @most/core    | 276654.02  | 19.33% | 46      |
+| RxJS @7       | 10322.11   | 52.99% | 77      |
+| Effect/Stream | 2.29       | 124.34% | 9      |
 -------------------------------------------------------
-Fx                 7442.81 op/s ±  8.70%   (68 samples)
-@most/core        200787.55 op/s ± 11.99%   (56 samples)
-RxJS @7           22591.12 op/s ± 13.91%   (53 samples)
-switchMap 10000 x 10000 integers
--------------------------------------------------------
-Fx                 5036.53 op/s ± 13.88%   (60 samples)
-@most/core        231046.49 op/s ± 15.07%   (48 samples)
-RxJS @7           18226.43 op/s ± 55.02%   (48 samples)
+
+### switchMap 10000 x 10000 integers
+| Library       | Ops/sec    | ±      | Samples |
+| --------------|------------|--------|---------|
+| Fx            | 4759.84    | 13.52% | 63      |
+| @most/core    | 300663.64  | 14.57% | 55      |
+| RxJS @7       | 16469.83   | 2.63%  | 75      |
 -------------------------------------------------------
 
