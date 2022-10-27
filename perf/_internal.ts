@@ -1,4 +1,4 @@
-import { performance } from 'node:perf_hooks'
+import process from 'node:process'
 
 import * as EffectStream from '@effect/core/Stream/Stream'
 import * as Effect from '@effect/core/io/Effect'
@@ -19,8 +19,16 @@ export function parseIterations() {
 export const iterations = parseIterations()
 export const array = Array.from({ length: iterations }, (_, i) => i)
 
-export function runSuite(suite: Suite) {
-  suite.on('start', logStart).on('cycle', logResults).on('complete', logComplete).run()
+export function runSuite(suite: Suite, cb: () => void) {
+  suite
+    .on('start', logStart)
+    .on('cycle', logResults)
+    .on('complete', () => {
+      logComplete()
+      cb()
+      suite.abort()
+    })
+    .run({ defer: false })
 }
 
 function logResults(e: any) {
@@ -46,8 +54,7 @@ function logStart(this: any) {
 }
 
 function logComplete() {
-  console.log('-------------------------------------------------------')
-  process.exit(0)
+  console.log('-------------------------------------------------------\n')
 }
 
 function padl(n: number, s: string) {
@@ -62,14 +69,6 @@ function padr(n: number, s: string) {
     s = ' ' + s
   }
   return s
-}
-
-export function timeConstruction(label: string) {
-  const start = performance.now()
-  return () => {
-    const end = performance.now()
-    console.log(label, end - start)
-  }
 }
 
 export interface PerformanceTest {
@@ -91,21 +90,19 @@ export function PerformanceTestCase<A>(
   return { name, init, run }
 }
 
-export function runPerformanceTest(test: PerformanceTest) {
+export function runPerformanceTest(test: PerformanceTest, cb: () => void) {
   // eslint-disable-next-line import/no-named-as-default-member
   let suite = new benchmark.Suite(test.name)
 
   for (const testCase of test.cases) {
-    const end = timeConstruction(testCase.name)
     const constructed = testCase.init()
-    end()
 
     suite = suite.add(testCase.name, (deferred: benchmark.Deferred) =>
       testCase.run(constructed, deferred),
     )
   }
 
-  runSuite(suite)
+  runSuite(suite, cb)
 }
 
 export function fxTest<E, A>(init: () => Fx.Push<never, E, A>) {

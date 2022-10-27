@@ -13,6 +13,7 @@ specifiers:
   '@types/mocha': ^9.1.1
   '@types/node': ^17.0.45
   '@types/prettier': ^2.7.0
+  '@types/yargs': ^17.0.13
   '@typescript-eslint/eslint-plugin': ^5.34.0
   '@typescript-eslint/parser': ^5.34.0
   '@zoltu/typescript-transformer-append-js-extension': ^1.0.1
@@ -40,6 +41,7 @@ specifiers:
   tsx: ^3.8.2
   typescript: ^4.7.4
   typescript-transform-paths: ^3.3.1
+  yargs: ^17.6.0
 
 dependencies:
   '@effect/core': 0.0.16
@@ -56,6 +58,7 @@ devDependencies:
   '@types/mocha': 9.1.1
   '@types/node': 17.0.45
   '@types/prettier': 2.7.0
+  '@types/yargs': 17.0.13
   '@typescript-eslint/eslint-plugin': 5.34.0_euudt5oqhhodkyae5tf6wjmsda
   '@typescript-eslint/parser': 5.34.0_4rv7y5c6xz3vfxwhbrcxxi73bq
   '@zoltu/typescript-transformer-append-js-extension': 1.0.1
@@ -83,6 +86,7 @@ devDependencies:
   tsx: 3.8.2
   typescript: 4.7.4
   typescript-transform-paths: 3.3.1_typescript@4.7.4
+  yargs: 17.6.0
 
 packages:
 
@@ -293,6 +297,16 @@ packages:
 
   /@types/prettier/2.7.0:
     resolution: {integrity: sha512-RI1L7N4JnW5gQw2spvL7Sllfuf1SaHdrZpCHiBlCXjIlufi1SMNnbu2teze3/QE67Fg2tBlH7W+mi4hVNk4p0A==}
+    dev: true
+
+  /@types/yargs-parser/21.0.0:
+    resolution: {integrity: sha512-iO9ZQHkZxHn4mSakYV0vFHAVDyEOIJQrV2uZ06HxEPcx+mt8swXoZHIbaaJ2crJYFfErySgktuTZ3BeLz+XmFA==}
+    dev: true
+
+  /@types/yargs/17.0.13:
+    resolution: {integrity: sha512-9sWaruZk2JGxIQU+IhI1fhPYRcQ0UuTNuKuCW9bR5fp7qi2Llf7WDzNa17Cy7TKnh3cdxDOiyTu6gaLS0eDatg==}
+    dependencies:
+      '@types/yargs-parser': 21.0.0
     dev: true
 
   /@typescript-eslint/eslint-plugin/5.34.0_euudt5oqhhodkyae5tf6wjmsda:
@@ -676,6 +690,15 @@ packages:
       wrap-ansi: 7.0.0
     dev: true
 
+  /cliui/8.0.1:
+    resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
+    engines: {node: '>=12'}
+    dependencies:
+      string-width: 4.2.3
+      strip-ansi: 6.0.1
+      wrap-ansi: 7.0.0
+    dev: true
+
   /color-convert/2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
     engines: {node: '>=7.0.0'}
@@ -717,7 +740,7 @@ packages:
       spawn-command: 0.0.2-1
       supports-color: 8.1.1
       tree-kill: 1.2.2
-      yargs: 17.5.1
+      yargs: 17.6.0
     dev: true
 
   /convert-source-map/1.8.0:
@@ -2836,14 +2859,14 @@ packages:
       require-directory: 2.1.1
       string-width: 4.2.3
       y18n: 5.0.8
-      yargs-parser: 20.2.4
+      yargs-parser: 20.2.9
     dev: true
 
-  /yargs/17.5.1:
-    resolution: {integrity: sha512-t6YAJcxDkNX7NFYiVtKvWUz8l+PaKTLiL63mJYWR2GnHq2gjEWISzsLp9wg3aY36dY1j+gfIEL3pIF+XlJJfbA==}
+  /yargs/17.6.0:
+    resolution: {integrity: sha512-8H/wTDqlSwoSnScvV2N/JHfLWOKuh5MVla9hqLjK3nsfyy6Y4kDSYSvkU5YCUEPOSnRXfIyx3Sq+B/IWudTo4g==}
     engines: {node: '>=12'}
     dependencies:
-      cliui: 7.0.4
+      cliui: 8.0.1
       escalade: 3.1.1
       get-caller-file: 2.0.5
       require-directory: 2.1.1
