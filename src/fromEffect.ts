@@ -71,10 +71,10 @@ export const tryPromise: <A>(promise: LazyArg<Promise<A>>) => Fx<never, unknown,
   fromEffect,
 )
 
-export const tryCatchPromise: <A, E>(
+export const tryCatchPromise = <A, E>(
   promise: LazyArg<Promise<A>>,
   onThrow: (u: unknown) => E,
-) => Fx<never, E, A> = flow(Effect.tryPromise, fromEffect)
+): Fx<never, E, A> => fromEffect(Effect.tryCatchPromise(promise, onThrow))
 
 export const tryCatch: <A, E>(f: LazyArg<A>, onThrow: (u: unknown) => E) => Fx<never, E, A> = flow(
   Effect.tryCatch,

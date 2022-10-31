@@ -7,6 +7,10 @@ export function fromIterable<A>(iterable: Iterable<A>): Fx<never, never, A> {
 }
 
 export class FromIterable<A> implements Fx<never, never, A> {
+  readonly _R!: () => never
+  readonly _E!: () => never
+  readonly _A!: () => A
+
   constructor(readonly iterable: Iterable<A>) {}
 
   run<R2>(emitter: Emitter<R2, never, A>) {
