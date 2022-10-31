@@ -23,6 +23,8 @@ export class Hold<R, E, A> extends Multicast<R, E, A> {
     super(fx)
   }
 
+  readonly get = Effect.sync(() => this._value)
+
   run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope, never, unknown> {
     if (this.shouldScheduleFlush()) {
       return pipe(
