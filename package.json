@@ -106,6 +106,16 @@
         "types": "./esm/Fx.d.ts"
       }
     },
+    "./Subject": {
+      "require": {
+        "default": "./cjs/Subject.js",
+        "types": "./cjs/Subject.d.ts"
+      },
+      "import": {
+        "default": "./esm/Subject.js",
+        "types": "./esm/Subject.d.ts"
+      }
+    },
     "./_internal": {
       "require": {
         "default": "./cjs/_internal.js",
