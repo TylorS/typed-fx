@@ -42,6 +42,10 @@ export function filterScan<A, B>(seed: A, f: (a: A, b: B) => Maybe.Maybe<A>) {
 }
 
 export class Loop<R, E, A, B, C> implements Fx<R, E, C> {
+  readonly _R!: () => R
+  readonly _E!: () => E
+  readonly _A!: () => C
+
   constructor(
     readonly fx: Fx<R, E, B>,
     readonly seed: A,
@@ -92,6 +96,10 @@ export class Loop<R, E, A, B, C> implements Fx<R, E, C> {
 }
 
 export class FilterLoop<R, E, A, B, C> implements Fx<R, E, C> {
+  readonly _R!: () => R
+  readonly _E!: () => E
+  readonly _A!: () => C
+
   constructor(
     readonly fx: Fx<R, E, B>,
     readonly seed: A,

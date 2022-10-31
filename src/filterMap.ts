@@ -14,6 +14,10 @@ export const map =
 export const as = <B>(value: B): (<R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, B>) => map(() => value)
 
 export class Map<R, E, A, B> implements Fx<R, E, B> {
+  readonly _R!: () => R
+  readonly _E!: () => E
+  readonly _A!: () => B
+
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B) {}
 
   run<R2>(emitter: Emitter<R2, E, B>): Effect.Effect<R | R2 | Scope, never, unknown> {
@@ -42,6 +46,10 @@ export function filter<A>(predicate: Predicate<A>) {
 }
 
 export class FilterMap<R, E, A, B> implements Fx<R, E, B> {
+  readonly _R!: () => R
+  readonly _E!: () => E
+  readonly _A!: () => B
+
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => Maybe.Maybe<B>) {}
 
   run<R2>(emitter: Emitter<R2, E, B>): Effect.Effect<R | R2 | Scope, never, unknown> {

@@ -14,7 +14,10 @@ export function join<R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>): Fx<R | R2, E
   return flatMap_(fx, (fx) => fx)
 }
 
-function flatMap_<R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) {
+function flatMap_<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  f: (a: A) => Fx<R2, E2, B>,
+): Fx<R | R2, E | E2, B> {
   return Fx((emitter) =>
     withDynamicCountdownLatch(
       1,

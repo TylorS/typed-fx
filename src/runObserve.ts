@@ -3,6 +3,7 @@ import * as Effect from '@effect/core/io/Effect'
 import { flow, pipe } from '@fp-ts/data/Function'
 
 import { Emitter, Fx } from './Fx.js'
+import { onEarlyExitFailure } from './_internal.js'
 
 export function runObserve<A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>) {
   return <R, E>(fx: Fx<R, E, A>): Effect.Effect<R | R2, E | E2, void> =>
@@ -26,6 +27,7 @@ export function runObserve<A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>) 
         ),
       ),
       Effect.flatMap((deferred) => deferred.await),
+      onEarlyExitFailure(Effect.unit),
       Effect.scoped,
     )
 }

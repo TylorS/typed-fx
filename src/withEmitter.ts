@@ -1,4 +1,3 @@
-import { Cause } from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
 import * as Exit from '@effect/core/io/Exit'
 import { unsafeForkUnstarted } from '@effect/core/io/Fiber/_internal/runtime'
@@ -6,13 +5,10 @@ import { Scope } from '@effect/core/io/Scope'
 import { flow, pipe } from '@fp-ts/data/Function'
 
 import { Emitter, Fx } from './Fx.js'
+import type { SubjectEmitter } from './Subject.js'
 
 export function withEmitter<R, E, A>(
-  f: (sink: {
-    readonly emit: (a: A) => void
-    readonly failCause: (cause: Cause<E>) => void
-    readonly end: () => void
-  }) => Effect.Canceler<R>,
+  f: (emitter: SubjectEmitter<E, A>) => Effect.Canceler<R>,
 ): Fx<R, E, A> {
   return Fx<R, E, A>(<R2>(sink: Emitter<R2, E, A>) => {
     return Effect.withFiberRuntime<R | R2 | Scope, never, unknown>((fiber, status) => {

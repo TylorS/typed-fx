@@ -2,6 +2,7 @@ import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 
 import { Fx } from './Fx.js'
+import { onEarlyExitFailure } from './_internal.js'
 import { runObserve } from './runObserve.js'
 
 export function runCollect<R, E, A>(fx: Fx<R, E, A>): Effect.Effect<R, E, ReadonlyArray<A>> {
@@ -11,6 +12,7 @@ export function runCollect<R, E, A>(fx: Fx<R, E, A>): Effect.Effect<R, E, Readon
       pipe(
         fx,
         runObserve((a) => Effect.sync(() => values.push(a))),
+        onEarlyExitFailure(Effect.unit),
         Effect.map(() => values),
       ),
     ),

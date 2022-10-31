@@ -3,6 +3,7 @@ import * as Effect from '@effect/core/io/Effect'
 import { pipe } from '@fp-ts/data/Function'
 
 import { Fx } from './Fx.js'
+import { onEarlyExitFailure } from './_internal.js'
 
 export function runDrain<R, E, A>(fx: Fx<R, E, A>): Effect.Effect<R, E, void> {
   return pipe(
@@ -16,6 +17,7 @@ export function runDrain<R, E, A>(fx: Fx<R, E, A>): Effect.Effect<R, E, void> {
         }),
         Effect.forkScoped,
         Effect.zipRight(deferred.await),
+        onEarlyExitFailure(Effect.sync(() => deferred.succeed(undefined))),
       ),
     ),
     Effect.scoped,

@@ -20,6 +20,10 @@ export interface MulticastObserver<E, A> {
 }
 
 export class Multicast<R, E, A> implements Fx<R, E, A>, Emitter<never, E, A> {
+  readonly _R!: () => R
+  readonly _E!: () => E
+  readonly _A!: () => A
+
   protected observers: MulticastObserver<E, A>[] = []
   protected fiber: Fiber.Fiber<never, unknown> | undefined
 
