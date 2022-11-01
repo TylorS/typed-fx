@@ -176,6 +176,26 @@
         "types": "./esm/during.d.ts"
       }
     },
+    "./exhaustMap": {
+      "require": {
+        "default": "./cjs/exhaustMap.js",
+        "types": "./cjs/exhaustMap.d.ts"
+      },
+      "import": {
+        "default": "./esm/exhaustMap.js",
+        "types": "./esm/exhaustMap.d.ts"
+      }
+    },
+    "./exhaustMapLatest": {
+      "require": {
+        "default": "./cjs/exhaustMapLatest.js",
+        "types": "./cjs/exhaustMapLatest.d.ts"
+      },
+      "import": {
+        "default": "./esm/exhaustMapLatest.js",
+        "types": "./esm/exhaustMapLatest.d.ts"
+      }
+    },
     "./filterLoop": {
       "require": {
         "default": "./cjs/filterLoop.js",
