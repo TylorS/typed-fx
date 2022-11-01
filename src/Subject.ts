@@ -1,8 +1,8 @@
 import * as Effect from '@effect/core/io/Effect'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
-import { Cause } from 'node_modules/@effect/core/io/Cause.js'
-import { pipe } from 'node_modules/@fp-ts/data/Function.js'
-import { LazyArg } from 'node_modules/@tsplus/stdlib/data/Function.js'
+import { Cause } from '@effect/core/io/Cause'
+import { pipe } from '@fp-ts/data/Function'
+import { LazyArg } from '@tsplus/stdlib/data/Function'
 
 import { Fx } from './Fx.js'
 import { never } from './fromEffect.js'
