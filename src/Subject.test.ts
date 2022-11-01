@@ -63,5 +63,33 @@ describe(import.meta.url, () => {
 
       await Effect.unsafeRunPromise(test)
     })
+
+    it('emits values when ref is updated', async () => {
+      const test = Effect.gen(function* ($) {
+        const subject = Fx.BehaviorSubject.unsafeMake<never, number>(() => 1)
+        const fiber = yield* $(
+          pipe(
+            subject,
+            Fx.map((n) => n * 2),
+            Fx.filter((x) => x % 2 === 0),
+            Fx.runCollect,
+            Effect.fork,
+          ),
+        )
+
+        deepStrictEqual(yield* $(subject.get), 1)
+
+        yield* $(subject.update((x) => x + 1))
+        yield* $(subject.update((x) => x + 1))
+        yield* $(subject.update((x) => x + 1))
+        yield* $(subject.end)
+
+        const events = yield* $(Fiber.join(fiber))
+
+        deepStrictEqual(events, [4, 6, 8])
+      })
+
+      await Effect.unsafeRunPromise(test)
+    })
   })
 })

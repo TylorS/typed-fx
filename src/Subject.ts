@@ -2,6 +2,8 @@ import { Cause } from '@effect/core/io/Cause'
 import * as Effect from '@effect/core/io/Effect'
 import * as Ref from '@effect/core/io/Ref'
 import { AtomicInternal, UnsafeAPI } from '@effect/core/io/Ref/operations/_internal/AtomicInternal'
+import { SynchronizedInternal } from '@effect/core/io/Ref/operations/_internal/SynchronizedInternal'
+import * as TSemaphore from '@effect/core/stm/TSemaphore'
 import { flow } from '@fp-ts/data/Function'
 import { LazyArg, pipe } from '@tsplus/stdlib/data/Function'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
@@ -42,19 +44,20 @@ export namespace Subject {
   }
 }
 
-export interface HoldSubject<E, A> extends Subject<E, A>, Ref.Ref<Maybe.Maybe<A>> {}
+export interface HoldSubject<E, A> extends Subject<E, A> {
+  readonly get: Effect.Effect<never, never, Maybe.Maybe<A>>
+}
 
 export namespace HoldSubject {
   export const unsafeMake = <E, A>(): HoldSubject<E, A> => {
     const h = new Hold<never, E, A>(never)
-    const ref: Ref.Ref<Maybe.Maybe<A>> = new AtomicInternal(new UnsafeAPI(h.value))
 
     return {
       ...FX_BRANDING,
-      ...ref,
-      run: h.run.bind(h),
-      emit: h.emit.bind(h),
-      failCause: h.failCause.bind(h),
+      get: Effect.sync(() => h.value.get),
+      run: (e) => h.run(e),
+      emit: (a) => h.emit(a),
+      failCause: (e) => h.failCause(e),
       end: h.end,
       unsafeEmit: (a) => Effect.unsafeRunAsync(h.emit(a)),
       unsafeFailCause: (c) => Effect.unsafeRunAsync(h.failCause(c)),
@@ -69,14 +72,26 @@ export namespace BehaviorSubject {
   export const unsafeMake = <E, A>(initial: LazyArg<A>): BehaviorSubject<E, A> => {
     const h = new Hold<never, E, A>(never)
     const maybeRef: Ref.Ref<Maybe.Maybe<A>> = new AtomicInternal(new UnsafeAPI(h.value))
-    const ref = invmapRef(maybeRef, Maybe.getOrElse(initial), Maybe.some)
+    const ref = emitRefChanges(invmapRef(maybeRef, Maybe.getOrElse(initial), Maybe.some), h)
 
     // Ensure there is always a value in the Ref
     h.value.set(Maybe.some(initial()))
 
     return {
       ...FX_BRANDING,
-      ...ref,
+      [Ref.RefSym]: Ref.RefSym,
+      [Ref._A]: (_) => _,
+      get: ref.get,
+      modify: (f) => ref.modify(f),
+      set: (a) => ref.set(a),
+      getAndSet: (a) => ref.getAndSet(a),
+      getAndUpdate: (f) => ref.getAndUpdate(f),
+      getAndUpdateSome: (f) => ref.getAndUpdateSome(f),
+      modifySome: (fallback, f) => ref.modifySome(fallback, f),
+      update: (f) => ref.update(f),
+      updateAndGet: (f) => ref.updateAndGet(f),
+      updateSome: (f) => ref.updateSome(f),
+      updateSomeAndGet: (f) => ref.updateSomeAndGet(f),
       run: h.run.bind(h),
       emit: h.emit.bind(h),
       failCause: h.failCause.bind(h),
@@ -84,6 +99,28 @@ export namespace BehaviorSubject {
       unsafeEmit: (a) => Effect.unsafeRunAsync(h.emit(a)),
       unsafeFailCause: (c) => Effect.unsafeRunAsync(h.failCause(c)),
       unsafeEnd: () => Effect.unsafeRunAsync(h.end),
+    }
+  }
+}
+
+export interface SynchronizedSubject<E, A> extends BehaviorSubject<E, A>, Ref.Ref.Synchronized<A> {}
+
+export namespace SynchronizedSubject {
+  export const unsafeMake = <E, A>(initial: LazyArg<A>): SynchronizedSubject<E, A> => {
+    const subject = BehaviorSubject.unsafeMake<E, A>(initial)
+    const synchronizedRef = new SynchronizedInternal(subject, TSemaphore.unsafeMake(1))
+
+    return {
+      ...subject,
+      [Ref.SynchronizedSym]: Ref.SynchronizedSym,
+      modifyEffect: (f) => synchronizedRef.modifyEffect(f),
+      modifySomeEffect: (fallback, f) => synchronizedRef.modifySomeEffect(fallback, f),
+      getAndUpdateEffect: (f) => synchronizedRef.getAndUpdateEffect(f),
+      getAndUpdateSomeEffect: (f) => synchronizedRef.getAndUpdateSomeEffect(f),
+      updateEffect: (f) => synchronizedRef.updateEffect(f),
+      updateAndGetEffect: (f) => synchronizedRef.updateAndGetEffect(f),
+      updateSomeEffect: (f) => synchronizedRef.updateSomeEffect(f),
+      updateSomeAndGetEffect: (f) => synchronizedRef.updateSomeAndGetEffect(f),
     }
   }
 }
@@ -141,5 +178,25 @@ function invmapRef<A, B>(ref: Ref.Ref<A>, to: (a: A) => B, from: (b: B) => A): R
     updateAndGet,
     updateSome,
     updateSomeAndGet,
+  }
+}
+
+function emitRefChanges<A, E>(ref: Ref.Ref<A>, subject: Emitter<never, E, A>): Ref.Ref<A> {
+  const andEmitLatestValue = Effect.zipLeft(pipe(ref.get, Effect.flatMap(subject.emit)))
+
+  return {
+    [Ref.RefSym]: Ref.RefSym,
+    [Ref._A]: (_) => _,
+    get: ref.get,
+    modify: (f) => pipe(ref.modify(f), andEmitLatestValue),
+    set: (a) => pipe(ref.set(a), andEmitLatestValue),
+    getAndSet: (a) => pipe(ref.getAndSet(a), andEmitLatestValue),
+    getAndUpdate: (f) => pipe(ref.getAndUpdate(f), andEmitLatestValue),
+    getAndUpdateSome: (f) => pipe(ref.getAndUpdateSome(f), andEmitLatestValue),
+    modifySome: (fallback, f) => pipe(ref.modifySome(fallback, f), andEmitLatestValue),
+    update: (f) => pipe(ref.update(f), andEmitLatestValue),
+    updateAndGet: (f) => pipe(ref.updateAndGet(f), andEmitLatestValue),
+    updateSome: (f) => pipe(ref.updateSome(f), andEmitLatestValue),
+    updateSomeAndGet: (f) => pipe(ref.updateSomeAndGet(f), andEmitLatestValue),
   }
 }
