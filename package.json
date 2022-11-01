@@ -416,6 +416,16 @@
         "types": "./esm/snapshot.d.ts"
       }
     },
+    "./struct": {
+      "require": {
+        "default": "./cjs/struct.js",
+        "types": "./cjs/struct.d.ts"
+      },
+      "import": {
+        "default": "./esm/struct.js",
+        "types": "./esm/struct.d.ts"
+      }
+    },
     "./suspendSucceed": {
       "require": {
         "default": "./cjs/suspendSucceed.js",
