@@ -66,10 +66,10 @@ export namespace HoldSubject {
   }
 }
 
-export interface BehaviorSubject<E, A> extends Subject<E, A>, Ref.Ref<A> {}
+export interface RefSubject<E, A> extends Subject<E, A>, Ref.Ref<A> {}
 
-export namespace BehaviorSubject {
-  export const unsafeMake = <E, A>(initial: LazyArg<A>): BehaviorSubject<E, A> => {
+export namespace RefSubject {
+  export const unsafeMake = <E, A>(initial: LazyArg<A>): RefSubject<E, A> => {
     const h = new Hold<never, E, A>(never)
     const maybeRef: Ref.Ref<Maybe.Maybe<A>> = new AtomicInternal(new UnsafeAPI(h.value))
     const ref = emitRefChanges(invmapRef(maybeRef, Maybe.getOrElse(initial), Maybe.some), h)
@@ -103,11 +103,11 @@ export namespace BehaviorSubject {
   }
 }
 
-export interface SynchronizedSubject<E, A> extends BehaviorSubject<E, A>, Ref.Ref.Synchronized<A> {}
+export interface SynchronizedSubject<E, A> extends RefSubject<E, A>, Ref.Ref.Synchronized<A> {}
 
 export namespace SynchronizedSubject {
   export const unsafeMake = <E, A>(initial: LazyArg<A>): SynchronizedSubject<E, A> => {
-    const subject = BehaviorSubject.unsafeMake<E, A>(initial)
+    const subject = RefSubject.unsafeMake<E, A>(initial)
     const synchronizedRef = new SynchronizedInternal(subject, TSemaphore.unsafeMake(1))
 
     return {
