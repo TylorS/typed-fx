@@ -13,6 +13,26 @@ import { never } from './fromEffect.js'
 import { Hold } from './hold.js'
 import { Multicast } from './multicast.js'
 
+export function makeSubject<E, A>(): Effect.Effect<never, never, Subject<E, A>> {
+  return Effect.sync(() => Subject.unsafeMake<E, A>())
+}
+
+export function makeHoldSubject<E, A>(): Effect.Effect<never, never, HoldSubject<E, A>> {
+  return Effect.sync(() => HoldSubject.unsafeMake<E, A>())
+}
+
+export function makeRefSubject<A, E = never>(
+  initial: LazyArg<A>,
+): Effect.Effect<never, never, RefSubject<E, A>> {
+  return Effect.sync(() => RefSubject.unsafeMake<A, E>(initial))
+}
+
+export function makeSynchronizedSubject<A, E = never>(
+  initial: LazyArg<A>,
+): Effect.Effect<never, never, SynchronizedSubject<E, A>> {
+  return Effect.sync(() => SynchronizedSubject.unsafeMake<A, E>(initial))
+}
+
 export interface Subject<E, A> extends Fx<never, E, A>, Emitter<never, E, A>, UnsafeEmitter<E, A> {}
 
 export interface UnsafeEmitter<E, A> {
@@ -69,7 +89,7 @@ export namespace HoldSubject {
 export interface RefSubject<E, A> extends Subject<E, A>, Ref.Ref<A> {}
 
 export namespace RefSubject {
-  export const unsafeMake = <E, A>(initial: LazyArg<A>): RefSubject<E, A> => {
+  export const unsafeMake = <A, E = never>(initial: LazyArg<A>): RefSubject<E, A> => {
     const h = new Hold<never, E, A>(never)
     const maybeRef: Ref.Ref<Maybe.Maybe<A>> = new AtomicInternal(new UnsafeAPI(h.value))
     const ref = emitRefChanges(invmapRef(maybeRef, Maybe.getOrElse(initial), Maybe.some), h)
@@ -106,8 +126,8 @@ export namespace RefSubject {
 export interface SynchronizedSubject<E, A> extends RefSubject<E, A>, Ref.Ref.Synchronized<A> {}
 
 export namespace SynchronizedSubject {
-  export const unsafeMake = <E, A>(initial: LazyArg<A>): SynchronizedSubject<E, A> => {
-    const subject = RefSubject.unsafeMake<E, A>(initial)
+  export const unsafeMake = <A, E = never>(initial: LazyArg<A>): SynchronizedSubject<E, A> => {
+    const subject = RefSubject.unsafeMake<A, E>(initial)
     const synchronizedRef = new SynchronizedInternal(subject, TSemaphore.unsafeMake(1))
 
     return {

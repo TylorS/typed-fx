@@ -29,7 +29,7 @@ describe(import.meta.url, () => {
   describe('RefSubject', () => {
     it('creates a Ref to sample the current value of the stream', async () => {
       const test = Effect.gen(function* ($) {
-        const subject = Fx.RefSubject.unsafeMake<never, number>(() => 1)
+        const subject = Fx.RefSubject.unsafeMake(() => 1)
         const fiber = yield* $(
           pipe(
             subject,
@@ -66,7 +66,7 @@ describe(import.meta.url, () => {
 
     it('emits values when ref is updated', async () => {
       const test = Effect.gen(function* ($) {
-        const subject = Fx.RefSubject.unsafeMake<never, number>(() => 1)
+        const subject = Fx.RefSubject.unsafeMake(() => 1)
         const fiber = yield* $(
           pipe(
             subject,
