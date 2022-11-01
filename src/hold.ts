@@ -4,6 +4,7 @@ import * as Fiber from '@effect/core/io/Fiber'
 import * as FiberId from '@effect/core/io/FiberId'
 import { Scope } from '@effect/core/io/Scope'
 import { pipe } from '@fp-ts/data/Function'
+import { AtomicReference } from '@tsplus/stdlib/data/AtomicReference'
 import * as Duration from '@tsplus/stdlib/data/Duration'
 import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
@@ -15,15 +16,13 @@ export function hold<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
 }
 
 export class Hold<R, E, A> extends Multicast<R, E, A> {
-  protected _value: Maybe.Maybe<A> = Maybe.none
+  readonly value: AtomicReference<Maybe.Maybe<A>> = new AtomicReference(Maybe.none)
   protected _pendingEmitters: Array<readonly [Emitter<unknown, E, A>, A[]]> = []
   protected _scheduledFiber: Fiber.RealFiber<any, any> | undefined
 
   constructor(readonly fx: Fx<R, E, A>) {
     super(fx)
   }
-
-  readonly get = Effect.sync(() => this._value)
 
   run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope, never, unknown> {
     if (this.shouldScheduleFlush()) {
@@ -66,14 +65,14 @@ export class Hold<R, E, A> extends Multicast<R, E, A> {
   }
 
   protected shouldScheduleFlush() {
-    return Maybe.isSome(this._value) && this.observers.length > 0
+    return Maybe.isSome(this.value.get) && this.observers.length > 0
   }
 
   protected scheduleFlush<R>(observer: Emitter<R, E, A>) {
     this._pendingEmitters.push([
       observer,
       pipe(
-        this._value,
+        this.value.get,
         Maybe.fold(
           () => [],
           (a) => [a],
@@ -121,7 +120,7 @@ export class Hold<R, E, A> extends Multicast<R, E, A> {
   }
 
   protected addValue(value: A) {
-    this._value = Maybe.some(value)
+    this.value.set(Maybe.some(value))
 
     this._pendingEmitters.forEach(([, values]) => {
       values.push(value)

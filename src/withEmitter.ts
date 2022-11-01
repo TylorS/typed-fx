@@ -5,10 +5,10 @@ import { Scope } from '@effect/core/io/Scope'
 import { flow, pipe } from '@fp-ts/data/Function'
 
 import { Emitter, Fx } from './Fx.js'
-import type { SubjectEmitter } from './Subject.js'
+import type { UnsafeEmitter } from './Subject.js'
 
 export function withEmitter<R, E, A>(
-  f: (emitter: SubjectEmitter<E, A>) => Effect.Canceler<R>,
+  f: (emitter: UnsafeEmitter<E, A>) => Effect.Canceler<R>,
 ): Fx<R, E, A> {
   return Fx<R, E, A>(<R2>(sink: Emitter<R2, E, A>) => {
     return Effect.withFiberRuntime<R | R2 | Scope, never, unknown>((fiber, status) => {
@@ -28,12 +28,12 @@ export function withEmitter<R, E, A>(
         Effect.zipRight(
           Effect.asyncEffect<R | R2, never, unknown, R | R2, never, any>((cb) => {
             canceler = f({
-              emit: (a) =>
+              unsafeEmit: (a) =>
                 unsafeRun(sink.emit(a), (exit) =>
                   Exit.isFailure(exit) ? cb(Effect.failCause(exit.cause)) : undefined,
                 ),
-              failCause: (e) => unsafeRun(sink.failCause(e), flow(Effect.done, cb)),
-              end: () => unsafeRun(sink.end, flow(Effect.done, cb)),
+              unsafeFailCause: (e) => unsafeRun(sink.failCause(e), flow(Effect.done, cb)),
+              unsafeEnd: () => unsafeRun(sink.end, flow(Effect.done, cb)),
             })
 
             return canceler

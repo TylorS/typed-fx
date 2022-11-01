@@ -10,10 +10,10 @@ describe(import.meta.url, () => {
     it('should allow converting sync callbacks into an Fx', async () => {
       const test = pipe(
         Fx.withEmitter((emitter) => {
-          emitter.emit(1)
-          emitter.emit(2)
-          emitter.emit(3)
-          emitter.end()
+          emitter.unsafeEmit(1)
+          emitter.unsafeEmit(2)
+          emitter.unsafeEmit(3)
+          emitter.unsafeEnd()
 
           return Effect.unit
         }),
