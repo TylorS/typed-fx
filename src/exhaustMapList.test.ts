@@ -10,9 +10,22 @@ import { millis } from '@tsplus/stdlib/data/Duration'
 import * as Fx from './index.js'
 
 describe(import.meta.url, () => {
-  describe(Fx.until.name, () => {
-    it('runs a stream until a signal is emitted to stop', async () => {
-      const fx = pipe(Fx.periodic(millis(20)), Fx.until(Fx.at(millis(200))(null)))
+  describe(Fx.exhaustMapList.name, () => {
+    it('memoizes the input value its first stream', async () => {
+      let started = 0
+      const fx = pipe(
+        Fx.succeed([1, 2, 3]),
+        Fx.merge(pipe(Fx.succeed([3, 2, 1]), Fx.delay(millis(30)))),
+        Fx.exhaustMapList((a) => {
+          started++
+
+          return pipe(
+            Fx.periodic(millis(10)),
+            Fx.scan(a, (x) => x + a),
+            Fx.take(a * a),
+          )
+        }),
+      )
 
       const test = pipe(
         Effect.gen(function* ($) {
@@ -29,7 +42,23 @@ describe(import.meta.url, () => {
 
       const events = await Effect.unsafeRunPromise(test)
 
-      deepStrictEqual(events.length, 10)
+      deepStrictEqual(events, [
+        [1, 2, 3],
+        [1, 2, 6],
+        [1, 4, 6],
+        [1, 6, 6],
+        [1, 6, 9],
+        [1, 6, 12],
+        [1, 8, 12],
+        [12, 8, 1],
+        [15, 8, 1],
+        [18, 8, 1],
+        [21, 8, 1],
+        [24, 8, 1],
+        [27, 8, 1],
+      ])
+
+      deepStrictEqual(started, 3)
     })
   })
 })
