@@ -128,6 +128,7 @@ export function exhaustMapList<A, R2, E2, B, A1 = A>(
                             ),
                           ),
                           Effect.forkScoped,
+                          Effect.zipRight(emitIfReady),
                         )
                       }),
                     emitter.failCause,
