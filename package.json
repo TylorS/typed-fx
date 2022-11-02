@@ -196,6 +196,16 @@
         "types": "./esm/exhaustMapLatest.d.ts"
       }
     },
+    "./exhaustMapList": {
+      "require": {
+        "default": "./cjs/exhaustMapList.js",
+        "types": "./cjs/exhaustMapList.d.ts"
+      },
+      "import": {
+        "default": "./esm/exhaustMapList.js",
+        "types": "./esm/exhaustMapList.d.ts"
+      }
+    },
     "./filterLoop": {
       "require": {
         "default": "./cjs/filterLoop.js",
