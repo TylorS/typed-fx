@@ -25,6 +25,10 @@ export function combineAll<R, E, A>(iterable: Iterable<Fx<R, E, A>>): Fx<R, E, R
     Effect.suspendSucceed(() => {
       const array = Array.from(iterable)
 
+      if (array.length === 0) {
+        return pipe(emitter.emit([]), Effect.zipRight(emitter.end))
+      }
+
       return pipe(
         Effect.sync<Maybe.Maybe<A>[]>(() => Array(array.length)),
         Effect.flatMap((ref) =>

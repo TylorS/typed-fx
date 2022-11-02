@@ -17,6 +17,10 @@ export function mergeAll<R, E, A>(iterable: Iterable<Fx<R, E, A>>): Fx<R, E, A> 
   return Fx((emitter) => {
     const array = Array.from(iterable)
 
+    if (array.length === 0) {
+      return emitter.end
+    }
+
     return withDynamicCountdownLatch(
       array.length,
       ({ latch }) =>
