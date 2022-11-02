@@ -10,7 +10,7 @@
   "scripts": {
     "build:cjs": "rm -rf cjs && tsc -p ./tsconfig.build.cjs.json",
     "build:esm": "rm -rf esm && tsc -p ./tsconfig.build.esm.json",
-    "build:package-exports": "tsx ./tools/generatePackageExports.ts",
+    "build:package-exports": "tsx ./tools/generatePackageExports.ts && git add package.json && git commit -m 'chore: generate package exports'",
     "build": "concurrently npm:build:esm npm:build:cjs && npm run build:package-exports",
     "eslint": "NODE_OPTIONS=--max-old-space-size=4096 eslint --ext .ts,.js,.json,.yaml --fix --cache src",
     "mocha": "mocha 'src/**/*.test.ts'",
