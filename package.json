@@ -376,6 +376,16 @@
         "types": "./esm/runReduce.d.ts"
       }
     },
+    "./scanEffect": {
+      "require": {
+        "default": "./cjs/scanEffect.js",
+        "types": "./cjs/scanEffect.d.ts"
+      },
+      "import": {
+        "default": "./esm/scanEffect.js",
+        "types": "./esm/scanEffect.d.ts"
+      }
+    },
     "./scheduled": {
       "require": {
         "default": "./cjs/scheduled.js",
