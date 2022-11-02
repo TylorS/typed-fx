@@ -32,6 +32,15 @@ export class Hold<R, E, A> extends Multicast<R, E, A> {
       )
     }
 
+    const current = this.value.get
+
+    if (Maybe.isSome(current) && this.observers.length === 0) {
+      return pipe(
+        emitter.emit(current.value),
+        Effect.flatMap(() => super.run(emitter)),
+      )
+    }
+
     return super.run(emitter)
   }
 

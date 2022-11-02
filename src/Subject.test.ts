@@ -58,7 +58,7 @@ describe(import.meta.url, () => {
 
         const events = yield* $(Fiber.join(fiber))
 
-        deepStrictEqual(events, [2, 4, 6])
+        deepStrictEqual(events, [2, 2, 4, 6])
       })
 
       await Effect.unsafeRunPromise(test)
@@ -86,7 +86,7 @@ describe(import.meta.url, () => {
 
         const events = yield* $(Fiber.join(fiber))
 
-        deepStrictEqual(events, [4, 6, 8])
+        deepStrictEqual(events, [2, 4, 6, 8])
       })
 
       await Effect.unsafeRunPromise(test)
