@@ -256,6 +256,16 @@
         "types": "./esm/fromEffect.d.ts"
       }
     },
+    "./fromFxEffect": {
+      "require": {
+        "default": "./cjs/fromFxEffect.js",
+        "types": "./cjs/fromFxEffect.d.ts"
+      },
+      "import": {
+        "default": "./esm/fromFxEffect.js",
+        "types": "./esm/fromFxEffect.d.ts"
+      }
+    },
     "./fromIterable": {
       "require": {
         "default": "./cjs/fromIterable.js",
@@ -314,6 +324,16 @@
       "import": {
         "default": "./esm/multicast.js",
         "types": "./esm/multicast.d.ts"
+      }
+    },
+    "./on": {
+      "require": {
+        "default": "./cjs/on.js",
+        "types": "./cjs/on.d.ts"
+      },
+      "import": {
+        "default": "./esm/on.js",
+        "types": "./esm/on.d.ts"
       }
     },
     "./orElse": {
