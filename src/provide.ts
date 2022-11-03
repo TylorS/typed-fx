@@ -50,7 +50,7 @@ export function provideService<S>(
 }
 
 export function provideServiceEffect<S, R2, E2>(tag: Tag<S>, service: Effect.Effect<R2, E2, S>) {
-  return <R, E, A>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, A> =>
+  return <R, E, A>(fx: Fx<R | S, E, A>): Fx<R2 | Exclude<R, S>, E | E2, A> =>
     Fx((emitter) =>
       pipe(
         fx.run(emitter),
