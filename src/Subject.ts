@@ -209,8 +209,16 @@ function emitRefChanges<A, E>(ref: Ref.Ref<A>, subject: Emitter<never, E, A>): R
     [Ref._A]: (_) => _,
     get: ref.get,
     modify: (f) => pipe(ref.modify(f), andEmitLatestValue),
-    set: (a) => pipe(ref.set(a), andEmitLatestValue),
-    getAndSet: (a) => pipe(ref.getAndSet(a), andEmitLatestValue),
+    set: (a) =>
+      pipe(
+        ref.update(() => a),
+        Effect.zipLeft(subject.emit(a)),
+      ),
+    getAndSet: (a) =>
+      pipe(
+        ref.getAndUpdate(() => a),
+        Effect.zipLeft(subject.emit(a)),
+      ),
     getAndUpdate: (f) => pipe(ref.getAndUpdate(f), andEmitLatestValue),
     getAndUpdateSome: (f) => pipe(ref.getAndUpdateSome(f), andEmitLatestValue),
     modifySome: (fallback, f) => pipe(ref.modifySome(fallback, f), andEmitLatestValue),
