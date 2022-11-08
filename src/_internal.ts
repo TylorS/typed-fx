@@ -7,7 +7,6 @@ import * as Deferred from '@effect/core/io/Deferred'
 import * as Effect from '@effect/core/io/Effect'
 import * as Ref from '@effect/core/io/Ref'
 import { pipe } from '@fp-ts/data/Function'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
 
 export const EARLY_EXIT_FAILURE = Symbol('EarlyExitFailure')
 export interface EarlyExitFailure {
@@ -26,18 +25,17 @@ export const onEarlyExitFailure =
   <R, E, A>(effect: Effect.Effect<R, E, A>): Effect.Effect<R | R2, E | E2, A | B> =>
     pipe(
       effect,
-      Effect.foldCauseEffect<E, A, R | R2, E | E2, A | B, R | R2, E | E2, A | B>(
-        (e) =>
-          pipe(
-            e,
-            Cause.dieMaybe,
-            Maybe.fold(
-              () => Effect.failCause(e),
-              (d) => (isEarlyExitFailure(d) ? handler : Effect.failCause(e)),
-            ),
-          ),
-        Effect.succeed,
-      ),
+      Effect.foldCauseEffect<E, A, R | R2, E | E2, A | B, R | R2, E | E2, A | B>((e) => {
+        const defects = Cause.defects(e)
+
+        for (const defect of defects) {
+          if (isEarlyExitFailure(defect)) {
+            return handler
+          }
+        }
+
+        return Effect.failCause(e)
+      }, Effect.succeed),
     )
 
 /**
