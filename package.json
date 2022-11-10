@@ -246,6 +246,16 @@
         "types": "./esm/flatMapConcurrently.d.ts"
       }
     },
+    "./fromDequeue": {
+      "require": {
+        "default": "./cjs/fromDequeue.js",
+        "types": "./cjs/fromDequeue.d.ts"
+      },
+      "import": {
+        "default": "./esm/fromDequeue.js",
+        "types": "./esm/fromDequeue.d.ts"
+      }
+    },
     "./fromEffect": {
       "require": {
         "default": "./cjs/fromEffect.js",
@@ -264,6 +274,16 @@
       "import": {
         "default": "./esm/fromFxEffect.js",
         "types": "./esm/fromFxEffect.d.ts"
+      }
+    },
+    "./fromHub": {
+      "require": {
+        "default": "./cjs/fromHub.js",
+        "types": "./cjs/fromHub.d.ts"
+      },
+      "import": {
+        "default": "./esm/fromHub.js",
+        "types": "./esm/fromHub.d.ts"
       }
     },
     "./fromIterable": {
@@ -534,6 +554,26 @@
       "import": {
         "default": "./esm/throttle.js",
         "types": "./esm/throttle.d.ts"
+      }
+    },
+    "./toEnqueue": {
+      "require": {
+        "default": "./cjs/toEnqueue.js",
+        "types": "./cjs/toEnqueue.d.ts"
+      },
+      "import": {
+        "default": "./esm/toEnqueue.js",
+        "types": "./esm/toEnqueue.d.ts"
+      }
+    },
+    "./toStream": {
+      "require": {
+        "default": "./cjs/toStream.js",
+        "types": "./cjs/toStream.d.ts"
+      },
+      "import": {
+        "default": "./esm/toStream.js",
+        "types": "./esm/toStream.d.ts"
       }
     },
     "./transform": {
