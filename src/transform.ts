@@ -29,7 +29,9 @@ export const withFinalizerExit = <R2, X>(
 export const withRuntimeFlags = (updated: RuntimeFlagsPatch) =>
   transform(Effect.withRuntimeFlags(updated))
 
-export const scoped = transform(Effect.scoped)
+export const scoped = transform(Effect.scoped) as <R, E, A>(
+  fx: Fx<R, E, A>,
+) => Fx<Exclude<R, Scope>, E, A>
 
 export const withClock = (clock: Clock) => transform(Effect.withClock(clock))
 
