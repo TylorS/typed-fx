@@ -3,6 +3,7 @@ import * as Exit from '@effect/core/io/Exit'
 import { unsafeForkUnstarted } from '@effect/core/io/Fiber/_internal/runtime'
 import { Scope } from '@effect/core/io/Scope'
 import { flow, pipe } from '@fp-ts/data/Function'
+import { left } from '@tsplus/stdlib/data/Either'
 
 import { Emitter, Fx } from './Fx.js'
 import type { UnsafeEmitter } from './Subject.js'
@@ -26,7 +27,7 @@ export function withEmitter<R, E, A>(
       return pipe(
         Effect.addFinalizer(Effect.suspendSucceed(() => canceler)),
         Effect.zipRight(
-          Effect.asyncEffect<R | R2, never, unknown, R | R2, never, any>((cb) => {
+          Effect.asyncInterrupt<R | R2, never, unknown>((cb) => {
             canceler = f({
               unsafeEmit: (a) =>
                 unsafeRun(sink.emit(a), (exit) =>
@@ -36,7 +37,7 @@ export function withEmitter<R, E, A>(
               unsafeEnd: () => unsafeRun(sink.end, flow(Effect.done, cb)),
             })
 
-            return canceler
+            return left(canceler)
           }),
         ),
       )
