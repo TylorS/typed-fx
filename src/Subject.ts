@@ -94,12 +94,6 @@ export namespace RefSubject {
     const maybeRef: Ref.Ref<Maybe.Maybe<A>> = new AtomicInternal(new UnsafeAPI(h.value))
     const ref = emitRefChanges(invmapRef(maybeRef, Maybe.getOrElse(initial), Maybe.some), h)
 
-    const emit = (a: A) =>
-      pipe(
-        ref.set(a),
-        Effect.flatMap(() => h.emit(a)),
-      )
-
     // Ensure there is always a value in the Ref
     h.value.set(Maybe.some(initial()))
 
@@ -119,10 +113,10 @@ export namespace RefSubject {
       updateSome: (f) => ref.updateSome(f),
       updateSomeAndGet: (f) => ref.updateSomeAndGet(f),
       run: h.run.bind(h),
-      emit,
+      emit: ref.set,
       failCause: h.failCause.bind(h),
       end: h.end,
-      unsafeEmit: (a) => Effect.unsafeRunAsync(emit(a)),
+      unsafeEmit: (a) => Effect.unsafeRunAsync(ref.set(a)),
       unsafeFailCause: (c) => Effect.unsafeRunAsync(h.failCause(c)),
       unsafeEnd: () => Effect.unsafeRunAsync(h.end),
     }
