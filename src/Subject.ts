@@ -96,8 +96,8 @@ export namespace RefSubject {
 
     const emit = (a: A) =>
       pipe(
-        h.emit(a),
-        Effect.tap(() => ref.set(a)),
+        ref.set(a),
+        Effect.flatMap(() => h.emit(a)),
       )
 
     // Ensure there is always a value in the Ref
