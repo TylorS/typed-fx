@@ -25,7 +25,6 @@ describe(import.meta.url, () => {
         Fx.fromIterable([1, 2, 3]),
         Fx.exhaustMap((n) => Fx.delay(Duration.millis(10))(Fx.fromIterable([n, n, n]))),
         Fx.runCollect,
-
         Effect.unsafeRunPromise,
       )
 

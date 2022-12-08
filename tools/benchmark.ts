@@ -14,20 +14,6 @@ export function PerformanceTestCase<A>(
   return { name, init, run }
 }
 
-export interface InitResult {
-  readonly startTime: number
-  readonly endTime: number
-}
-
-export interface TestResult {
-  readonly startTime: number
-  readonly endTime: number
-}
-
-export function TestResult(startTime: number, endTime: number): TestResult {
-  return { startTime, endTime }
-}
-
 export interface TestStats {
   readonly average: number
   readonly min: number
@@ -82,24 +68,38 @@ export function runTestCaseWith(config: RunTestConfig) {
     const initStartTime = getTime()
     const init = test.init()
     const initEndTime = getTime()
-    const results: TestResult[] = []
+
+    let total = 0
+    let min = Infinity
+    let max = 0
+
+    console.log(`Running ${test.name}...`)
 
     for (let i = 0; i < iterations; i++) {
+      console.log(`Running ${test.name} (${i + 1} of ${iterations})`)
       const startTime = getTime()
       await test.run(init)
       const endTime = getTime()
-      results.push(TestResult(startTime, endTime))
+      const elapsed = endTime - startTime
+
+      total += elapsed
+
+      if (elapsed < min) {
+        min = elapsed
+      } else if (elapsed > max) {
+        max = elapsed
+      }
     }
 
-    return buildStats({
-      [test.name]: [
-        {
-          startTime: initStartTime,
-          endTime: initEndTime,
-        },
-        results,
-      ] as const,
-    })
+    return {
+      [test.name]: TestStats(
+        roundNumber(total / iterations),
+        roundNumber(min),
+        roundNumber(max),
+        roundNumber(initEndTime - initStartTime),
+        -1,
+      ),
+    }
   }
 }
 
@@ -110,34 +110,14 @@ export async function runTestSuite(
   let results: Record<string, TestStats> = {}
   const runTestCase = runTestCaseWith(config)
 
+  console.log(`\n\nRunning ${suite.name}...`)
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+
   for (const test of suite.tests) {
     results = { ...results, ...(await runTestCase(test)) }
   }
 
   return TestSuiteResult(suite.name, addPercentile(results))
-}
-
-function buildStats(
-  results: Record<string, readonly [InitResult, readonly TestResult[]]>,
-): Readonly<Record<string, TestStats>> {
-  const stats: Record<string, TestStats> = {}
-
-  for (const [name, [initResult, testResults]] of Object.entries(results)) {
-    const durations = testResults.map((r) => r.endTime - r.startTime)
-    const average = durations.reduce((a, b) => a + b, 0) / durations.length
-    const min = Math.min(...durations)
-    const max = Math.max(...durations)
-
-    stats[name] = TestStats(
-      roundNumber(average),
-      roundNumber(min),
-      roundNumber(max),
-      roundNumber(initResult.endTime - initResult.startTime),
-      -1, // Needs to be calculated later
-    )
-  }
-
-  return stats
 }
 
 function roundNumber(n: number): number {

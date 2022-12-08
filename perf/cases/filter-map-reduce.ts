@@ -1,7 +1,9 @@
 import { performance } from 'node:perf_hooks'
 
-import { pipe } from '@fp-ts/data/Function'
+import * as Stream from '@effect/core/stream/Stream'
 import * as MC from '@most/core'
+import * as Chunk from '@tsplus/stdlib/collections/Chunk'
+import { pipe } from '@tsplus/stdlib/data/Function'
 import * as rxjs from 'rxjs'
 
 import * as Fx from '../../src/index'
@@ -11,7 +13,7 @@ import {
   printTestSuiteResult,
   runTestSuite,
 } from '../../tools/benchmark.js'
-import { fxTest, mostTest, rxjsTest } from '../helpers.js'
+import { effectTest, fxTest, isMain, mostTest, rxjsTest } from '../helpers.js'
 
 const array = Array.from({ length: 100_000 }, (_, i) => i)
 const filterEven = (n: number) => n % 2 === 0
@@ -28,15 +30,22 @@ const suite: TestSuite = TestSuite(`filter -> map -> reduce ${array.length} inte
   rxjsTest(() =>
     pipe(rxjs.from(array), rxjs.filter(filterEven), rxjs.map(double), rxjs.scan(sum, 0)),
   ),
+  effectTest(() =>
+    pipe(
+      Stream.fromChunk(Chunk.from(array)),
+      Stream.filter(filterEven),
+      Stream.map(double),
+      Stream.scan(0, sum),
+      Stream.runDrain,
+    ),
+  ),
 ])
 
-runTestSuite(
+export const result = await runTestSuite(
   suite,
   RunTestConfig(100, () => performance.now()),
-).then(
-  (result) => console.log(printTestSuiteResult(result)),
-  (error) => {
-    console.error(error)
-    process.exitCode = 1
-  },
 )
+
+if (isMain(import.meta)) {
+  console.log(printTestSuiteResult(result))
+}

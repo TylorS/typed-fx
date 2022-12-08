@@ -44,11 +44,11 @@ specifiers:
 
 dependencies:
   '@effect/core': 0.0.16
+  '@fp-ts/data': 0.0.22
   '@tsplus/stdlib': 0.2.8
 
 devDependencies:
   '@esbuild-kit/esm-loader': 2.5.4
-  '@fp-ts/data': 0.0.22
   '@most/core': 1.6.1
   '@most/scheduler': 1.3.0
   '@most/types': 1.1.0
@@ -163,13 +163,13 @@ packages:
 
   /@fp-ts/core/0.0.9:
     resolution: {integrity: sha512-FuXKPHTEvvgxV3LulGJXkSpAghovh7wLxux+Pm9LKefC0gtZZQ4OajTjTK5RsQtpyKIsAn26PwdG6W6zksF/UA==}
-    dev: true
+    dev: false
 
   /@fp-ts/data/0.0.22:
     resolution: {integrity: sha512-chgnnyMAT17WCfAIbD8vvnJOsPtA2Xi79oMNklexprI9YaV/2u8QeeerHCYKuEJihK6GuIJtAYSsOwjBYMfWcQ==}
     dependencies:
       '@fp-ts/core': 0.0.9
-    dev: true
+    dev: false
 
   /@humanwhocodes/config-array/0.11.7:
     resolution: {integrity: sha512-kBbPWzN8oVMLb0hOUYXhmxggL/1cJE6ydvjDIGi9EnAGUyA7cLVKQg+d/Dsm+KZwx2czGHrCmMVLiyg8s5JPKw==}

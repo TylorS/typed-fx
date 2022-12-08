@@ -20,8 +20,11 @@
     "preversion": "npm test",
     "postversion": "npm run build && npm publish --access=public",
     "prepare": "ts-patch install -s",
-    "perf:filter-map-reduce": "npm run perfTest  perf/cases/filter-map-reduce.ts",
-    "perfTest": "ESBK_DISABLE_CACHE=1 node --loader @esbuild-kit/esm-loader"
+    "perf": "npm run esm perf/runPerfTest.ts",
+    "perf:filter-map-reduce": "npm run esm perf/cases/filter-map-reduce.ts",
+    "perf:flatMap": "npm run esm  perf/cases/flatMap.ts",
+    "perf:switchMap": "npm run esm  perf/cases/switchMap.ts",
+    "esm": "ESBK_DISABLE_CACHE=1 node --max-old-space-size=4096 --loader @esbuild-kit/esm-loader"
   },
   "keywords": [
     "Fx",
@@ -35,6 +38,7 @@
   "license": "MIT",
   "dependencies": {
     "@effect/core": "^0.0.16",
+    "@fp-ts/data": "^0.0.22",
     "@tsplus/stdlib": "^0.2.8"
   },
   "peerDependencies": {
