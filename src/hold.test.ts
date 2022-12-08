@@ -2,8 +2,8 @@ import { deepStrictEqual } from 'assert'
 
 import * as Effect from '@effect/core/io/Effect'
 import * as Fiber from '@effect/core/io/Fiber'
-import { pipe } from '@fp-ts/data/Function'
 import * as Duration from '@tsplus/stdlib/data/Duration'
+import { pipe } from '@tsplus/stdlib/data/Function'
 
 import * as Fx from './index.js'
 

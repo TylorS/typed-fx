@@ -2,7 +2,7 @@ import { deepStrictEqual } from 'assert'
 
 import * as Effect from '@effect/core/io/Effect'
 import * as Scope from '@effect/core/io/Scope'
-import { pipe } from '@fp-ts/data/Function'
+import { pipe } from '@tsplus/stdlib/data/Function'
 import { Tag } from '@tsplus/stdlib/service/Tag'
 
 import * as Fx from './index.js'

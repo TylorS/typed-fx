@@ -1,7 +1,7 @@
 import { deepStrictEqual } from 'assert'
 
 import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
+import { pipe } from '@tsplus/stdlib/data/Function'
 import * as Equivalence from '@tsplus/stdlib/prelude/Equivalence'
 
 import * as Fx from './index.js'

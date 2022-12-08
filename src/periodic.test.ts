@@ -1,8 +1,8 @@
 import { deepStrictEqual } from 'assert'
 
 import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
 import { millis } from '@tsplus/stdlib/data/Duration'
+import { pipe } from '@tsplus/stdlib/data/Function'
 
 import { periodic } from './periodic.js'
 import { runCollect } from './runCollect.js'

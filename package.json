@@ -20,11 +20,8 @@
     "preversion": "npm test",
     "postversion": "npm run build && npm publish --access=public",
     "prepare": "ts-patch install -s",
-    "perf": "ESBK_DISABLE_CACHE=1 node --loader @esbuild-kit/esm-loader perf/runFullSuite.ts",
-    "perf:filter-map-reduce": "npm run perfTest filter-map-reduce",
-    "perf:flatMap": "npm run perfTest flatMap",
-    "perf:switchMap": "npm run perfTest switchMap",
-    "perfTest": "ESBK_DISABLE_CACHE=1 node --loader @esbuild-kit/esm-loader perf/runPerfTest.ts"
+    "perf:filter-map-reduce": "npm run perfTest  perf/cases/filter-map-reduce.ts",
+    "perfTest": "ESBK_DISABLE_CACHE=1 node --loader @esbuild-kit/esm-loader"
   },
   "keywords": [
     "Fx",
@@ -37,7 +34,8 @@
   "author": "Tylor Steinberger (tlsteinberger167@gmail.com)",
   "license": "MIT",
   "dependencies": {
-    "effect": "2.0.0-next.10"
+    "@effect/core": "^0.0.16",
+    "@tsplus/stdlib": "^0.2.8"
   },
   "peerDependencies": {
     "tslib": "^2.4.0",
@@ -73,6 +71,7 @@
     "prettier": "^2.8.0",
     "rxjs": "^7.6.0",
     "source-map-support": "^0.5.21",
+    "tablemark": "^3.0.0",
     "ts-patch": "^2.0.2",
     "tsconfig-paths": "^4.1.1",
     "tsconfig-replace-paths": "^0.0.11",

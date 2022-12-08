@@ -4,8 +4,8 @@ import * as Effect from '@effect/core/io/Effect'
 import * as Fiber from '@effect/core/io/Fiber'
 import * as TestClock from '@effect/core/testing/TestClock'
 import { TestEnvironment } from '@effect/core/testing/TestEnvironment'
-import { pipe } from '@fp-ts/data/Function'
 import { millis } from '@tsplus/stdlib/data/Duration'
+import { pipe } from '@tsplus/stdlib/data/Function'
 
 import * as Fx from './index.js'
 
