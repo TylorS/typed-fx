@@ -1,22 +1,15 @@
-import { Context, Effect, Layer, Scope, pipe } from 'effect'
+import { Context, Effect, Layer, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 
 export function provideSomeEnvironment<R2>(env: Context.Context<R2>) {
   return <R, E, A>(fx: Fx<R | R2, E, A>): Fx<Exclude<R, R2>, E, A> =>
-    Fx((emitter) =>
-      pipe(
-        fx.run(emitter),
-        Effect.provideSomeEnvironment(
-          (
-            e: Context.Context<Exclude<R, R2> | Emitter.ResourcesOf<typeof emitter> | Scope.Scope>,
-          ) =>
-            pipe(
-              e as Context.Context<R | Emitter.ResourcesOf<typeof emitter> | Scope.Scope>,
-              Context.merge(env),
-            ),
-        ),
-      ),
+    Fx(
+      <R3>(emitter: Emitter<R3, E, A>) =>
+        pipe(
+          fx.run(emitter),
+          Effect.provideSomeEnvironment((e) => pipe(e, Context.merge(env))),
+        ) as any,
     )
 }
 

@@ -1,30 +1,32 @@
-// import { deepStrictEqual } from 'assert'
+import { deepStrictEqual } from 'assert'
 
-// import { Duration, Effect, Fiber, pipe } from 'effect'
+import { Duration, Effect, Fiber, pipe } from 'effect'
 
-// import * as Fx from './index.js'
+import { TestEnvironment, adjust } from './_internal.test.js'
 
-// describe(import.meta.url, () => {
-//   describe(Fx.until.name, () => {
-//     it('runs a stream until a signal is emitted to stop', async () => {
-//       const fx = pipe(Fx.periodic(Duration.millis(20)), Fx.until(Fx.at(Duration.millis(200))(null)))
+import * as Fx from './index.js'
 
-//       const test = pipe(
-//         Effect.gen(function* ($) {
-//           const fiber = yield* $(pipe(fx, Fx.runCollect, Effect.fork))
+describe(import.meta.url, () => {
+  describe(Fx.until.name, () => {
+    it('runs a stream until a signal is emitted to stop', async () => {
+      const fx = pipe(Fx.periodic(Duration.millis(20)), Fx.until(Fx.at(Duration.millis(200))(null)))
 
-//           for (let i = 0; i < 20; i++) {
-//             yield* $(TestClock.adjust(Duration.millis(10)))
-//           }
+      const test = pipe(
+        Effect.gen(function* ($) {
+          const fiber = yield* $(pipe(fx, Fx.runCollect, Effect.fork))
 
-//           return yield* $(Fiber.join(fiber))
-//         }),
-//         Effect.provideLayer(TestEnvironment),
-//       )
+          for (let i = 0; i < 20; i++) {
+            yield* $(adjust(Duration.millis(10)))
+          }
 
-//       const events = await Effect.unsafeRunPromise(test)
+          return yield* $(Fiber.join(fiber))
+        }),
+        Effect.provideLayer(TestEnvironment),
+      )
 
-//       deepStrictEqual(events.length, 10)
-//     })
-//   })
-// })
+      const events = await Effect.unsafeRunPromise(test)
+
+      deepStrictEqual(events.length, 10)
+    })
+  })
+})

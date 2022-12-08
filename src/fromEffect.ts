@@ -36,10 +36,8 @@ export const dieSync: <A>(f: () => A) => Fx<never, never, never> = flow(Effect.d
 
 export const done: <E, A>(exit: Exit.Exit<E, A>) => Fx<never, E, A> = flow(Effect.done, fromEffect)
 
-export const fromEither: <E, A>(either: Either.Either<E, A>) => Fx<never, E, A> = flow(
-  Effect.fromEither,
-  fromEffect,
-)
+export const fromEither = <E, A>(either: Either.Either<E, A>): Fx<never, E, A> =>
+  fromEffect(Effect.fromEither(either))
 
 export const succeedLeft: <A>(value: A) => Fx<never, never, Either.Either<A, never>> = flow(
   Effect.succeedLeft,

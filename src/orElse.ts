@@ -10,7 +10,7 @@ export function orElseCause<E, R2, E2, B>(f: (cause: Cause.Cause<E>) => Fx<R2, E
 
 export function orElse<E, R2, E2, B>(f: (error: E) => Fx<R2, E2, B>) {
   return <R, A>(fx: Fx<R, E, A>): Fx<R | R2, E2, A | B> =>
-    orElseCause_(fx, flow(Cause.failureOrCause, Either.match(f, failCause)))
+    orElseCause_(fx, flow(Cause.failureOrCause, Either.match(f, failCause<never>)))
 }
 
 function orElseCause_<R, E, A, R2, E2, B>(

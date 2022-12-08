@@ -12,9 +12,9 @@ describe(import.meta.url, () => {
 
         const result = yield* $(
           pipe(
-            Fx.service(Scope.Tag),
+            Fx.service<Scope.Scope>(Scope.Tag),
             Fx.flatMap((s) => Fx.fromIterable([s, s])),
-            Fx.provideService(Scope.Tag, scope),
+            Fx.provideService<Scope.Scope>(Scope.Tag, scope),
             Fx.runCollect,
           ),
         )
