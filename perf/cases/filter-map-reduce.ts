@@ -13,7 +13,6 @@ import {
 } from '../../tools/benchmark.js'
 import { fxTest, mostTest, rxjsTest } from '../helpers.js'
 
-const config: RunTestConfig = RunTestConfig(100, () => performance.now())
 const array = Array.from({ length: 100_000 }, (_, i) => i)
 const filterEven = (n: number) => n % 2 === 0
 const double = (n: number) => n * 2
@@ -31,7 +30,10 @@ const suite: TestSuite = TestSuite(`filter -> map -> reduce ${array.length} inte
   ),
 ])
 
-runTestSuite(suite, config).then(
+runTestSuite(
+  suite,
+  RunTestConfig(100, () => performance.now()),
+).then(
   (result) => console.log(printTestSuiteResult(result)),
   (error) => {
     console.error(error)
