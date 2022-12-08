@@ -1,7 +1,6 @@
 import { deepStrictEqual } from 'assert'
 
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
+import { Effect, pipe } from 'effect'
 
 import * as Fx from './index.js'
 
@@ -15,7 +14,7 @@ describe(import.meta.url, () => {
           emitter.unsafeEmit(3)
           emitter.unsafeEnd()
 
-          return Effect.unit
+          return Effect.unit()
         }),
         Fx.runCollect,
       )

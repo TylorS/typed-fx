@@ -1,8 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import * as Fiber from '@effect/core/io/Fiber'
-import * as Ref from '@effect/core/io/Ref'
-import { Scope } from '@effect/core/io/Scope'
-import { pipe } from '@fp-ts/data/Function'
+import { Effect, Fiber, Ref, Scope, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { withDynamicCountdownLatch } from './_internal.js'
@@ -11,16 +7,26 @@ export function exhaustMapLatest<A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>) {
   return <R, E>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, B> =>
     Fx(<R3>(emitter: Emitter<R3, E | E2, B>) =>
       pipe(
-        Ref.makeSynchronized<Fiber.Fiber<never, unknown> | null>(() => null),
-        Effect.zip(Ref.makeRef<Fx<R2, E2, B> | null>(() => null)),
+        Ref.SynchronizedRef.make<Fiber.Fiber<never, unknown> | null>(null),
+        Effect.zip(Ref.make<Fx<R2, E2, B> | null>(null)),
         Effect.flatMap(([fiberRef, nextFxRef]) => {
           return withDynamicCountdownLatch(
             1,
-            ({ increment, latch }) => {
-              const runNextFx: Effect.Effect<R3 | R2 | Scope, never, void> = pipe(
-                nextFxRef.getAndSet(null),
+            (latch) => {
+              const runNextFx: Effect.Effect<R3 | R2 | Scope.Scope, never, void> = pipe(
+                nextFxRef,
+                Ref.getAndSet<Fx<R2, E2, B> | null>(null),
                 Effect.flatMap((fx) =>
-                  fx ? fiberRef.updateEffect(() => runFx(fx)) : latch.countDown,
+                  fx
+                    ? pipe(
+                        fiberRef,
+                        Ref.SynchronizedRef.updateEffect<
+                          Fiber.Fiber<never, unknown> | null,
+                          R2 | Scope.Scope | R3,
+                          never
+                        >(() => runFx(fx)),
+                      )
+                    : latch.decrement,
                 ),
               )
 
@@ -29,8 +35,17 @@ export function exhaustMapLatest<A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>) {
                   fx.run(
                     Emitter(
                       emitter.emit,
-                      (e) => pipe(fiberRef.set(null), Effect.zipRight(emitter.failCause(e))),
-                      pipe(fiberRef.set(null), Effect.zipRight(runNextFx)),
+                      (e) =>
+                        pipe(
+                          fiberRef,
+                          Ref.SynchronizedRef.set<Fiber.Fiber<never, unknown> | null>(null),
+                          Effect.zipRight(emitter.failCause(e)),
+                        ),
+                      pipe(
+                        fiberRef,
+                        Ref.SynchronizedRef.set<Fiber.Fiber<never, unknown> | null>(null),
+                        Effect.zipRight(runNextFx),
+                      ),
                     ),
                   ),
                 )
@@ -38,16 +53,23 @@ export function exhaustMapLatest<A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>) {
               return fx.run(
                 Emitter(
                   (a) =>
-                    fiberRef.updateEffect((fiber) =>
-                      fiber
-                        ? pipe(nextFxRef.set(f(a)), Effect.as(fiber))
-                        : pipe(
-                            increment,
-                            Effect.flatMap(() => runFx(f(a))),
-                          ),
+                    pipe(
+                      fiberRef,
+                      Ref.SynchronizedRef.updateEffect<
+                        Fiber.Fiber<never, unknown> | null,
+                        R2 | Scope.Scope | R3,
+                        never
+                      >((fiber) =>
+                        fiber
+                          ? pipe(nextFxRef, Ref.set<Fx<R2, E2, B> | null>(f(a)), Effect.as(fiber))
+                          : pipe(
+                              latch.increment,
+                              Effect.flatMap(() => runFx(f(a))),
+                            ),
+                      ),
                     ),
                   emitter.failCause,
-                  latch.countDown,
+                  latch.decrement,
                 ),
               )
             },

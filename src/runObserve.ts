@@ -1,6 +1,4 @@
-import * as Deferred from '@effect/core/io/Deferred'
-import * as Effect from '@effect/core/io/Effect'
-import { flow, pipe } from '@fp-ts/data/Function'
+import { Deferred, Effect, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { onEarlyExitFailure } from './_internal.js'
@@ -13,21 +11,23 @@ export function runObserve<A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>) 
         Effect.forkScoped(
           fx.run(
             Emitter(
-              flow(
-                f,
-                Effect.foldCauseEffect(
-                  (c) => deferred.failCauseSync(c),
-                  () => Effect.unit,
+              (a: A) =>
+                pipe(
+                  a,
+                  f,
+                  Effect.foldCauseEffect(
+                    (c) => Deferred.failCause<E | E2>(c)(deferred),
+                    Effect.unit,
+                  ),
                 ),
-              ),
-              (c) => deferred.failCauseSync(c),
-              deferred.succeed(undefined),
+              (c) => Deferred.failCause<E | E2>(c)(deferred),
+              Deferred.succeed<void>(undefined)(deferred),
             ),
           ),
         ),
       ),
-      Effect.flatMap((deferred) => deferred.await),
-      onEarlyExitFailure(Effect.unit),
+      Effect.flatMap((deferred) => Deferred.await(deferred)),
+      onEarlyExitFailure(Effect.unit()),
       Effect.scoped,
     )
 }

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "baseUrl": ".",
+    "paths": {
+      "@typed/fx/*": [
+        "../src/*"
+      ]
+    }
+  },
+  "include": [
+    "*.ts",
+    "cases",
+    "../src"
+  ]
+}

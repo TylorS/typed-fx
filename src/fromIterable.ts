@@ -1,4 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
+import { Effect } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 
@@ -14,6 +14,6 @@ export class FromIterable<A> implements Fx<never, never, A> {
   constructor(readonly iterable: Iterable<A>) {}
 
   run<R2>(emitter: Emitter<R2, never, A>) {
-    return Effect.zipRight(emitter.end)(Effect.forEachDiscard(this.iterable, emitter.emit))
+    return Effect.zipRight(emitter.end)(Effect.forEachDiscard(emitter.emit)(this.iterable))
   }
 }

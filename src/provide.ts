@@ -1,26 +1,26 @@
-import * as Effect from '@effect/core/io/Effect'
-import * as Layer from '@effect/core/io/Layer'
-import * as Scope from '@effect/core/io/Scope'
-import { pipe } from '@fp-ts/data/Function'
-import { Env } from '@tsplus/stdlib/service/Env'
-import { Tag } from '@tsplus/stdlib/service/Tag'
+import { Context, Effect, Layer, Scope, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 
-export function provideSomeEnvironment<R2>(env: Env<R2>) {
+export function provideSomeEnvironment<R2>(env: Context.Context<R2>) {
   return <R, E, A>(fx: Fx<R | R2, E, A>): Fx<Exclude<R, R2>, E, A> =>
     Fx((emitter) =>
       pipe(
         fx.run(emitter),
         Effect.provideSomeEnvironment(
-          (e: Env<Exclude<R, R2> | Emitter.ResourcesOf<typeof emitter> | Scope.Scope>) =>
-            (e as Env<R | Emitter.ResourcesOf<typeof emitter> | Scope.Scope>).merge(env),
+          (
+            e: Context.Context<Exclude<R, R2> | Emitter.ResourcesOf<typeof emitter> | Scope.Scope>,
+          ) =>
+            pipe(
+              e as Context.Context<R | Emitter.ResourcesOf<typeof emitter> | Scope.Scope>,
+              Context.merge(env),
+            ),
         ),
       ),
     )
 }
 
-export function provideEnvironment<R>(env: Env<R>) {
+export function provideEnvironment<R>(env: Context.Context<R>) {
   return provideSomeEnvironment(env) as <E, A>(fx: Fx<R, E, A>) => Fx<never, E, A>
 }
 
@@ -43,18 +43,21 @@ export function provideLayer<RI, E2, RO>(layer: Layer.Layer<RI, E2, RO>) {
 }
 
 export function provideService<S>(
-  tag: Tag<S>,
+  tag: Context.Tag<S>,
   service: S,
 ): <R, E, A>(fx: Fx<S | R, E, A>) => Fx<Exclude<R, S>, E, A> {
-  return provideSomeEnvironment(Env(tag, service))
+  return pipe(Context.empty(), Context.add(tag)(service), provideSomeEnvironment)
 }
 
-export function provideServiceEffect<S, R2, E2>(tag: Tag<S>, service: Effect.Effect<R2, E2, S>) {
+export function provideServiceEffect<S, R2, E2>(
+  tag: Context.Tag<S>,
+  service: Effect.Effect<R2, E2, S>,
+) {
   return <R, E, A>(fx: Fx<R | S, E, A>): Fx<R2 | Exclude<R, S>, E | E2, A> =>
     Fx((emitter) =>
       pipe(
         fx.run(emitter),
-        Effect.provideServiceEffect(tag, service),
+        Effect.provideServiceEffect(tag)(service),
         Effect.foldCauseEffect(emitter.failCause, Effect.succeed),
       ),
     )

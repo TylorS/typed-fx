@@ -1,5 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
+import { Effect, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'
@@ -20,12 +19,12 @@ export function slice(skip: number, take: number) {
               (a) => {
                 if (toSkip > 0) {
                   --toSkip
-                  return Effect.unit
+                  return Effect.unit()
                 }
 
                 return pipe(
                   emitter.emit(a),
-                  Effect.flatMap(() => (--toTake === 0 ? exitEarly : Effect.unit)),
+                  Effect.flatMap(() => (--toTake === 0 ? exitEarly : Effect.unit())),
                 )
               },
               emitter.failCause,

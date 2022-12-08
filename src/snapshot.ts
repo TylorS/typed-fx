@@ -1,7 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
-import { AtomicReference } from '@tsplus/stdlib/data/AtomicReference'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Effect, MutableRef, Option, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 
@@ -21,14 +18,14 @@ function snapshot_<R, E, A, R2, E2, B, C>(
 ): Fx<R | R2, E | E2, C> {
   return Fx((emitter) =>
     pipe(
-      Effect.sync(() => new AtomicReference<Maybe.Maybe<B>>(Maybe.none)),
+      Effect.sync(() => MutableRef.make<Option.Option<B>>(Option.none)),
       Effect.tap((ref) =>
         Effect.forkScoped(
           sampled.run(
             Emitter(
-              (a) => Effect.sync(() => ref.set(Maybe.some(a))),
+              (a) => Effect.sync(() => pipe(ref, MutableRef.set(Option.some(a)))),
               emitter.failCause,
-              Effect.unit,
+              Effect.unit(),
             ),
           ),
         ),
@@ -38,11 +35,9 @@ function snapshot_<R, E, A, R2, E2, B, C>(
           Emitter(
             (a) =>
               pipe(
-                ref.get,
-                Maybe.fold(
-                  () => Effect.unit,
-                  (b) => emitter.emit(f(b, a)),
-                ),
+                ref,
+                MutableRef.get,
+                Option.match(Effect.unit, (b) => emitter.emit(f(b, a))),
               ),
             emitter.failCause,
             emitter.end,

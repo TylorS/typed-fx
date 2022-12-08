@@ -1,5 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
+import { Effect, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 

@@ -1,13 +1,11 @@
-import { Cause } from '@effect/core/io/Cause'
-import * as Effect from '@effect/core/io/Effect'
-import { Scope } from '@effect/core/io/Scope'
+import { Cause, Effect, Scope } from 'effect'
 
 export interface Fx<R, E, A> {
   readonly _R: () => R
   readonly _E: () => E
   readonly _A: () => A
 
-  run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope, never, unknown>
+  run<R2>(emitter: Emitter<R2, E, A>): Effect.Effect<R | R2 | Scope.Scope, never, unknown>
 }
 
 export function Fx<R, E, A>(run: Fx<R, E, A>['run']): Fx<R, E, A> {
@@ -28,7 +26,7 @@ export namespace Fx {
 
 export interface Emitter<R, E, A> {
   readonly emit: (a: A) => Effect.Effect<R, never, unknown>
-  readonly failCause: (e: Cause<E>) => Effect.Effect<R, never, unknown>
+  readonly failCause: (e: Cause.Cause<E>) => Effect.Effect<R, never, unknown>
   readonly end: Effect.Effect<R, never, unknown>
 }
 

@@ -1,6 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Effect, Option, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { withDynamicCountdownLatch } from './_internal.js'
@@ -30,32 +28,35 @@ export function zipAll<R, E, A>(iterable: Iterable<Fx<R, E, A>>): Fx<R, E, Reado
       }
 
       return pipe(
-        Effect.sync<Maybe.Maybe<A>[]>(() => Array(array.length)),
+        Effect.sync<Option.Option<A>[]>(() => Array(array.length)),
         Effect.flatMap((ref) =>
           Effect.suspendSucceed(() => {
             const emitIfReady = pipe(
-              Effect.sync(() => ref.filter(Maybe.isSome).map((x) => x.value)),
+              Effect.sync(() => ref.filter(Option.isSome).map((x) => x.value)),
               Effect.flatMap((bs) =>
                 bs.length === array.length
-                  ? Effect.suspendSucceed(() => (ref.fill(Maybe.none), emitter.emit(bs)))
-                  : Effect.unit,
+                  ? Effect.suspendSucceed(() => (ref.fill(Option.none), emitter.emit(bs)))
+                  : Effect.unit(),
               ),
             )
 
             return withDynamicCountdownLatch(
               array.length,
-              ({ latch }) =>
-                Effect.forEachWithIndex(array, (push, i) =>
-                  Effect.forkScoped(
-                    push.run(
-                      Emitter(
-                        (a) =>
-                          pipe(
-                            Effect.sync(() => (ref[i] = Maybe.some(a))),
-                            Effect.zipRight(emitIfReady),
-                          ),
-                        emitter.failCause,
-                        latch.countDown,
+              (latch) =>
+                pipe(
+                  array,
+                  Effect.forEachWithIndex((push, i) =>
+                    Effect.forkScoped(
+                      push.run(
+                        Emitter(
+                          (a) =>
+                            pipe(
+                              Effect.sync(() => (ref[i] = Option.some(a))),
+                              Effect.zipRight(emitIfReady),
+                            ),
+                          emitter.failCause,
+                          latch.decrement,
+                        ),
                       ),
                     ),
                   ),

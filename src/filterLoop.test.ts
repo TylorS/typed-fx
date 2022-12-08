@@ -1,8 +1,6 @@
 import { deepStrictEqual } from 'assert'
 
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Effect, Option, pipe } from 'effect'
 
 import * as Fx from './index.js'
 
@@ -34,12 +32,12 @@ describe(import.meta.url, () => {
   })
 
   describe(Fx.filterLoop.name, () => {
-    it('tracks state and atomically computing a value, using Maybe for filtering', async () => {
+    it('tracks state and atomically computing a value, using Option for filtering', async () => {
       const values = ['foo', 'bar', 'baz', 'quux']
       const test = pipe(
         Fx.fromIterable(values),
         Fx.filterLoop(1, (a, b) =>
-          b.startsWith('b') ? Maybe.some([a + b.length, a]) : Maybe.none,
+          b.startsWith('b') ? Option.some([a + b.length, a]) : Option.none,
         ),
       )
       const events = await pipe(test, Fx.runCollect, Effect.unsafeRunPromise)
@@ -49,11 +47,11 @@ describe(import.meta.url, () => {
   })
 
   describe(Fx.filterScan.name, () => {
-    it('emits seed value and tracks applies a reducer to events and accumulator, using Maybe for filtering', async () => {
+    it('emits seed value and tracks applies a reducer to events and accumulator, using Option for filtering', async () => {
       const values = ['foo', 'bar', 'baz', 'quux']
       const test = pipe(
         Fx.fromIterable(values),
-        Fx.filterScan(1, (a, b) => (b.startsWith('b') ? Maybe.some(a + b.length) : Maybe.none)),
+        Fx.filterScan(1, (a, b) => (b.startsWith('b') ? Option.some(a + b.length) : Option.none)),
       )
       const events = await pipe(test, Fx.runCollect, Effect.unsafeRunPromise)
 

@@ -1,5 +1,5 @@
-import * as TSemaphore from '@effect/core/stm/TSemaphore'
-import { flow, pipe } from '@fp-ts/data/Function'
+import { unsafeMake } from '@effect/stm/TSemaphore'
+import { flow, pipe } from 'effect'
 
 import { Fx } from './Fx.js'
 import { flatMap } from './flatMap.js'
@@ -8,7 +8,7 @@ import { withPermit } from './transform.js'
 
 export function flatMapConcurrently<A, R2, E2, B>(concurrency: number, f: (a: A) => Fx<R2, E2, B>) {
   return <R, E>(fx: Fx<R, E, A>): Fx<R | R2, E | E2, B> =>
-    suspendSucceed(() => pipe(fx, flatMap(flow(f, withPermit(TSemaphore.unsafeMake(concurrency))))))
+    suspendSucceed(() => pipe(fx, flatMap(flow(f, withPermit(unsafeMake(concurrency))))))
 }
 
 export function concatMap<A, R2, E2, B>(f: (a: A) => Fx<R2, E2, B>) {

@@ -1,7 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { Scope } from '@effect/core/io/Scope'
-import { pipe } from '@tsplus/stdlib/data/Function'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Effect, Option, Scope, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { startWith } from './continueWith.js'
@@ -23,18 +20,18 @@ export function scan<A, B>(seed: A, f: (a: A, b: B) => A) {
     )
 }
 
-export function filterLoop<A, B, C>(seed: A, f: (a: A, b: B) => Maybe.Maybe<readonly [A, C]>) {
+export function filterLoop<A, B, C>(seed: A, f: (a: A, b: B) => Option.Option<readonly [A, C]>) {
   return <R, E>(fx: Fx<R, E, B>): Fx<R, E, C> => FilterLoop.make(fx, seed, f)
 }
 
-export function filterScan<A, B>(seed: A, f: (a: A, b: B) => Maybe.Maybe<A>) {
+export function filterScan<A, B>(seed: A, f: (a: A, b: B) => Option.Option<A>) {
   return <R, E>(fx: Fx<R, E, B>): Fx<R, E, A> =>
     pipe(
       fx,
       filterLoop(seed, (a, b) =>
         pipe(
           f(a, b),
-          Maybe.map((c) => [c, c]),
+          Option.map((c) => [c, c]),
         ),
       ),
       startWith(seed),
@@ -52,7 +49,7 @@ export class Loop<R, E, A, B, C> implements Fx<R, E, C> {
     readonly f: (a: A, b: B) => readonly [A, C],
   ) {}
 
-  run<R2>(emitter: Emitter<R2, E, C>): Effect.Effect<R | R2 | Scope, never, unknown> {
+  run<R2>(emitter: Emitter<R2, E, C>): Effect.Effect<R | R2 | Scope.Scope, never, unknown> {
     return Effect.suspendSucceed(() => {
       let acc = this.seed
 
@@ -82,7 +79,7 @@ export class Loop<R, E, A, B, C> implements Fx<R, E, C> {
         pipe(
           x,
           fx.f,
-          Maybe.map((b) => f(a, b)),
+          Option.map((b) => f(a, b)),
         ),
       )
     }
@@ -103,10 +100,10 @@ export class FilterLoop<R, E, A, B, C> implements Fx<R, E, C> {
   constructor(
     readonly fx: Fx<R, E, B>,
     readonly seed: A,
-    readonly f: (a: A, b: B) => Maybe.Maybe<readonly [A, C]>,
+    readonly f: (a: A, b: B) => Option.Option<readonly [A, C]>,
   ) {}
 
-  run<R2>(emitter: Emitter<R2, E, C>): Effect.Effect<R | R2 | Scope, never, unknown> {
+  run<R2>(emitter: Emitter<R2, E, C>): Effect.Effect<R | R2 | Scope.Scope, never, unknown> {
     return Effect.suspendSucceed(() => {
       let acc = this.seed
 
@@ -115,10 +112,7 @@ export class FilterLoop<R, E, A, B, C> implements Fx<R, E, C> {
           (b: B) =>
             pipe(
               this.f(acc, b),
-              Maybe.fold(
-                () => Effect.unit,
-                ([a, c]) => ((acc = a), emitter.emit(c)),
-              ),
+              Option.match(Effect.unit, ([a, c]) => ((acc = a), emitter.emit(c))),
             ),
           emitter.failCause,
           emitter.end,
@@ -130,14 +124,14 @@ export class FilterLoop<R, E, A, B, C> implements Fx<R, E, C> {
   static make<R, E, A, B, C>(
     fx: Fx<R, E, B>,
     seed: A,
-    f: (a: A, b: B) => Maybe.Maybe<readonly [A, C]>,
+    f: (a: A, b: B) => Option.Option<readonly [A, C]>,
   ): Fx<R, E, C> {
     if (fx instanceof FilterMap) {
       return FilterLoop.make(fx.fx, seed, (a, x) =>
         pipe(
           x,
           fx.f,
-          Maybe.flatMap((b) => f(a, b)),
+          Option.flatMap((b) => f(a, b)),
         ),
       )
     }

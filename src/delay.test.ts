@@ -1,8 +1,6 @@
 import { deepStrictEqual, ok } from 'assert'
 
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
-import * as Duration from '@tsplus/stdlib/data/Duration'
+import { Duration, Effect, pipe } from 'effect'
 
 import * as Fx from './index.js'
 

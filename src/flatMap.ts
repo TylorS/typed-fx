@@ -1,5 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { flow, pipe } from '@fp-ts/data/Function'
+import { Effect, flow, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { withDynamicCountdownLatch } from './_internal.js'
@@ -21,20 +20,20 @@ function flatMap_<R, E, A, R2, E2, B>(
   return Fx((emitter) =>
     withDynamicCountdownLatch(
       1,
-      ({ increment, latch }) =>
+      (latch) =>
         fx.run(
           Emitter(
             (a) =>
               pipe(
-                increment,
+                latch.increment,
                 Effect.flatMap(() =>
                   Effect.forkScoped(
-                    f(a).run(Emitter(emitter.emit, emitter.failCause, latch.countDown)),
+                    f(a).run(Emitter(emitter.emit, emitter.failCause, latch.decrement)),
                   ),
                 ),
               ),
             emitter.failCause,
-            latch.countDown,
+            latch.decrement,
           ),
         ),
       emitter.end,

@@ -1,4 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
+import { Effect, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { withDynamicCountdownLatch } from './_internal.js'
@@ -23,9 +23,12 @@ export function mergeAll<R, E, A>(iterable: Iterable<Fx<R, E, A>>): Fx<R, E, A> 
 
     return withDynamicCountdownLatch(
       array.length,
-      ({ latch }) =>
-        Effect.forEachDiscard(array, (fx) =>
-          Effect.forkScoped(fx.run(Emitter(emitter.emit, emitter.failCause, latch.countDown))),
+      (latch) =>
+        pipe(
+          array,
+          Effect.forEachDiscard((fx) =>
+            Effect.forkScoped(fx.run(Emitter(emitter.emit, emitter.failCause, latch.decrement))),
+          ),
         ),
       emitter.end,
     )

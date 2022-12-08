@@ -1,7 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { joinAll } from '@effect/core/io/Fiber'
-import { pipe } from '@fp-ts/data/Function'
-import { AtomicReference } from '@tsplus/stdlib/data/AtomicReference'
+import { Effect, Fiber, MutableRef, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'
@@ -16,20 +13,20 @@ function during_<R, E, A, R2, E2, R3, E3, B>(
 ): Fx<R | R2 | R3, E | E2 | E3, A> {
   return Fx((emitter) =>
     pipe(
-      Effect.sync(() => new AtomicReference(false)),
+      Effect.sync(() => MutableRef.make(false)),
       Effect.flatMap((ref) =>
         pipe(
           signal.run(
             Emitter(
               (endSignal) =>
                 pipe(
-                  Effect.sync(() => ref.set(true)),
+                  Effect.sync(() => pipe(ref, MutableRef.set(true))),
                   Effect.flatMap(() =>
-                    endSignal.run(Emitter(() => exitEarly, emitter.failCause, Effect.unit)),
+                    endSignal.run(Emitter(() => exitEarly, emitter.failCause, Effect.unit())),
                   ),
                 ),
               emitter.failCause,
-              Effect.unit,
+              Effect.unit(),
             ),
           ),
           Effect.forkScoped,
@@ -37,13 +34,13 @@ function during_<R, E, A, R2, E2, R3, E3, B>(
             pipe(
               fx.run(
                 Emitter(
-                  (a) => (ref.get ? emitter.emit(a) : Effect.unit),
+                  (a) => (MutableRef.get(ref) ? emitter.emit(a) : Effect.unit()),
                   emitter.failCause,
                   exitEarly,
                 ),
               ),
               Effect.forkScoped,
-              Effect.flatMap((fiber2) => joinAll([fiber, fiber2])),
+              Effect.flatMap((fiber2) => Fiber.joinAll([fiber, fiber2])),
               onEarlyExitFailure(emitter.end),
             ),
           ),

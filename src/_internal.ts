@@ -1,12 +1,4 @@
-import {
-  CountdownLatch,
-  CountdownLatchInternal,
-} from '@effect/core/concurrent/CountdownLatch/definition'
-import * as Cause from '@effect/core/io/Cause'
-import * as Deferred from '@effect/core/io/Deferred'
-import * as Effect from '@effect/core/io/Effect'
-import * as Ref from '@effect/core/io/Ref'
-import { pipe } from '@fp-ts/data/Function'
+import { Cause, Deferred, Effect, Ref, pipe } from 'effect'
 
 export const EARLY_EXIT_FAILURE = Symbol('EarlyExitFailure')
 export interface EarlyExitFailure {
@@ -44,17 +36,26 @@ export const onEarlyExitFailure =
  */
 export type DynamicCountdownLatch = {
   readonly increment: Effect.Effect<never, never, void>
-  readonly latch: CountdownLatch
+  readonly decrement: Effect.Effect<never, never, void>
+  readonly await: Effect.Effect<never, never, void>
 }
 
 export function makeDynamicCountdownLatch(
   initialCount: number,
 ): Effect.Effect<never, never, DynamicCountdownLatch> {
   return pipe(
-    Ref.makeRef<number>(() => initialCount),
+    Ref.make<number>(initialCount),
     Effect.zipWith(Deferred.make<never, void>(), (ref, deferred) => ({
-      increment: ref.update((x) => x + 1),
-      latch: new CountdownLatchInternal(ref, deferred),
+      increment: pipe(
+        ref,
+        Ref.update((x) => x + 1),
+      ),
+      decrement: pipe(
+        ref,
+        Ref.updateAndGet((x) => Math.max(0, x - 1)),
+        Effect.tap((x) => (x === 0 ? Deferred.succeed<void>(undefined)(deferred) : Effect.unit())),
+      ),
+      await: Deferred.await(deferred),
     })),
   )
 }
@@ -67,6 +68,6 @@ export function withDynamicCountdownLatch<R, E, A, R2, E2, B>(
   return pipe(
     makeDynamicCountdownLatch(initialCount),
     Effect.tap(f),
-    Effect.flatMap(({ latch }) => pipe(latch.await, Effect.zipRight(onEnd))),
+    Effect.flatMap((latch) => pipe(latch.await, Effect.zipRight(onEnd))),
   )
 }

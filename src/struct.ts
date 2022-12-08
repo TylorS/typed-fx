@@ -1,4 +1,4 @@
-import { pipe } from '@fp-ts/data/Function'
+import { pipe } from 'effect'
 
 import { Fx } from './Fx.js'
 import { combineAll } from './combine.js'

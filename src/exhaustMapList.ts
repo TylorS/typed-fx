@@ -1,11 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import * as Fiber from '@effect/core/io/Fiber'
-import { pipe } from '@fp-ts/data/Function'
-import * as HashSet from '@tsplus/stdlib/collections/HashSet'
-import * as ImmutableMap from '@tsplus/stdlib/collections/ImmutableMap'
-import { AtomicReference } from '@tsplus/stdlib/data/AtomicReference'
-import { identity } from '@tsplus/stdlib/data/Function'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Effect, Fiber, HashMap, HashSet, MutableRef, Option, identity, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { withDynamicCountdownLatch } from './_internal.js'
@@ -17,42 +10,44 @@ export function exhaustMapList<A, R2, E2, B, A1 = A>(
   return <R, E>(fx: Fx<R, E, ReadonlyArray<A>>): Fx<R | R2, E | E2, ReadonlyArray<B>> =>
     Fx((emitter) =>
       pipe(
-        Effect.sync(() => new AtomicReference(ImmutableMap.empty<A1, Fiber.Fiber<E2, unknown>>())),
-        Effect.zip(Effect.sync(() => new AtomicReference<ReadonlyArray<A>>([]))), // Must use Array to maintain order
-        Effect.zip(Effect.sync(() => new AtomicReference(ImmutableMap.empty<A1, B>()))),
+        Effect.sync(() => MutableRef.make(HashMap.empty<A1, Fiber.Fiber<E2, unknown>>())),
+        Effect.zip(Effect.sync(() => MutableRef.make<ReadonlyArray<A>>([]))), // Must use Array to maintain order
+        Effect.zip(Effect.sync(() => MutableRef.make(HashMap.empty<A1, B>()))),
         Effect.flatMap(([[fibersMapRef, previousValuesRef], valuesRef]) => {
           const emitIfReady = pipe(
-            Effect.sync(() => previousValuesRef.get),
-            Effect.zip(Effect.sync(() => valuesRef.get)),
+            Effect.sync(() => MutableRef.get(previousValuesRef)),
+            Effect.zip(Effect.sync(() => MutableRef.get(valuesRef))),
             Effect.flatMap(([previousValues, values]) => {
               const vals = previousValues
-                .map((a) => pipe(values, ImmutableMap.get(selector(a))))
-                .filter(Maybe.isSome)
+                .map((a) => pipe(values, HashMap.get(selector(a))))
+                .filter(Option.isSome)
                 .map((x) => x.value)
 
               if (vals.length === previousValues.length) {
                 return emitter.emit(vals)
               }
 
-              return Effect.unit
+              return Effect.unit()
             }),
           )
 
           return withDynamicCountdownLatch(
             1,
-            ({ latch, increment }) =>
+            (latch) =>
               pipe(
                 fx.run(
                   Emitter(
                     (as) =>
                       Effect.suspendSucceed(() => {
-                        const fibersMap = fibersMapRef.get
-                        const previous = HashSet.make<readonly A[]>(...previousValuesRef.get)
+                        const fibersMap = MutableRef.get(fibersMapRef)
+                        const previous = HashSet.make<readonly A[]>(
+                          ...MutableRef.get(previousValuesRef),
+                        )
                         const current = HashSet.make<readonly A[]>(...as)
                         const toStart = HashSet.difference(previous)(current)
                         const toCancel = HashSet.difference(current)(previous)
 
-                        previousValuesRef.set(as)
+                        pipe(previousValuesRef, MutableRef.set(as))
 
                         // If the input values were just reordered, go ahead and emit
                         if (HashSet.size(toStart) === 0 && HashSet.size(toCancel) === 0) {
@@ -60,79 +55,106 @@ export function exhaustMapList<A, R2, E2, B, A1 = A>(
                         }
 
                         return pipe(
-                          Effect.forEachParDiscard(toCancel, (a) =>
+                          toCancel,
+                          Effect.forEachParDiscard((a) =>
                             pipe(
                               fibersMap,
-                              ImmutableMap.get(selector(a)),
-                              Maybe.fold(
-                                () => Effect.unit,
-                                (fiber) =>
-                                  pipe(
-                                    Fiber.interrupt(fiber),
-                                    Effect.zipRight(
-                                      Effect.sync(() => {
-                                        const a1 = selector(a)
-                                        fibersMapRef.set(ImmutableMap.remove(a1)(fibersMapRef.get))
-                                        valuesRef.set(ImmutableMap.remove(a1)(valuesRef.get))
-                                      }),
-                                    ),
-                                    Effect.zipRight(latch.countDown),
+                              HashMap.get(selector(a)),
+                              Option.match(Effect.unit, (fiber) =>
+                                pipe(
+                                  Fiber.interrupt(fiber),
+                                  Effect.zipRight(
+                                    Effect.sync(() => {
+                                      const a1 = selector(a)
+                                      pipe(
+                                        fibersMapRef,
+                                        MutableRef.set(
+                                          HashMap.remove(a1)(MutableRef.get(fibersMapRef)),
+                                        ),
+                                      )
+                                      pipe(
+                                        valuesRef,
+                                        MutableRef.set(
+                                          HashMap.remove(a1)(MutableRef.get(valuesRef)),
+                                        ),
+                                      )
+                                    }),
                                   ),
+                                  Effect.zipRight(latch.decrement),
+                                ),
                               ),
                             ),
                           ),
                           Effect.zipParRight(
-                            Effect.forEachDiscard(toStart, (a) =>
-                              pipe(
-                                increment,
-                                Effect.flatMap(() =>
-                                  Effect.forkScoped(
-                                    f(a).run(
-                                      Emitter(
-                                        (b) =>
+                            pipe(
+                              toStart,
+                              Effect.forEachDiscard((a) =>
+                                pipe(
+                                  latch.increment,
+                                  Effect.flatMap(() =>
+                                    Effect.forkScoped(
+                                      f(a).run(
+                                        Emitter(
+                                          (b) =>
+                                            pipe(
+                                              Effect.sync(() =>
+                                                pipe(
+                                                  valuesRef,
+                                                  MutableRef.set(
+                                                    HashMap.set(
+                                                      selector(a),
+                                                      b,
+                                                    )(MutableRef.get(valuesRef)),
+                                                  ),
+                                                ),
+                                              ),
+                                              Effect.zipRight(emitIfReady),
+                                            ),
+                                          emitter.failCause,
                                           pipe(
                                             Effect.sync(() =>
-                                              valuesRef.set(
-                                                ImmutableMap.set(selector(a), b)(valuesRef.get),
+                                              pipe(
+                                                fibersMapRef,
+                                                MutableRef.set(
+                                                  HashMap.remove(selector(a))(
+                                                    MutableRef.get(fibersMapRef),
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                            Effect.zipRight(emitIfReady),
+                                            Effect.zipRight(latch.decrement),
                                           ),
-                                        emitter.failCause,
-                                        pipe(
-                                          Effect.sync(() =>
-                                            fibersMapRef.set(
-                                              ImmutableMap.remove(selector(a))(fibersMapRef.get),
-                                            ),
-                                          ),
-                                          Effect.zipRight(latch.countDown),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Effect.tap((fiber) =>
-                                  Effect.sync(() =>
-                                    fibersMapRef.set(
+                                  Effect.tap((fiber) =>
+                                    Effect.sync(() =>
                                       pipe(
-                                        fibersMapRef.get,
-                                        ImmutableMap.set<A1, Fiber.Fiber<E2, unknown>>(
-                                          selector(a),
-                                          fiber,
+                                        fibersMapRef,
+                                        MutableRef.set(
+                                          pipe(
+                                            fibersMapRef,
+                                            MutableRef.get,
+                                            HashMap.set<A1, Fiber.Fiber<E2, unknown>>(
+                                              selector(a),
+                                              fiber,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
+                              Effect.forkScoped,
+                              Effect.zipRight(emitIfReady),
                             ),
                           ),
-                          Effect.forkScoped,
-                          Effect.zipRight(emitIfReady),
                         )
                       }),
                     emitter.failCause,
-                    latch.countDown,
+                    latch.decrement,
                   ),
                 ),
               ),

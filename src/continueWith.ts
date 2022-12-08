@@ -1,4 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
+import { Effect } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { succeed } from './fromEffect.js'

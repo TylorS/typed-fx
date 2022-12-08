@@ -1,8 +1,6 @@
 import { deepStrictEqual } from 'assert'
 
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Effect, Option, pipe } from 'effect'
 
 import * as Fx from './index.js'
 
@@ -20,10 +18,10 @@ describe(import.meta.url, () => {
   })
 
   describe(Fx.filterMap.name, () => {
-    it('transform the values and filters using Maybe of a Fx', async () => {
+    it('transform the values and filters using Option of a Fx', async () => {
       const test = pipe(
         Fx.fromIterable([1, 2, 3]),
-        Fx.filterMap((x) => (x % 2 === 0 ? Maybe.none : Maybe.some(x ** x))),
+        Fx.filterMap((x) => (x % 2 === 0 ? Option.none : Option.some(x ** x))),
         Fx.runCollect,
       )
 

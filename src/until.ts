@@ -1,6 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { joinAll } from '@effect/core/io/Fiber'
-import { pipe } from '@fp-ts/data/Function'
+import { Effect, Fiber, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'
@@ -18,7 +16,7 @@ function until_<R, E, A, R2, E2, B>(fx: Fx<R, E, A>, signal: Fx<R2, E2, B>): Fx<
         pipe(
           fx.run(emitter),
           Effect.forkScoped,
-          Effect.flatMap((fiber2) => joinAll([fiber, fiber2])),
+          Effect.flatMap((fiber2) => Fiber.joinAll([fiber, fiber2])),
         ),
       ),
       onEarlyExitFailure(emitter.end),

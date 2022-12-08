@@ -1,9 +1,6 @@
 import { deepEqual } from 'assert'
 
-import * as Cause from '@effect/core/io/Cause'
-import * as Effect from '@effect/core/io/Effect'
-import * as Exit from '@effect/core/io/Exit'
-import { pipe } from '@fp-ts/data/Function'
+import { Cause, Effect, Exit, pipe } from 'effect'
 
 import * as Fx from './index.js'
 

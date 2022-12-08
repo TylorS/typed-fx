@@ -1,6 +1,4 @@
-import * as Deferred from '@effect/core/io/Deferred'
-import * as Effect from '@effect/core/io/Effect'
-import { pipe } from '@fp-ts/data/Function'
+import { Deferred, Effect, pipe } from 'effect'
 
 import { Fx } from './Fx.js'
 import { onEarlyExitFailure } from './_internal.js'
@@ -11,13 +9,13 @@ export function runDrain<R, E, A>(fx: Fx<R, E, A>): Effect.Effect<R, E, void> {
     Effect.flatMap((deferred) =>
       pipe(
         fx.run({
-          emit: () => Effect.unit,
-          failCause: (c) => deferred.failCauseSync(c),
-          end: deferred.succeed(undefined),
+          emit: Effect.unit,
+          failCause: (c) => Deferred.failCause<E>(c)(deferred),
+          end: pipe(deferred, Deferred.succeed<void>(undefined)),
         }),
         Effect.forkScoped,
-        Effect.zipRight(deferred.await),
-        onEarlyExitFailure(Effect.sync(() => deferred.succeed(undefined))),
+        Effect.zipRight(Deferred.await(deferred)),
+        onEarlyExitFailure(Effect.sync(() => Deferred.succeed<void>(undefined)(deferred))),
       ),
     ),
     Effect.scoped,

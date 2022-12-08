@@ -1,7 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import * as Ref from '@effect/core/io/Ref'
-import { pipe } from '@fp-ts/data/Function'
-import * as Maybe from '@tsplus/stdlib/data/Maybe'
+import { Effect, Option, Ref, pipe } from 'effect'
 
 import { Fx } from './Fx.js'
 import { runObserve } from './runObserve.js'
@@ -12,7 +9,7 @@ export function runReduce<A, B>(seed: A, f: (a: A, b: B) => A) {
   }
 }
 
-export function runFilterReduce<A, B>(seed: A, f: (a: A, b: B) => Maybe.Maybe<A>) {
+export function runFilterReduce<A, B>(seed: A, f: (a: A, b: B) => Option.Option<A>) {
   return <R, E>(fx: Fx<R, E, B>): Effect.Effect<R, E, A> => {
     return runFilterReduce_(fx, seed, f)
   }
@@ -24,12 +21,19 @@ function runReduce_<R, E, A, B>(
   f: (a: A, b: B) => A,
 ): Effect.Effect<R, E, A> {
   return pipe(
-    Ref.makeRef<A>(() => seed),
+    Ref.make<A>(seed),
     Effect.flatMap((ref) =>
       pipe(
         fx,
-        runObserve((b) => Effect.sync(() => ref.update((a) => f(a, b)))),
-        Effect.flatMap(() => ref.get),
+        runObserve((b) =>
+          Effect.sync(() =>
+            pipe(
+              ref,
+              Ref.update((a) => f(a, b)),
+            ),
+          ),
+        ),
+        Effect.flatMap(() => Ref.get(ref)),
       ),
     ),
     Effect.scoped,
@@ -39,24 +43,27 @@ function runReduce_<R, E, A, B>(
 function runFilterReduce_<R, E, A, B>(
   fx: Fx<R, E, B>,
   seed: A,
-  f: (a: A, b: B) => Maybe.Maybe<A>,
+  f: (a: A, b: B) => Option.Option<A>,
 ): Effect.Effect<R, E, A> {
   return pipe(
-    Ref.makeRef<A>(() => seed),
+    Ref.make<A>(seed),
     Effect.flatMap((ref) =>
       pipe(
         fx,
         runObserve((b) =>
           Effect.sync(() =>
-            ref.update((a) =>
-              pipe(
-                f(a, b),
-                Maybe.getOrElse(() => a),
+            pipe(
+              ref,
+              Ref.update((a) =>
+                pipe(
+                  f(a, b),
+                  Option.getOrElse(() => a),
+                ),
               ),
             ),
           ),
         ),
-        Effect.flatMap(() => ref.get),
+        Effect.flatMap(() => Ref.get(ref)),
       ),
     ),
     Effect.scoped,

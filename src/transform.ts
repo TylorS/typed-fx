@@ -1,9 +1,6 @@
-import { Clock } from '@effect/core/io/Clock'
-import * as Effect from '@effect/core/io/Effect'
-import { Exit } from '@effect/core/io/Exit'
-import { RuntimeFlagsPatch } from '@effect/core/io/RuntimeFlags/patch'
-import { Scope } from '@effect/core/io/Scope'
-import * as TSemaphore from '@effect/core/stm/TSemaphore'
+import * as TSemaphore from '@effect/stm/TSemaphore'
+import { Clock, Effect, Scope, pipe } from 'effect'
+import { RuntimeFlagsPatch } from 'effect/Fiber'
 
 import { Fx } from './Fx.js'
 
@@ -19,26 +16,25 @@ export function withParallelism(parallelism: number) {
 
 export const withParallelismUnbounded = transform(Effect.withParallelismUnbounded)
 
-export const withFinalizer = <R2, X>(finalizer: Effect.Effect<R2, never, X>) =>
-  transform<R2 | Scope>(Effect.withFinalizer(finalizer))
-
-export const withFinalizerExit = <R2, X>(
-  finalizer: <E, A>(exit: Exit<E, A>) => Effect.Effect<R2, never, X>,
-) => transform<R2 | Scope>(Effect.withFinalizerExit(finalizer))
-
-export const withRuntimeFlags = (updated: RuntimeFlagsPatch) =>
+export const withRuntimeFlags = (updated: RuntimeFlagsPatch.RuntimeFlagsPatch) =>
   transform(Effect.withRuntimeFlags(updated))
 
 export const scoped = transform(Effect.scoped) as <R, E, A>(
   fx: Fx<R, E, A>,
-) => Fx<Exclude<R, Scope>, E, A>
+) => Fx<Exclude<R, Scope.Scope>, E, A>
 
-export const withClock = (clock: Clock) => transform(Effect.withClock(clock))
+export const withClock = (clock: Clock.Clock) => transform(Effect.withClock(clock))
 
 export const uninterruptible = transform(Effect.uninterruptible)
 export const interruptible = transform(Effect.interruptible)
 
-export const withPermit = (self: TSemaphore.TSemaphore) => transform(TSemaphore.withPermit(self))
+export const withPermit = (
+  self: TSemaphore.TSemaphore,
+): (<R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A>) =>
+  transform(
+    <R, E, A>(eff: Effect.Effect<R, E, A>): Effect.Effect<R, E, A> =>
+      pipe(eff, TSemaphore.withPermit(self) as any),
+  )
 
 export const withPermits = (permits: number) => (self: TSemaphore.TSemaphore) =>
-  transform(TSemaphore.withPermits(permits)(self))
+  transform(TSemaphore.withPermits(permits)(self) as any)

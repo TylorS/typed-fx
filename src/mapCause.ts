@@ -1,5 +1,4 @@
-import * as Cause from '@effect/core/io/Cause'
-import { flow } from '@fp-ts/data/Function'
+import { Cause, flow } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 

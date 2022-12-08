@@ -1,5 +1,4 @@
-import * as Effect from '@effect/core/io/Effect'
-import { identity, pipe } from '@fp-ts/data/Function'
+import { Effect, identity, pipe } from 'effect'
 
 import { Emitter, Fx } from './Fx.js'
 import { exitEarly, onEarlyExitFailure } from './_internal.js'

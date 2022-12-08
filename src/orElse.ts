@@ -1,7 +1,4 @@
-import * as Cause from '@effect/core/io/Cause'
-import * as Effect from '@effect/core/io/Effect'
-import { flow, pipe } from '@fp-ts/data/Function'
-import * as Either from '@tsplus/stdlib/data/Either'
+import { Cause, Effect, Either, flow, pipe } from 'effect'
 
 import { Fx } from './Fx.js'
 import { failCause } from './fromEffect.js'
@@ -13,7 +10,7 @@ export function orElseCause<E, R2, E2, B>(f: (cause: Cause.Cause<E>) => Fx<R2, E
 
 export function orElse<E, R2, E2, B>(f: (error: E) => Fx<R2, E2, B>) {
   return <R, A>(fx: Fx<R, E, A>): Fx<R | R2, E2, A | B> =>
-    orElseCause_(fx, flow(Cause.failureOrCause, Either.fold(f, failCause)))
+    orElseCause_(fx, flow(Cause.failureOrCause, Either.match(f, failCause)))
 }
 
 function orElseCause_<R, E, A, R2, E2, B>(
