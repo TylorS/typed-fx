@@ -169,6 +169,11 @@ function addPercentile(
 export function printTestSuiteResult(result: TestSuiteResult): string {
   return `## ${result.name}
 
-${tablemark(Object.entries(result.stats).map(([library, stats]) => ({ library, ...stats })))}
+${tablemark(
+  Object.entries(result.stats).map(([library, stats]) => ({
+    library,
+    ...stats,
+  })),
+)}
 `
 }

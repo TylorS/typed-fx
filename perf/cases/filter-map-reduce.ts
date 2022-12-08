@@ -31,7 +31,10 @@ const suite: TestSuite = TestSuite(`filter -> map -> reduce ${array.length} inte
   ),
 ])
 
-runTestSuite(suite, config).then(printTestSuiteResult, (error) => {
-  console.error(error)
-  process.exitCode = 1
-})
+runTestSuite(suite, config).then(
+  (result) => console.log(printTestSuiteResult(result)),
+  (error) => {
+    console.error(error)
+    process.exitCode = 1
+  },
+)
