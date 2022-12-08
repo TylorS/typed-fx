@@ -19,7 +19,7 @@ export interface TestStats {
   readonly min: number
   readonly max: number
   readonly timeToInit: number
-  readonly percentile: number
+  readonly overhead: number
 }
 
 export function TestStats(
@@ -27,9 +27,9 @@ export function TestStats(
   min: number,
   max: number,
   timeToInit: number,
-  percentile: number,
+  overhead: number,
 ): TestStats {
-  return { average, min, max, timeToInit, percentile }
+  return { average, min, max, timeToInit, overhead }
 }
 
 export interface TestSuite {
