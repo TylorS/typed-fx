@@ -17,8 +17,8 @@ export function fromFxEffect<R, E, R2, E2, A>(
 export function fromFxGen<Eff extends Effect.GenEffect<any, any, any>, R2, E2, A>(
   f: (i: Effect.Adapter) => Generator<Eff, Fx<R2, E2, A>, any>,
 ): Fx<
-  [Eff] extends [{ [Effect._GenR]: () => infer R }] ? R : never | R2,
-  [Eff] extends [{ [Effect._GenE]: () => infer E }] ? E : never | E2,
+  ([Eff] extends [{ [Effect._GenR]: () => infer R }] ? R : never) | R2,
+  ([Eff] extends [{ [Effect._GenE]: () => infer E }] ? E : never) | E2,
   A
 > {
   return fromFxEffect<
@@ -27,5 +27,5 @@ export function fromFxGen<Eff extends Effect.GenEffect<any, any, any>, R2, E2, A
     R2,
     E2,
     A
-  >(Effect.gen(f)) as any
+  >(Effect.gen(f))
 }
