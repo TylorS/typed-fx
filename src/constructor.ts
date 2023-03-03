@@ -9,5 +9,11 @@ export {
    * @since 1.0.0
    * @category Constructor
    */
-  fromEffect
+  fromEffect,
+  /**
+   * Detect if an Fx is a FromEffect instance. Useful for creating fusion optimizations.
+   * @since 1.0.0
+   * @category Type Guard
+   */
+  isFromEffect
 } from "./internal/constructor/fromEffect"
