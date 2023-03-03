@@ -1,5 +1,6 @@
 import { flow } from "@effect/data/Function"
-import { type Effect, matchCauseEffect, zipRight } from "@effect/io/Effect"
+import type { Cause } from "@effect/io/Cause"
+import * as Effect from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 
 /**
@@ -8,7 +9,7 @@ import type { Fx, Sink } from "@typed/fx/Fx"
  * @category Constructor
  */
 export function fromEffect<Services, Errors, Output>(
-  effect: Effect<Services, Errors, Output>
+  effect: Effect.Effect<Services, Errors, Output>
 ): Fx<Services, Errors, Output> {
   return new FromEffect(effect)
 }
@@ -18,10 +19,10 @@ export function fromEffect<Services, Errors, Output>(
  */
 export class FromEffect<Services, Errors, Output> implements Fx<Services, Errors, Output> {
   readonly _tag = "FromEffect"
-  constructor(readonly effect: Effect<Services, Errors, Output>) {}
+  constructor(readonly effect: Effect.Effect<Services, Errors, Output>) {}
 
   run<Services2>(sink: Sink<Services2, Errors, Output>) {
-    return matchCauseEffect(this.effect, sink.error, flow(sink.event, zipRight(sink.end)))
+    return Effect.matchCauseEffect(this.effect, sink.error, flow(sink.event, Effect.zipRight(sink.end)))
   }
 }
 
@@ -35,3 +36,11 @@ export function isFromEffect<Services, Errors, Output>(
 ): fx is FromEffect<Services, Errors, Output> {
   return fx instanceof FromEffect
 }
+
+export const succeed: <A>(value: A) => Fx<never, never, A> = flow(Effect.succeed, fromEffect)
+
+export const fail: <E>(error: E) => Fx<never, E, never> = flow(Effect.fail, fromEffect)
+
+export const failCause: <E>(cause: Cause<E>) => Fx<never, E, never> = flow(Effect.failCause, fromEffect)
+
+export const promise: <A>(promise: () => Promise<A>) => Fx<never, unknown, A> = flow(Effect.promise, fromEffect)
