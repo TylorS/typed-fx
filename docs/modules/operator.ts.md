@@ -39,7 +39,7 @@ Added in v1.0.0
 
 ## isMap
 
-Detect if an Fx is a FromEffect instance. Useful for creating fusion optimizations.
+Detect if an Fx is a MapFx instance. Useful for creating fusion optimizations.
 
 **Signature**
 
