@@ -3,7 +3,6 @@ import type { Cause } from "@effect/io/Cause"
 import { isInterruptedOnly } from "@effect/io/Cause"
 import * as Deferred from "@effect/io/Deferred"
 import * as Effect from "@effect/io/Effect"
-import * as Fiber from "@effect/io/Fiber"
 import type { Fx } from "@typed/fx/Fx"
 import { Sink } from "@typed/fx/Fx"
 
@@ -27,14 +26,11 @@ export const observe: {
         const end = Deferred.succeed(deferred, undefined as void)
         const error = (cause: Cause<E | E2>) => isInterruptedOnly(cause) ? end : Deferred.failCause(deferred, cause)
 
-        const fiber = yield* $(
-          Effect.forkScoped(
-            fx.run(Sink(flow(f, Effect.catchAllCause(error)), error, end))
-          )
+        yield* $(
+          fx.run(Sink(flow(f, Effect.catchAllCause(error)), error, end))
         )
 
-        yield* $(Deferred.await(deferred))
-        yield* $(Fiber.interrupt(fiber))
+        return yield* $(Deferred.await(deferred))
       })
     )
 )
