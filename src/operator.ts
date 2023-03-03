@@ -22,18 +22,26 @@ export {
   /**
    * Run an Effect for all failures within an Fx making any interrupt end the Fx
    * instead of failing.
+   * @since 1.0.0
+   * @category Operator
    */
   onNonInterruptCause
 } from "./internal/operator/onNonInterruptCause"
 
 export {
   /**
-   * Merge together multiple Fx instances into a single Fx that emits all of their
+   * Merge together 2 Fx instances into a single Fx that emits all of their
    * values as soon as possible.
    * @since 1.0.0
    * @category Operator
    */
   merge,
+  /**
+   * Merge together multiple Fx instances into a single Fx that emits all of their
+   * values as soon as possible.
+   * @since 1.0.0
+   * @category Operator
+   */
   mergeAll
 } from "./internal/operator/merge"
 
@@ -64,6 +72,11 @@ export {
    * @category Operator
    */
   flatMap,
+  /**
+   * Flatten an Fx of Fx into a single Fx.
+   * @since 1.0.0
+   * @category Operator
+   */
   flatten
 } from "./internal/operator/flatMap"
 

@@ -25,6 +25,8 @@ Added in v1.0.0
   - [Sink (interface)](#sink-interface)
 - [Type Guard](#type-guard)
   - [isFx](#isfx)
+- [Type Lambda](#type-lambda)
+  - [FxTypeLambda (interface)](#fxtypelambda-interface)
 
 ---
 
@@ -61,7 +63,8 @@ being run by higher-order Fx operators like flatMap or switchMap but not limited
 ```ts
 export interface Fx<out Services, out Errors, out Output> {
   /**
-   * The main API for
+   * The main API for running an Fx.
+   * @macro traced
    */
   run<Services2>(services: Sink<Services2, Errors, Output>): Effect<Services | Services2 | Scope, never, unknown>
 }
@@ -91,6 +94,22 @@ Verify that a value is an Fx.
 
 ```ts
 export declare const isFx: typeof isFx
+```
+
+Added in v1.0.0
+
+# Type Lambda
+
+## FxTypeLambda (interface)
+
+TypeLambda for typeclasses using Fx.
+
+**Signature**
+
+```ts
+export interface FxTypeLambda extends TypeLambda {
+  readonly type: Fx<this['Out1'], this['Out2'], this['Target']>
+}
 ```
 
 Added in v1.0.0

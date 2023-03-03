@@ -15,12 +15,25 @@ Added in v1.0.0
 <h2 class="text-delta">Table of contents</h2>
 
 - [utils](#utils)
+  - [collectAll](#collectall)
   - [drain](#drain)
   - [observe](#observe)
 
 ---
 
 # utils
+
+## collectAll
+
+Collect all the values of an Fx into an Array
+
+**Signature**
+
+```ts
+export declare const collectAll: typeof collectAll
+```
+
+Added in v1.0.0
 
 ## drain
 
