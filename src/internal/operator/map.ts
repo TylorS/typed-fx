@@ -7,6 +7,8 @@ export const map: {
 } = dual(2, <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f))
 
 export class MapFx<R, E, A, B> implements Fx<R, E, B> {
+  readonly _tag = "Map" as const
+
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B) {}
 
   run<R2>(sink: Sink<R2, E, B>) {

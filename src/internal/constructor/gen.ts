@@ -11,8 +11,13 @@ export function gen<Eff extends Effect.EffectGen<any, any, any>, R, E, A>(
 export class GenFx<Eff extends Effect.EffectGen<any, any, any>, R, E, A>
   implements Fx<R | GenResources<Eff>, E | GenErrors<Eff>, A>
 {
+  readonly _tag = "Gen" as const
+
   constructor(readonly f: (resume: EffectResume) => Generator<Eff, Fx<R, E, A>>) {}
 
+  /**
+   * @macro traced
+   */
   run<R2>(sink: Sink<R2, E | GenErrors<Eff>, A>) {
     return fromFxEffect<GenResources<Eff>, GenErrors<Eff>, R, E, A>(Effect.gen(this.f)).run(sink)
   }

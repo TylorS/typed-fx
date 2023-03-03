@@ -18,6 +18,8 @@ export const onNonInterruptCause: {
 })
 
 export class OnNonInterruptCauseFx<R, E, A, R2, E2, B> implements Fx<R | R2, E | E2, A> {
+  readonly _tag = "OnNonInterruptCause" as const
+
   constructor(readonly fx: Fx<R, E, A>, readonly f: (cause: Cause.Cause<E>) => Effect<R2, E2, B>) {}
 
   run<R2>(sink: Sink<R2, E | E2, A>) {

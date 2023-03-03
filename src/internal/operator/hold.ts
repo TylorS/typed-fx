@@ -18,7 +18,7 @@ export function hold_<R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Opt
   return new HoldFx(fx, value)
 }
 
-export class HoldFx<R, E, A> extends MulticastFx<R, E, A> implements Fx<R, E, A> {
+export class HoldFx<R, E, A> extends MulticastFx<R, E, A, "Hold"> implements Fx<R, E, A> {
   protected pendingSinks: Array<readonly [Sink<any, E, A>, Array<A>]> = []
   protected scheduledFiber: Fiber.RuntimeFiber<any, any> | undefined = undefined
 
@@ -26,7 +26,7 @@ export class HoldFx<R, E, A> extends MulticastFx<R, E, A> implements Fx<R, E, A>
     readonly fx: Fx<R, E, A>,
     protected current: MutableRef.MutableRef<Option.Option<A>>
   ) {
-    super(fx)
+    super(fx, "Hold")
 
     this.event = this.event.bind(this)
     this.error = this.error.bind(this)

@@ -10,13 +10,13 @@ import type { Scope } from "@effect/io/Scope"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { asap } from "../RefCounter"
 
-export const multicast = <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx)
+export const multicast = <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast")
 
-export class MulticastFx<R, E, A> implements Fx<R, E, A>, Sink<never, E, A> {
+export class MulticastFx<R, E, A, Tag extends string> implements Fx<R, E, A>, Sink<never, E, A> {
   protected observers: Array<MulticastObserver<any, E, A>> = []
   protected fiber: RuntimeFiber<never, unknown> | undefined
 
-  constructor(readonly fx: Fx<R, E, A>) {
+  constructor(readonly fx: Fx<R, E, A>, readonly _tag: Tag) {
     this.event = this.event.bind(this)
     this.error = this.error.bind(this)
   }

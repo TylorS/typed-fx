@@ -21,6 +21,8 @@ export const merge: {
 export class MergeAllFx<Streams extends ReadonlyArray<Fx<any, any, any>>>
   implements Fx<Fx.ServicesOf<Streams[number]>, Fx.ErrorsOf<Streams[number]>, Fx.OutputOf<Streams[number]>>
 {
+  readonly _tag = "MergeAll" as const
+
   constructor(readonly streams: Streams) {}
 
   run<R2>(sink: Sink<R2, Fx.ErrorsOf<Streams[number]>, Fx.OutputOf<Streams[number]>>) {

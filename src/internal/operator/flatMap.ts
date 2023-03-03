@@ -15,6 +15,8 @@ export const flatMap: FlatMap<FxTypeLambda>["flatMap"] = dual(
 export const flatten: <R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>) => Fx<R | R2, E | E2, A> = flatMap(identity)
 
 class FlatMapFx<R, E, A, R2, E2, B> implements Fx<R | R2, E | E2, B> {
+  readonly _tag = "FlatMap" as const
+
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => Fx<R2, E2, B>) {}
 
   run<R3>(sink: Sink<R3, E | E2, B>) {

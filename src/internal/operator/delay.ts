@@ -9,6 +9,8 @@ export function delay(duration: Duration) {
 }
 
 class DelayFx<R, E, A> implements Fx<R, E, A> {
+  readonly _tag = "Delay" as const
+
   constructor(readonly fx: Fx<R, E, A>, readonly duration: Duration) {}
 
   run<R2>(sink: Sink<R2, E, A>) {

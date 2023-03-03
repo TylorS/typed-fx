@@ -21,9 +21,13 @@ export function fromEffect<Services, Errors, Output>(
  * @internal
  */
 export class FromEffect<Services, Errors, Output> implements Fx<Services, Errors, Output> {
-  readonly _tag = "FromEffect"
+  readonly _tag = "FromEffect" as const
+
   constructor(readonly effect: Effect.Effect<Services, Errors, Output>) {}
 
+  /**
+   * @macro traced
+   */
   run<Services2>(sink: Sink<Services2, Errors, Output>) {
     return Effect.matchCauseEffect(this.effect, sink.error, flow(sink.event, Effect.zipRight(sink.end)))
   }

@@ -23,6 +23,8 @@ import type { Scope } from "@effect/io/Scope"
  * @category Model
  */
 export interface Fx<out Services, out Errors, out Output> {
+  readonly _tag: string
+
   /**
    * The main API for running an Fx.
    * @macro traced
