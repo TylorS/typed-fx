@@ -57,6 +57,7 @@ export function Sink<Services1, Services2, Services3, Errors, Output>(
 export {
   /**
    * Verify that a value is an Fx.
+   * @since 1.0.0
    * @category Type Guard
    */
   isFx
