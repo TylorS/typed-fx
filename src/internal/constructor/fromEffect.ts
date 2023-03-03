@@ -33,5 +33,5 @@ export class FromEffect<Services, Errors, Output> implements Fx<Services, Errors
 export function isFromEffect<Services, Errors, Output>(
   fx: Fx<Services, Errors, Output>
 ): fx is FromEffect<Services, Errors, Output> {
-  return fx._tag === "FromEffect"
+  return fx instanceof FromEffect
 }

@@ -22,9 +22,6 @@ import type { Scope } from "@effect/io/Scope"
  * @category Model
  */
 export interface Fx<out Services, out Errors, out Output> {
-  // A unique tag for this Fx, used to distinguish between different Fx types.
-  readonly _tag: string
-
   /**
    * The main API for
    */
