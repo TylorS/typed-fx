@@ -17,3 +17,21 @@ export {
    */
   isFromEffect
 } from "./internal/constructor/fromEffect"
+
+export {
+  /**
+   * Construct a Fx from an Effect returning an Fx.
+   * @since 1.0.0
+   * @category Constructor
+   */
+  fromFxEffect
+} from "./internal/constructor/fromFxEffect"
+
+export {
+  /**
+   * Construct a Fx from an Generator of Effects returning an Fx.
+   * @since 1.0.0
+   * @category Constructor
+   */
+  gen
+} from "./internal/constructor/gen"

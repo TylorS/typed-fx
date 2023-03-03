@@ -20,3 +20,11 @@ export {
    */
   drain
 } from "./internal/run/drain"
+
+export {
+  /**
+   * Collect all the values of an Fx into an Array
+   * @since 1.0.0
+   */
+  collectAll
+} from "./internal/run/collectAll"

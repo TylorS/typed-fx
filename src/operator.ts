@@ -11,9 +11,17 @@ export {
    */
   isMap,
   /**
-   * Construct a Fx from an Effect.
+   * Transform the values of an Fx.
    * @since 1.0.0
    * @category Operator
    */
   map
 } from "./internal/operator/map"
+
+export {
+  /**
+   * Run an Effect for all failures within an Fx making any interrupt end the Fx
+   * instead of failing.
+   */
+  onNonInterruptCause
+} from "./internal/operator/onNonInterruptCause"

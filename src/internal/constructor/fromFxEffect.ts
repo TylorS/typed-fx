@@ -1,7 +1,7 @@
 import { type Effect, matchCauseEffect } from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 
-export function fromFxEffect<R, E, R2, E2, A>(
+export function fromFxEffect<R = never, E = never, R2 = never, E2 = never, A = never>(
   effect: Effect<R, E, Fx<R2, E2, A>>
 ): Fx<R | R2, E | E2, A> {
   return new FxEffect(effect)
