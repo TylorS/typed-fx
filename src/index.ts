@@ -11,6 +11,12 @@ export * from "./Fx"
 export * from "./constructor"
 
 /**
+ * All the ways to interact with an Fx.
+ * @since 1.0.0
+ */
+export * from "./operator"
+
+/**
  * All the ways to invoke an Fx including listening to events.
  * @since 1.0.0
  */

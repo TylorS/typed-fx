@@ -15,6 +15,9 @@ import type { Scope } from "@effect/io/Scope"
 /**
  * A `Fx` is a push-based reactive data structure that declaratively represents a multi-shot Effects.
  * An Fx can call its provided Sink 0 or more times, and then call Sink.error or Sink.end exactly once.
+ *
+ * It makes use of Scope to ensure that all resources are properly released including any "nested" Fx
+ * being run by higher-order Fx operators like flatMap or switchMap but not limited to.
  * @since 1.0.0
  * @category Model
  */
@@ -25,9 +28,9 @@ export interface Fx<out Services, out Errors, out Output> {
   /**
    * The main API for
    */
-  readonly run: <Services2>(
+  run<Services2>(
     services: Sink<Services2, Errors, Output>
-  ) => Effect<Services | Services2 | Scope, never, unknown>
+  ): Effect<Services | Services2 | Scope, never, unknown>
 }
 
 /**
@@ -53,3 +56,11 @@ export function Sink<Services1, Services2, Services3, Errors, Output>(
 ): Sink<Services1 | Services2 | Services3, Errors, Output> {
   return { event, error, end }
 }
+
+export {
+  /**
+   * Verify that a value is an Fx.
+   * @category Type Guard
+   */
+  isFx
+} from "./internal/Fx"
