@@ -1,7 +1,7 @@
 import { left } from "@effect/data/Either"
 import * as Effect from "@effect/io/Effect"
 import * as Random from "@effect/io/Random"
-import { collectAll, fromEffect, gen, observe } from "@typed/fx"
+import { collectAll, fromArray, fromEffect, gen, observe } from "@typed/fx"
 import { fromFxEffect } from "@typed/fx/internal/constructor/fromFxEffect"
 import { describe, it } from "vitest"
 
@@ -143,6 +143,19 @@ describe("operators", () => {
 
         expect(either).toEqual(left(`Expected`))
       })
+    })
+  })
+
+  describe(fromArray.name, () => {
+    it("emits the expected values then ends", async () => {
+      const test = Effect.gen(function*($) {
+        const expected = [1, 2, 3]
+        const actual = yield* $(collectAll(fromArray(expected)))
+
+        expect(actual).toEqual(expected)
+      })
+
+      await Effect.runPromise(test)
     })
   })
 })

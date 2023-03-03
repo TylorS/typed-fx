@@ -35,3 +35,12 @@ export {
    */
   gen
 } from "./internal/constructor/gen"
+
+export {
+  /**
+   * Construct a Fx from an array of values.
+   * @since 1.0.0
+   * @category Constructor
+   */
+  fromArray
+} from "./internal/constructor/fromArray"
