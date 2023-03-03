@@ -23,6 +23,8 @@ Added in v1.0.0
 - [Model](#model)
   - [Fx (interface)](#fx-interface)
   - [Sink (interface)](#sink-interface)
+- [Type Guard](#type-guard)
+  - [isFx](#isfx)
 
 ---
 
@@ -51,19 +53,17 @@ Added in v1.0.0
 A `Fx` is a push-based reactive data structure that declaratively represents a multi-shot Effects.
 An Fx can call its provided Sink 0 or more times, and then call Sink.error or Sink.end exactly once.
 
+It makes use of Scope to ensure that all resources are properly released including any "nested" Fx
+being run by higher-order Fx operators like flatMap or switchMap but not limited to.
+
 **Signature**
 
 ```ts
 export interface Fx<out Services, out Errors, out Output> {
-  // A unique tag for this Fx, used to distinguish between different Fx types.
-  readonly _tag: string
-
   /**
    * The main API for
    */
-  readonly run: <Services2>(
-    services: Sink<Services2, Errors, Output>
-  ) => Effect<Services | Services2 | Scope, never, unknown>
+  run<Services2>(services: Sink<Services2, Errors, Output>): Effect<Services | Services2 | Scope, never, unknown>
 }
 ```
 
@@ -77,6 +77,20 @@ A `Sink` is receiver of a `Fx`'s events and errors. It describes event and error
 
 ```ts
 export interface Sink<out Services,
+```
+
+Added in v1.0.0
+
+# Type Guard
+
+## isFx
+
+Verify that a value is an Fx.
+
+**Signature**
+
+```ts
+export declare const isFx: typeof isFx
 ```
 
 Added in v1.0.0

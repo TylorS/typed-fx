@@ -1,6 +1,6 @@
 ---
 title: run.ts
-nav_order: 4
+nav_order: 5
 parent: Modules
 ---
 
@@ -15,11 +15,24 @@ Added in v1.0.0
 <h2 class="text-delta">Table of contents</h2>
 
 - [utils](#utils)
+  - [drain](#drain)
   - [observe](#observe)
 
 ---
 
 # utils
+
+## drain
+
+Activate an Fx.
+
+**Signature**
+
+```ts
+export declare const drain: Drain
+```
+
+Added in v1.0.0
 
 ## observe
 
