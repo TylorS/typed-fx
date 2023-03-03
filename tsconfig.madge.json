@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@typed/fx": [
+        "./build/esm/index.js"
+      ],
+      "@typed/fx/*": [
+        "./build/esm/*"
+      ]
+    }
+  },
+  "include": [
+    "./build/esm/**/*.js"
+  ]
+}
