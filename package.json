@@ -1,6 +1,6 @@
 {
-  "name": "@effect/data",
-  "version": "0.3.1",
+  "name": "@typed/fx",
+  "version": "1.1.1",
   "publishConfig": {
     "access": "public",
     "directory": "dist"
@@ -19,12 +19,16 @@
   "tags": [
     "typescript",
     "algebraic-data-types",
-    "functional-programming"
+    "functional-programming",
+    "reactive",
+    "effect"
   ],
   "keywords": [
     "typescript",
     "algebraic-data-types",
-    "functional-programming"
+    "functional-programming",
+    "reactive",
+    "effect"
   ],
   "scripts": {
     "example": "ts-node --project tsconfig.examples.json",
@@ -50,10 +54,14 @@
   },
   "exports": {
     ".": {
-      "require": "./build/cjs/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/mjs/index.js",
+      "require": "./dist/index.js"
     },
     "./*": {
-      "require": "./build/cjs/*.js"
+      "types": "./dist/*.d.ts",
+      "import": "./dist/mjs/*.js",
+      "require": "./dist/*.js"
     }
   },
   "devDependencies": {
