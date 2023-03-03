@@ -12,3 +12,11 @@ export {
    */
   observe
 } from "./internal/run/observe"
+
+export {
+  /**
+   * Activate an Fx.
+   * @since 1.0.0
+   */
+  drain
+} from "./internal/run/drain"
