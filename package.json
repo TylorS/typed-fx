@@ -7,14 +7,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Effect-TS/data.git"
+    "url": "https://github.com/TylorS/typed-fx.git"
   },
-  "author": "Michael Arnaldi <ma@matechs.com>",
+  "author": "Tylor Steinberger <tlsteinberger167@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Effect-TS/data/issues"
+    "url": "https://github.com/TylorS/typed-fx/issues"
   },
-  "homepage": "https://github.com/Effect-TS/data",
+  "homepage": "https://github.com/TylorS/typed-fx",
   "description": "Functional programming in TypeScript",
   "tags": [
     "typescript",
