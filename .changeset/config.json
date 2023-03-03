@@ -1,10 +1,10 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@2.3.0/schema.json",
   "changelog": ["@changesets/changelog-github", { "repo": "TylorS/typed-fx" }],
-  "commit": false,
+  "commit": true,
   "linked": [],
   "access": "restricted",
-  "baseBranch": "main",
+  "baseBranch": "development",
   "updateInternalDependencies": "patch",
   "ignore": []
 }
