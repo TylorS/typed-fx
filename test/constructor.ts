@@ -1,8 +1,8 @@
 import { left } from "@effect/data/Either"
 import * as Effect from "@effect/io/Effect"
 import * as Random from "@effect/io/Random"
-import { fromEffect } from "@typed/fx/constructor/fromEffect"
-import { observe } from "@typed/fx/run/observe"
+import { fromEffect } from "@typed/fx/internal/constructor/fromEffect"
+import { observe } from "@typed/fx/internal/run/observe"
 import { describe, it } from "vitest"
 
 describe(fromEffect.name, () => {
