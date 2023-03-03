@@ -8,6 +8,7 @@
  * @since 1.0.0
  */
 
+import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
@@ -28,6 +29,12 @@ export interface Fx<out Services, out Errors, out Output> {
   run<Services2>(
     services: Sink<Services2, Errors, Output>
   ): Effect<Services | Services2 | Scope, never, unknown>
+}
+
+export namespace Fx {
+  export type ServicesOf<T> = T extends Fx<infer Services, any, any> ? Services : never
+  export type ErrorsOf<T> = T extends Fx<any, infer Errors, any> ? Errors : never
+  export type OutputOf<T> = T extends Fx<any, any, infer Output> ? Output : never
 }
 
 /**
@@ -62,3 +69,10 @@ export {
    */
   isFx
 } from "./internal/Fx"
+
+/**
+ * TypeLambda for typeclasses using Fx.
+ */
+export interface FxTypeLambda extends TypeLambda {
+  readonly type: Fx<this["Out1"], this["Out2"], this["Target"]>
+}
