@@ -1,7 +1,9 @@
+import { millis } from "@effect/data/Duration"
 import { left } from "@effect/data/Either"
+import * as Clock from "@effect/io/Clock"
 import * as Effect from "@effect/io/Effect"
 import * as Random from "@effect/io/Random"
-import { collectAll, fromArray, fromEffect, gen, observe } from "@typed/fx"
+import { at, collectAll, fromArray, fromEffect, gen, observe } from "@typed/fx"
 import { fromFxEffect } from "@typed/fx/internal/constructor/fromFxEffect"
 import { describe, it } from "vitest"
 
@@ -153,6 +155,23 @@ describe("operators", () => {
         const actual = yield* $(collectAll(fromArray(expected)))
 
         expect(actual).toEqual(expected)
+      })
+
+      await Effect.runPromise(test)
+    })
+  })
+
+  describe(at.name, () => {
+    it("emits the expected value then ends", async () => {
+      const test = Effect.gen(function*($) {
+        const expected = 1
+        const delay = 100
+        const start = yield* $(Clock.currentTimeMillis())
+        const actual = yield* $(collectAll(at(expected, millis(delay))))
+        const end = yield* $(Clock.currentTimeMillis())
+
+        expect(actual).toEqual([expected])
+        expect(end - start).toBeGreaterThanOrEqual(delay)
       })
 
       await Effect.runPromise(test)

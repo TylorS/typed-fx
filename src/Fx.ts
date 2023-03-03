@@ -24,7 +24,8 @@ import type { Scope } from "@effect/io/Scope"
  */
 export interface Fx<out Services, out Errors, out Output> {
   /**
-   * The main API for
+   * The main API for running an Fx.
+   * @macro traced
    */
   run<Services2>(
     services: Sink<Services2, Errors, Output>
@@ -32,8 +33,25 @@ export interface Fx<out Services, out Errors, out Output> {
 }
 
 export namespace Fx {
+  /**
+   * Extract the services of an Fx.
+   * @since 1.0.0
+   * @category Type-level
+   */
   export type ServicesOf<T> = T extends Fx<infer Services, any, any> ? Services : never
+
+  /**
+   * Extract the errors of an Fx.
+   * @since 1.0.0
+   * @category Type-level
+   */
   export type ErrorsOf<T> = T extends Fx<any, infer Errors, any> ? Errors : never
+
+  /**
+   * Extract the output of an Fx.
+   * @since 1.0.0
+   * @category Type-level
+   */
   export type OutputOf<T> = T extends Fx<any, any, infer Output> ? Output : never
 }
 
@@ -72,6 +90,8 @@ export {
 
 /**
  * TypeLambda for typeclasses using Fx.
+ * @since 1.0.0
+ * @category Type Lambda
  */
 export interface FxTypeLambda extends TypeLambda {
   readonly type: Fx<this["Out1"], this["Out2"], this["Target"]>

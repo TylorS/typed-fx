@@ -27,7 +27,7 @@ export const observe: {
         const error = (cause: Cause<E | E2>) => isInterruptedOnly(cause) ? end : Deferred.failCause(deferred, cause)
 
         yield* $(
-          fx.run(Sink(flow(f, Effect.catchAllCause(error)), error, end))
+          Effect.forkScoped(fx.run(Sink(flow(f, Effect.catchAllCause(error)), error, end)))
         )
 
         return yield* $(Deferred.await(deferred))
