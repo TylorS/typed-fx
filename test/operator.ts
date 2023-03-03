@@ -1,22 +1,24 @@
 import { left } from "@effect/data/Either"
 import * as Effect from "@effect/io/Effect"
 import * as Random from "@effect/io/Random"
-import { fromEffect, observe } from "@typed/fx"
+import { fromEffect, map, observe } from "@typed/fx"
 import { describe, it } from "vitest"
 
 describe("operators", () => {
-  describe(fromEffect.name, () => {
+  describe(map.name, () => {
     describe("given an Effect that succeeds", () => {
-      it("emits the expected value then ends", async () => {
+      it("transforms the value", async () => {
         const test = Effect.gen(function*($) {
           const value = yield* $(Random.nextInt())
-          const fx = fromEffect(Effect.succeed(value))
+          const fx = map(fromEffect(Effect.succeed(value)), (x) => x + 1)
 
           yield* $(
             observe(
               fx,
               (a) =>
-                a === value ? Effect.succeed(undefined) : Effect.fail(`Expected value to be ${value} but got ${value}`)
+                a === value + 1 ?
+                  Effect.succeed(undefined) :
+                  Effect.fail(`Expected value to be ${value} but got ${value}`)
             )
           )
         })
@@ -26,9 +28,11 @@ describe("operators", () => {
     })
 
     describe("given an Effect that fails", () => {
-      it("emits the expected error", async () => {
+      it("doesn't run the transormation", async () => {
         const test = Effect.gen(function*($) {
-          const fx = fromEffect(Effect.fail(`Expected`))
+          const runs = 0
+          const run = () => runs + 1
+          const fx = map(fromEffect(Effect.fail(`Expected`)), run)
 
           yield* $(
             observe(
@@ -36,6 +40,8 @@ describe("operators", () => {
               (a) => Effect.fail(`Unexpected value: ${a}`)
             )
           )
+
+          expect(runs).toEqual(0)
         })
 
         const either = await Effect.runPromiseEither(test)
