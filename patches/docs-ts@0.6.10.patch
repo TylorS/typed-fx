@@ -24,7 +24,7 @@ index c0f282ca9e3ddd93e44a62e1d05c1cc45b9f5c6a..616f7f6223459e0621522279ea7fc1cf
 +                  "lib": ["es2021"],
 +                  "paths": {
 +                    "@typed/fx": ["../../src/index.ts"],
-+                    "@typed/fx/*": ["../../src/*"]
++                    "@typed/fx/*": ["../../src/*"],
 +                    "@typed/fx/test/*": ["../../test/*"],
 +                    "@typed/fx/examples/*": ["../../examples/*"],
 +                  }
