@@ -1,16 +1,19 @@
 import { dual } from "@effect/data/Function"
 import type { Fx, Sink } from "@typed/fx/Fx"
+import type { HasParents } from "@typed/fx/internal/HasParent"
+import { HAS_PARENTS } from "@typed/fx/internal/HasParent"
 
 export const map: {
   <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B): Fx<R, E, B>
   <A, B>(f: (a: A) => B): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, B>
 } = dual(2, <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f))
 
-export class MapFx<R, E, A, B> implements Fx<R, E, B> {
+export class MapFx<R, E, A, B> implements Fx<R, E, B>, HasParents {
   readonly _tag = "Map"
 
-  constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B) {
-  }
+  readonly [HAS_PARENTS] = [this.fx]
+
+  constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B) {}
 
   run<R2>(sink: Sink<R2, E, B>) {
     return this.fx.run({
