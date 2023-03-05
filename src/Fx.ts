@@ -10,6 +10,7 @@
 
 import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
+import type { Trace } from "@effect/io/Debug"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 
@@ -32,6 +33,11 @@ export interface Fx<out Services, out Errors, out Output> {
   run<Services2>(
     services: Sink<Services2, Errors, Output>
   ): Effect<Services | Services2 | Scope, never, unknown>
+
+  /**
+   * Add a trace to an Fx.
+   */
+  traced(trace: Trace): Fx<Services, Errors, Output>
 }
 
 export namespace Fx {
@@ -96,5 +102,5 @@ export {
  * @category Type Lambda
  */
 export interface FxTypeLambda extends TypeLambda {
-  readonly type: Fx<this["Out1"], this["Out2"], this["Target"]>
+  readonly type: Fx<this["Out2"], this["Out1"], this["Target"]>
 }

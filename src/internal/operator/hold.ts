@@ -6,17 +6,18 @@ import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 
+import { methodWithTrace } from "@effect/io/Debug"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { asap } from "@typed/fx/internal/RefCounter"
 import { MulticastFx } from "./multicast"
 
-export function hold<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
-  return new HoldFx(fx, MutableRef.make(Option.none()))
-}
+export const hold = methodWithTrace((trace) =>
+  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, MutableRef.make(Option.none())).traced(trace)
+)
 
-export function hold_<R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>) {
-  return new HoldFx(fx, value)
-}
+export const hold_ = methodWithTrace((trace) =>
+  <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>) => new HoldFx(fx, value).traced(trace)
+)
 
 export class HoldFx<R, E, A> extends MulticastFx<R, E, A, "Hold"> implements Fx<R, E, A> {
   protected pendingSinks: Array<readonly [Sink<any, E, A>, Array<A>]> = []

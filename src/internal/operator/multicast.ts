@@ -7,16 +7,21 @@ import * as Fiber from "@effect/io/Fiber"
 import type { RuntimeFiber } from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 
+import { methodWithTrace } from "@effect/io/Debug"
 import type { Fx, Sink } from "@typed/fx/Fx"
+import { BaseFx } from "@typed/fx/internal/Fx"
 import { asap } from "../RefCounter"
 
-export const multicast = <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast")
+export const multicast = methodWithTrace((trace) =>
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast").traced(trace)
+)
 
-export class MulticastFx<R, E, A, Tag extends string> implements Fx<R, E, A>, Sink<never, E, A> {
+export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> implements Sink<never, E, A> {
   protected observers: Array<MulticastObserver<any, E, A>> = []
   protected fiber: RuntimeFiber<never, unknown> | undefined
 
   constructor(readonly fx: Fx<R, E, A>, readonly _tag: Tag) {
+    super()
     this.event = this.event.bind(this)
     this.error = this.error.bind(this)
   }

@@ -1,7 +1,9 @@
 import { millis } from "@effect/data/Duration"
-import { left } from "@effect/data/Either"
+import * as Either from "@effect/data/Either"
+import * as Cause from "@effect/io/Cause"
 import * as Clock from "@effect/io/Clock"
 import * as Effect from "@effect/io/Effect"
+import * as Exit from "@effect/io/Exit"
 import * as Random from "@effect/io/Random"
 import { at, collectAll, fromArray, fromEffect, gen, observe } from "@typed/fx"
 import { fromFxEffect } from "@typed/fx/internal/constructor/fromFxEffect"
@@ -43,7 +45,7 @@ describe("operators", () => {
 
         const either = await Effect.runPromiseEither(test)
 
-        expect(either).toEqual(left(`Expected`))
+        expect(either).toEqual(Either.left(`Expected`))
       })
     })
   })
@@ -73,22 +75,27 @@ describe("operators", () => {
 
           const either = await Effect.runPromiseEither(test)
 
-          expect(either).toEqual(left(`Expected`))
+          expect(either).toEqual(Either.left(`Expected`))
         })
       })
     })
 
     describe("given an Effect that fails", () => {
       it("emits the expected error", async () => {
-        const test = Effect.gen(function*($) {
-          const fx = fromFxEffect(Effect.fail(`Expected`))
+        const message = `Expected`
+        const test = collectAll(fromFxEffect(Effect.fail(message)))
+        const exit = await Effect.runPromiseExit(test)
 
-          yield* $(collectAll(fx))
-        })
+        assert(Exit.isFailure(exit))
+        expect(Cause.unannotate(exit.cause)).toEqual(Cause.fail(message))
 
-        const either = await Effect.runPromiseEither(test)
+        const pretty = Cause.pretty(exit.cause)
 
-        expect(either).toEqual(left(`Expected`))
+        expect(pretty).toMatch(/Error: Expected/)
+        expect(pretty).toMatch(/\.fail/)
+        expect(pretty).toMatch(/\.fromFxEffect/)
+        expect(pretty).toMatch(/\.collectAll/)
+        expect(pretty).toMatch(/\.runPromiseExit/)
       })
     })
   })
@@ -124,7 +131,7 @@ describe("operators", () => {
 
           const either = await Effect.runPromiseEither(test)
 
-          expect(either).toEqual(left(`Expected`))
+          expect(either).toEqual(Either.left(`Expected`))
         })
       })
     })
@@ -143,7 +150,7 @@ describe("operators", () => {
 
         const either = await Effect.runPromiseEither(test)
 
-        expect(either).toEqual(left(`Expected`))
+        expect(either).toEqual(Either.left(`Expected`))
       })
     })
   })

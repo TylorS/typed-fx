@@ -1,18 +1,21 @@
+import { methodWithTrace } from "@effect/io/Debug"
 import { forEachDiscard, matchCauseEffect } from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
+import { BaseFx } from "@typed/fx/internal/Fx"
 
-export function fromArray<T extends ReadonlyArray<any>>(array: readonly [...T]): Fx<never, never, T[number]> {
-  return new FromArrayFx(array)
-}
+export const fromArray = methodWithTrace((trace) =>
+  function fromArray<T extends ReadonlyArray<any>>(array: readonly [...T]): Fx<never, never, T[number]> {
+    return new FromArrayFx(array).traced(trace)
+  }
+)
 
-export class FromArrayFx<T extends ReadonlyArray<any>> implements Fx<never, never, T[number]> {
+export class FromArrayFx<T extends ReadonlyArray<any>> extends BaseFx<never, never, T[number]> {
   readonly _tag = "FromArray" as const
 
-  constructor(readonly array: T) {}
+  constructor(readonly array: T) {
+    super()
+  }
 
-  /**
-   * @macro traced
-   */
   run<R>(sink: Sink<R, never, T[number]>) {
     return matchCauseEffect(forEachDiscard(this.array, sink.event), sink.error, () => sink.end)
   }

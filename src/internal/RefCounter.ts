@@ -7,10 +7,8 @@ import * as Ref from "@effect/io/Ref"
 import * as Schedule from "@effect/io/Schedule"
 import type { Scope } from "@effect/io/Scope"
 
-export const asap = pipe(
-  Schedule.once(),
-  Schedule.delayed(() => millis(0))
-)
+const zero = millis(0)
+export const asap = Schedule.delayed(Schedule.once(), () => zero)
 
 export class RefCounter {
   protected count = Ref.unsafeMake(this.initial)

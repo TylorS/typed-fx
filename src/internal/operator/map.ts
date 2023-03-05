@@ -1,15 +1,18 @@
-import { dual } from "@effect/data/Function"
+import { dualWithTrace } from "@effect/io/Debug"
 import type { Fx, Sink } from "@typed/fx/Fx"
+import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const map: {
   <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B): Fx<R, E, B>
   <A, B>(f: (a: A) => B): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, B>
-} = dual(2, <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f))
+} = dualWithTrace(2, (trace) => <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f).traced(trace))
 
-export class MapFx<R, E, A, B> implements Fx<R, E, B> {
+export class MapFx<R, E, A, B> extends BaseFx<R, E, B> {
   readonly _tag = "Map" as const
 
-  constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B) {}
+  constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B) {
+    super()
+  }
 
   run<R2>(sink: Sink<R2, E, B>) {
     return this.fx.run({
