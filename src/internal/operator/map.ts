@@ -1,5 +1,6 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
+import { Sink } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const map: {
@@ -15,10 +16,11 @@ export class MapFx<R, E, A, B> extends BaseFx<R, E, B> {
   }
 
   run<R2>(sink: Sink<R2, E, B>) {
-    return this.fx.run({
-      ...sink,
-      event: (a) => sink.event(this.f(a))
-    })
+    return this.fx.run(Sink(
+      (a) => sink.event(this.f(a)),
+      sink.error,
+      sink.end
+    ))
   }
 
   static make<R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B): Fx<R, E, B> {

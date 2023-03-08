@@ -33,8 +33,6 @@
 - [x] Effect.absorbWith
 - [x] Effect.bind
 - [x] Effect.bindValue
-- [ ] Effect.cached
-- [ ] Effect.cachedInvalidate
 - [ ] Effect.catchAllCause
 - [ ] Effect.catchAllDefect
 - [ ] Effect.catchSome
