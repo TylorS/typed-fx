@@ -4,8 +4,8 @@
 
 - [x] Empty
 - [ ] periodic
-- [ ] continueWith
-- [ ] startWith
+- [x] continueWith
+- [x] startWith
 - [ ] scan
 - [ ] loop
 - [ ] zipItems
@@ -63,7 +63,7 @@
 - [ ] Effect.collectPar
 - [ ] Effect.collectWhile
 - [ ] Effect.daemonChildren
-- [ ] Effect.delay
+- [x] Effect.delay
 - [ ] Effect.descriptor
 - [ ] Effect.descriptorWith
 - [ ] Effect.either
@@ -73,8 +73,9 @@
 - [ ] Effect.eventually
 - [ ] Effect.exists
 - [ ] Effect.existsPar
-- [ ] Effect.exit
-- [ ] Effect.fail
+- [x] Effect.exit
+- [x] Effect.fail
+- [x] Effect.failCause
 - [ ] Effect.failCauseSync
 - [ ] Effect.failSync
 - [ ] Effect.filter
@@ -110,10 +111,10 @@
 - [ ] Effect.forkIn
 - [ ] Effect.forkScoped
 - [ ] Effect.forkWithErrorHandler
-- [ ] Effect.fromEither
-- [ ] Effect.fromEitherCause
-- [ ] Effect.fromFiber
-- [ ] Effect.fromFiberEffect
+- [x] Effect.fromEither
+- [x] Effect.fromEitherCause
+- [x] Effect.fromFiber
+- [x] Effect.fromFiberEffect
 - [ ] Effect.getFiberRefs
 - [ ] Effect.getOrFail
 - [ ] Effect.getOrFailDiscard
