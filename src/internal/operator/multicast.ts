@@ -69,7 +69,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
     )
   }
 
-  get end(): Effect.Effect<never, never, void> {
+  end(): Effect.Effect<never, never, void> {
     return Effect.suspendSucceed(() =>
       pipe(
         Effect.forEachParDiscard(this.observers.slice(), (observer) => this.runEnd(observer)),
@@ -93,7 +93,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
 
   protected runEnd(observer: MulticastObserver<any, E, A>) {
     return pipe(
-      observer.sink.end,
+      observer.sink.end(),
       Effect.provideContext(observer.context),
       Effect.tap(() => Effect.sync(() => this.removeObserver(observer))),
       Effect.intoDeferred(observer.deferred)

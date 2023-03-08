@@ -29,7 +29,7 @@ export class OnNonInterruptCauseFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E 
   run<R2>(sink: Sink<R2, E | E2, A>) {
     return this.fx.run({
       ...sink,
-      error: (cause) => (Cause.isInterruptedOnly(cause) ? sink.end : catchAllCause(this.f(cause), sink.error))
+      error: (cause) => (Cause.isInterruptedOnly(cause) ? sink.end() : catchAllCause(this.f(cause), sink.error))
     })
   }
 }

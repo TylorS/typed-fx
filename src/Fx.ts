@@ -11,6 +11,7 @@
 import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
 import type { Trace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/io/Debug"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 
@@ -71,7 +72,7 @@ export namespace Fx {
 export interface Sink<out Services, in Errors, in Output> {
   readonly event: (event: Output) => Effect<Services, never, unknown>
   readonly error: (error: Cause<Errors>) => Effect<Services, never, unknown>
-  readonly end: Effect<Services, never, unknown>
+  readonly end: () => Effect<Services, never, unknown>
 }
 
 /**
@@ -85,9 +86,9 @@ export function Sink<Services1, Services2, Services3, Errors, Output>(
   end: Sink<Services3, Errors, Output>["end"]
 ): Sink<Services1 | Services2 | Services3, Errors, Output> {
   const sink: Sink<Services1 | Services2 | Services3, Errors, Output> = {
-    event,
-    error,
-    end
+    event: methodWithTrace((trace, restore) => (a) => restore(event)(a).traced(trace)),
+    error: methodWithTrace((trace, restore) => (e) => restore(error)(e).traced(trace)),
+    end: methodWithTrace((trace, restore) => () => restore(end)().traced(trace))
   }
 
   return sink

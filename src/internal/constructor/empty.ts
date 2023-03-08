@@ -7,7 +7,7 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 export class EmptyFx extends BaseFx<never, never, never> {
   readonly _tag = "Empty"
   run<R>(sink: Sink<R, never, never>): Effect<R | Scope, never, void> {
-    return sink.end
+    return sink.end()
   }
 }
 

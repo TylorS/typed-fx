@@ -57,7 +57,7 @@ export class RefCounter {
 export function withRefCounter<R, E, A, R2, E2, B>(
   initialCount: number,
   f: (counter: RefCounter) => Effect.Effect<R, E, A>,
-  onEnd: Effect.Effect<R2, E2, B>
+  onEnd: () => Effect.Effect<R2, E2, B>
 ): Effect.Effect<R | R2 | Scope, E | E2, B> {
   return Effect.gen(function*($) {
     const deferred = yield* $(Deferred.make<never, void>())
@@ -69,6 +69,6 @@ export function withRefCounter<R, E, A, R2, E2, B>(
 
     yield* $(Fiber.interrupt(fiber))
 
-    return yield* $(onEnd)
+    return yield* $(onEnd())
   })
 }

@@ -32,7 +32,7 @@ export class ContinueWithFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, A
       Sink(
         sink.event,
         sink.error,
-        suspendSucceed(() => this.f().run(sink))
+        () => suspendSucceed(() => this.f().run(sink))
       )
     )
   }

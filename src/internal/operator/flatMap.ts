@@ -32,12 +32,12 @@ class FlatMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
             (a) =>
               pipe(
                 counter.increment,
-                Effect.flatMap(() => this.f(a).run(Sink(sink.event, sink.error, counter.decrement))),
+                Effect.flatMap(() => this.f(a).run(Sink(sink.event, sink.error, () => counter.decrement))),
                 Effect.onError((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
                 Effect.forkScoped
               ),
             sink.error,
-            counter.decrement
+            () => counter.decrement
           )
         ),
       sink.end

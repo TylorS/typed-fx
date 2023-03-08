@@ -25,7 +25,7 @@ export class FromEffect<Services, Errors, Output> extends BaseFx<Services, Error
   }
 
   run<Services2>(sink: Sink<Services2, Errors, Output>) {
-    return Effect.matchCauseEffect(this.effect, sink.error, flow(sink.event, Effect.zipRight(sink.end)))
+    return Effect.matchCauseEffect(this.effect, sink.error, flow(sink.event, Effect.flatMap(sink.end)))
   }
 }
 

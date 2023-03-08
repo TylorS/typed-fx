@@ -17,6 +17,6 @@ export class FromArrayFx<T extends ReadonlyArray<any>> extends BaseFx<never, nev
   }
 
   run<R>(sink: Sink<R, never, T[number]>) {
-    return matchCauseEffect(forEachDiscard(this.array, sink.event), sink.error, () => sink.end)
+    return matchCauseEffect(forEachDiscard(this.array, sink.event), sink.error, sink.end)
   }
 }
