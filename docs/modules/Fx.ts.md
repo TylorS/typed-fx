@@ -1,6 +1,6 @@
 ---
 title: Fx.ts
-nav_order: 2
+nav_order: 1
 parent: Modules
 ---
 
@@ -62,11 +62,18 @@ being run by higher-order Fx operators like flatMap or switchMap but not limited
 
 ```ts
 export interface Fx<out Services, out Errors, out Output> {
+  readonly _tag: string
+
   /**
    * The main API for running an Fx.
    * @macro traced
    */
   run<Services2>(services: Sink<Services2, Errors, Output>): Effect<Services | Services2 | Scope, never, unknown>
+
+  /**
+   * Add a trace to an Fx.
+   */
+  traced(trace: Trace): Fx<Services, Errors, Output>
 }
 ```
 
@@ -108,7 +115,7 @@ TypeLambda for typeclasses using Fx.
 
 ```ts
 export interface FxTypeLambda extends TypeLambda {
-  readonly type: Fx<this['Out1'], this['Out2'], this['Target']>
+  readonly type: Fx<this['Out2'], this['Out1'], this['Target']>
 }
 ```
 
