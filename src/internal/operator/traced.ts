@@ -20,6 +20,6 @@ export class Traced<R, E, A> implements Fx<R, E, A> {
   }
 
   traced(trace: Trace): Fx<R, E, A> {
-    return new Traced(this.fx, trace)
+    return trace ? new Traced(this.fx, trace) : this
   }
 }
