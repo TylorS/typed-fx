@@ -6,9 +6,11 @@ import { Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
-export const mergeAll = methodWithTrace((trace) =>
-  <Streams extends ReadonlyArray<Fx<any, any, any>>>(...streams: Streams) => new MergeAllFx(streams).traced(trace)
-)
+export const mergeAll: <Streams extends ReadonlyArray<Fx<any, any, any>>>(
+  ...streams: Streams
+) => Fx<Fx.ServicesOf<Streams[number]>, Fx.ErrorsOf<Streams[number]>, Fx.OutputOf<Streams[number]>> = methodWithTrace((
+  trace
+) => <Streams extends ReadonlyArray<Fx<any, any, any>>>(...streams: Streams) => new MergeAllFx(streams).traced(trace))
 
 export const merge: {
   <R, E, A, R2, E2, B>(first: Fx<R, E, A>, second: Fx<R2, E2, B>): Fx<R | R2, E | E2, A | B>

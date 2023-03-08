@@ -6,28 +6,35 @@ import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 
-import { methodWithTrace } from "@effect/io/Debug"
+import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { asap } from "@typed/fx/internal/RefCounter"
 import { MulticastFx } from "./multicast"
 
-export const hold = methodWithTrace((trace) =>
-  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, MutableRef.make(Option.none())).traced(trace)
+export const hold: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>
+  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, MutableRef.make(Option.none()), "Hold").traced(trace)
 )
 
-export const hold_ = methodWithTrace((trace) =>
-  <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>) => new HoldFx(fx, value).traced(trace)
+export const hold_: {
+  <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>): Fx<R, E, A>
+  <A>(value: MutableRef.MutableRef<Option.Option<A>>): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, A>
+} = dualWithTrace(
+  2,
+  (trace) =>
+    <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>): Fx<R, E, A> =>
+      new HoldFx(fx, value, "Hold").traced(trace)
 )
 
-export class HoldFx<R, E, A> extends MulticastFx<R, E, A, "Hold"> implements Fx<R, E, A> {
+export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Tag> implements Fx<R, E, A> {
   protected pendingSinks: Array<readonly [Sink<any, E, A>, Array<A>]> = []
   protected scheduledFiber: Fiber.RuntimeFiber<any, any> | undefined = undefined
 
   constructor(
     readonly fx: Fx<R, E, A>,
-    protected current: MutableRef.MutableRef<Option.Option<A>>
+    protected current: MutableRef.MutableRef<Option.Option<A>>,
+    readonly tag: Tag
   ) {
-    super(fx, "Hold")
+    super(fx, tag)
 
     this.event = this.event.bind(this)
     this.error = this.error.bind(this)
