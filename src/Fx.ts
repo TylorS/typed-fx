@@ -72,6 +72,8 @@ export interface Sink<out Services, in Errors, in Output> {
   readonly event: (event: Output) => Effect<Services, never, unknown>
   readonly error: (error: Cause<Errors>) => Effect<Services, never, unknown>
   readonly end: Effect<Services, never, unknown>
+
+  readonly traced: (trace: Trace) => Sink<Services, Errors, Output>
 }
 
 /**
@@ -84,7 +86,19 @@ export function Sink<Services1, Services2, Services3, Errors, Output>(
   error: Sink<Services2, Errors, Output>["error"],
   end: Sink<Services3, Errors, Output>["end"]
 ): Sink<Services1 | Services2 | Services3, Errors, Output> {
-  return { event, error, end }
+  const sink: Sink<Services1 | Services2 | Services3, Errors, Output> = {
+    event,
+    error,
+    end,
+    traced: (trace) =>
+      Sink(
+        (a) => event(a).traced(trace),
+        (e) => error(e).traced(trace),
+        end.traced(trace)
+      )
+  }
+
+  return sink
 }
 
 export {

@@ -28,14 +28,11 @@
 
 ## Evaluate if there's a reasonable equivalent in Fx
 
-- [ ] Effect.absolve
-- [ ] Effect.absorb
-- [ ] Effect.absorbWith
-- [ ] Effect.acquireRelease
-- [ ] Effect.acquireReleaseInterruptible
-- [ ] Effect.acquireUseRelease
-- [ ] Effect.bind
-- [ ] Effect.bindValue
+- [x] Effect.absolve
+- [x] Effect.absorb
+- [x] Effect.absorbWith
+- [x] Effect.bind
+- [x] Effect.bindValue
 - [ ] Effect.cached
 - [ ] Effect.cachedInvalidate
 - [ ] Effect.catchAllCause
@@ -255,7 +252,7 @@
 - [ ] Effect.runSyncExit
 - [ ] Effect.runtime
 - [ ] Effect.runtimeFlags
-- [ ] Effect.sandbox
+- [x] Effect.sandbox
 - [ ] Effect.schedule
 - [ ] Effect.scheduleForked
 - [ ] Effect.scheduleFrom

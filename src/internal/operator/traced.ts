@@ -14,7 +14,7 @@ export class Traced<R, E, A> implements Fx<R, E, A> {
   constructor(readonly fx: Fx<R, E, A>, readonly trace: Trace) {}
 
   run<R2>(sink: Sink<R2, E, A>): Effect<R | R2 | Scope, never, void> {
-    return this.fx.run(sink).traced(this.trace)
+    return this.fx.run(sink.traced(this.trace)).traced(this.trace)
   }
 
   traced(trace: Trace): Fx<R, E, A> {
