@@ -62,6 +62,11 @@ export namespace Fx {
    * @category Type-level
    */
   export type OutputOf<T> = T extends Fx<any, any, infer Output> ? Output : never
+
+  export type Succeed<A> = Fx<never, never, A>
+  export type Fail<E> = Fx<never, E, never>
+  export type WithError<E, A> = Fx<never, E, A>
+  export type WithService<R, A> = Fx<R, never, A>
 }
 
 /**

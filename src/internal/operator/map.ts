@@ -24,7 +24,7 @@ export class MapFx<R, E, A, B> extends BaseFx<R, E, B> {
   }
 
   static make<R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B): Fx<R, E, B> {
-    // Functor composition fusion
+    // Covariant fusion
     if (isMap(fx)) {
       return new MapFx(fx.fx, (a) => f(fx.f(a)))
     }
