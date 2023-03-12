@@ -42,7 +42,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
 
   run<R2>(sink: Sink<R2, E, A>): Effect.Effect<Scope | R | R2, never, void> {
     return Effect.suspendSucceed(() => {
-      if (Option.isSome(this.current.get())) {
+      if (Option.isSome(MutableRef.get(this.current))) {
         return pipe(
           this.scheduleFlush(sink),
           Effect.flatMap(() => super.run(sink))
@@ -73,11 +73,11 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
     )
   }
 
-  get end() {
+  end() {
     return Effect.suspendSucceed(() =>
       pipe(
         this.flushPending(),
-        Effect.flatMap(() => super.end)
+        Effect.flatMap(() => super.end())
       )
     )
   }
@@ -87,7 +87,8 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
       this.pendingSinks.push([
         sink,
         pipe(
-          this.current.get(),
+          this.current,
+          MutableRef.get,
           Option.match(
             () => [],
             (a) => [a]
@@ -144,7 +145,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
   }
 
   protected addValue(a: A) {
-    this.current.set(Option.some(a))
+    MutableRef.set(this.current, Option.some(a))
     this.pendingSinks.forEach(([, events]) => events.push(a))
   }
 }
