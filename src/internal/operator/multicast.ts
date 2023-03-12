@@ -56,14 +56,14 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
 
   event(a: A) {
     return Effect.suspendSucceed(() =>
-      Effect.forEachDiscard(this.observers.slice(), (observer) => this.runEvent(a, observer))
+      Effect.forEachDiscard(this.observers.slice(0), (observer) => this.runEvent(a, observer))
     )
   }
 
   error(cause: Cause<E>) {
     return Effect.suspendSucceed(() =>
       pipe(
-        Effect.forEachParDiscard(this.observers.slice(), (observer) => this.runError(cause, observer)),
+        Effect.forEachParDiscard(this.observers.slice(0), (observer) => this.runError(cause, observer)),
         Effect.tap(() => this.cleanup())
       )
     )
@@ -72,7 +72,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
   end(): Effect.Effect<never, never, void> {
     return Effect.suspendSucceed(() =>
       pipe(
-        Effect.forEachParDiscard(this.observers.slice(), (observer) => this.runEnd(observer)),
+        Effect.forEachParDiscard(this.observers.slice(0), (observer) => this.runEnd(observer)),
         Effect.tap(() => this.cleanup())
       )
     )

@@ -37,7 +37,7 @@ export class CollectAllFx<R, E, A> extends BaseFx<R, E, Chunk.Chunk<A>> {
                 values[i] = a
 
                 if (remaining === 0) {
-                  return sink.event(Chunk.unsafeFromArray(Array.from(values)))
+                  return sink.event(Chunk.unsafeFromArray(values.slice(0)))
                 }
 
                 return Effect.unit()
