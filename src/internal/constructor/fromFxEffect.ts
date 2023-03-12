@@ -1,11 +1,11 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { bodyWithTrace } from "@effect/io/Debug"
 import { type Effect, matchCauseEffect } from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const fromFxEffect: <R, E, R2 = never, E2 = never, A = unknown>(
   effect: Effect<R, E, Fx<R2, E2, A>>
-) => Fx<R | R2, E | E2, A> = methodWithTrace((trace) =>
+) => Fx<R | R2, E | E2, A> = bodyWithTrace((trace) =>
   <R, E, R2 = never, E2 = never, A = unknown>(effect: Effect<R, E, Fx<R2, E2, A>>) =>
     new FromFxEffect(effect).traced(trace)
 )

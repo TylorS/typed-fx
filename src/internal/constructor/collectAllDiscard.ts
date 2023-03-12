@@ -1,4 +1,3 @@
-import * as Chunk from "@effect/data/Chunk"
 import { bodyWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import { Sink } from "@typed/fx/Fx"
@@ -6,18 +5,18 @@ import type { Fx } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
-export const collectAll: <R, E, A>(fx: Iterable<Fx<R, E, A>>) => Fx<R, E, Chunk.Chunk<A>> = bodyWithTrace((trace) =>
-  <R, E, A>(fx: Iterable<Fx<R, E, A>>) => new CollectAllFx(fx).traced(trace)
+export const collectAllDiscard: <R, E, A>(fx: Iterable<Fx<R, E, A>>) => Fx<R, E, void> = bodyWithTrace((trace) =>
+  <R, E, A>(fx: Iterable<Fx<R, E, A>>) => new CollectAllDiscardFx(fx).traced(trace)
 )
 
-export class CollectAllFx<R, E, A> extends BaseFx<R, E, Chunk.Chunk<A>> {
-  readonly _tag = "CollectAll" as const
+export class CollectAllDiscardFx<R, E, A> extends BaseFx<R, E, void> {
+  readonly _tag = "CollectAllDiscard" as const
 
   constructor(readonly fx: Iterable<Fx<R, E, A>>) {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E, Chunk.Chunk<A>>) {
+  run<R2>(sink: Sink<R2, E, void>) {
     const fx = Array.from(this.fx)
     const length = fx.length
 
@@ -37,7 +36,7 @@ export class CollectAllFx<R, E, A> extends BaseFx<R, E, Chunk.Chunk<A>> {
                 values[i] = a
 
                 if (remaining === 0) {
-                  return sink.event(Chunk.unsafeFromArray(values.slice(0)))
+                  return sink.event()
                 }
 
                 return Effect.unit()

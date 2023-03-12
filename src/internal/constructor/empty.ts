@@ -1,4 +1,4 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { bodyWithTrace } from "@effect/io/Debug"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 import type { Fx, Sink } from "@typed/fx/Fx"
@@ -13,4 +13,4 @@ export class EmptyFx extends BaseFx<never, never, never> {
 
 const empty_ = new EmptyFx()
 
-export const empty: () => Fx<never, never, never> = methodWithTrace((trace) => () => empty_.traced(trace))
+export const empty: () => Fx<never, never, never> = bodyWithTrace((trace) => () => empty_.traced(trace))

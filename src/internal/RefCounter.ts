@@ -39,11 +39,7 @@ export class RefCounter {
     return pipe(
       interrupt,
       Effect.flatMap(() => Ref.get(this.count)),
-      Effect.flatMap((x) =>
-        Effect.sync(() => {
-          if (x === 0) Deferred.unsafeDone<never, void>(this.deferred, Effect.unit())
-        })
-      ),
+      Effect.flatMap((x) => x === 0 ? Effect.intoDeferred(Effect.unit(), this.deferred) : Effect.unit()),
       Effect.scheduleForked(asap),
       Effect.tap((fiber) =>
         Effect.sync(() => {

@@ -1,4 +1,4 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { bodyWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { fromFxEffect } from "@typed/fx/internal/constructor/fromFxEffect"
@@ -6,7 +6,7 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const gen: <Eff extends Effect.EffectGen<any, any, any>, R, E, A>(
   f: (resume: EffectResume) => Generator<Eff, Fx<R, E, A>, unknown>
-) => Fx<R | GenResources<Eff>, E | GenErrors<Eff>, A> = methodWithTrace((trace) =>
+) => Fx<R | GenResources<Eff>, E | GenErrors<Eff>, A> = bodyWithTrace((trace) =>
   <Eff extends Effect.EffectGen<any, any, any>, R, E, A>(
     f: (resume: EffectResume) => Generator<Eff, Fx<R, E, A>>
   ): Fx<R | GenResources<Eff>, E | GenErrors<Eff>, A> => new GenFx(f).traced(trace)

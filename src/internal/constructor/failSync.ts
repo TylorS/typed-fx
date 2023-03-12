@@ -4,6 +4,6 @@ import * as Effect from "@effect/io/Effect"
 import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/constructor/fromEffect"
 
-export const attempt: <A>(
-  f: LazyArg<A>
-) => Fx<never, unknown, A> = bodyWithTrace((trace) => <A>(f: LazyArg<A>) => fromEffect(Effect.attempt(f)).traced(trace))
+export const failSync: <E>(error: LazyArg<E>) => Fx<never, E, never> = bodyWithTrace((trace) =>
+  (error) => fromEffect(Effect.failSync(error)).traced(trace)
+)

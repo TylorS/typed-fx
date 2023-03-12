@@ -1,0 +1,68 @@
+import { identity, pipe } from "@effect/data/Function"
+import type { FlatMap } from "@effect/data/typeclass/FlatMap"
+import * as Cause from "@effect/io/Cause"
+import { dualWithTrace } from "@effect/io/Debug"
+import * as Effect from "@effect/io/Effect"
+
+import * as RS from "@effect/io/Ref/Synchronized"
+import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import { Sink } from "@typed/fx/Fx"
+import { Fiber } from "@typed/fx/internal/_externals"
+import { BaseFx } from "@typed/fx/internal/Fx"
+import { withRefCounter } from "@typed/fx/internal/RefCounter"
+
+export const switchMap: FlatMap<FxTypeLambda>["flatMap"] = dualWithTrace(
+  2,
+  (trace) => <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) => new SwitchMapFx(fx, f).traced(trace)
+)
+
+export const switchLatest: <R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>) => Fx<R | R2, E | E2, A> = switchMap(identity)
+
+class SwitchMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
+  readonly _tag = "SwitchMap" as const
+
+  constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => Fx<R2, E2, B>) {
+    super()
+  }
+
+  run<R3>(sink: Sink<R3, E | E2, B>) {
+    const { f, fx } = this
+
+    return withRefCounter(
+      1,
+      (counter) =>
+        Effect.gen(function*($) {
+          const refFiber = yield* $(RS.make<Fiber.RuntimeFiber<never, unknown> | null>(null))
+          const resetRef = RS.set<Fiber.RuntimeFiber<never, unknown> | null>(refFiber, null)
+
+          return yield* $(fx.run(
+            Sink(
+              (a) =>
+                RS.updateEffect(refFiber, (fiber) =>
+                  pipe(
+                    fiber
+                      ? Effect.asUnit(Fiber.interrupt(fiber))
+                      : Effect.asUnit(counter.increment),
+                    Effect.flatMap((_: unknown) =>
+                      pipe(
+                        f(a).run(
+                          Sink(
+                            sink.event,
+                            (e) => pipe(e, sink.error, Effect.zipLeft(resetRef)),
+                            () => pipe(counter.decrement, Effect.zipLeft(resetRef))
+                          )
+                        ),
+                        Effect.onError((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
+                        Effect.forkScoped
+                      )
+                    )
+                  )),
+              sink.error,
+              () => counter.decrement
+            )
+          ))
+        }),
+      sink.end
+    )
+  }
+}

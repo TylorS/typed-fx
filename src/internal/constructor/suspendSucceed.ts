@@ -1,8 +1,8 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { bodyWithTrace } from "@effect/io/Debug"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
-export const suspendSucceed: <R, E, A>(f: () => Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>
+export const suspendSucceed: <R, E, A>(f: () => Fx<R, E, A>) => Fx<R, E, A> = bodyWithTrace((trace) =>
   <R, E, A>(f: () => Fx<R, E, A>): Fx<R, E, A> => new SuspendSucceedFx(f).traced(trace)
 )
 

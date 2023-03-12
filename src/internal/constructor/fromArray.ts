@@ -1,10 +1,10 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { bodyWithTrace } from "@effect/io/Debug"
 import { forEachDiscard, matchCauseEffect } from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const fromArray: <T extends ReadonlyArray<any>>(array: readonly [...T]) => Fx<never, never, T[number]> =
-  methodWithTrace((trace) =>
+  bodyWithTrace((trace) =>
     <T extends ReadonlyArray<any>>(array: readonly [...T]): Fx<never, never, T[number]> =>
       new FromArrayFx(array).traced(trace)
   )
