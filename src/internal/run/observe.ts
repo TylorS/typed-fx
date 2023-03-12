@@ -1,4 +1,4 @@
-import { flow } from "@effect/data/Function"
+import { pipe } from "@effect/data/Function"
 import type { Cause } from "@effect/io/Cause"
 import { isInterruptedOnly } from "@effect/io/Cause"
 import { dualWithTrace } from "@effect/io/Debug"
@@ -35,7 +35,7 @@ export const observe_ = <R, E, A, R2, E2>(
     const error = (cause: Cause<E | E2>) => isInterruptedOnly(cause) ? end : Deferred.failCause(deferred, cause)
 
     yield* $(
-      Effect.forkScoped(fx.run(Sink(flow(f, Effect.catchAllCause(error)), error, () => end)))
+      Effect.forkScoped(fx.run(Sink((a) => pipe(a, f, Effect.catchAllCause(error)), error, () => end)))
     )
 
     return yield* $(Deferred.await(deferred))

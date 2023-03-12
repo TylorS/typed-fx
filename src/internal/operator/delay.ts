@@ -1,5 +1,5 @@
 import type { Duration } from "@effect/data/Duration"
-import { flow } from "@effect/data/Function"
+import { pipe } from "@effect/data/Function"
 import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Fx } from "@typed/fx/Fx"
@@ -22,6 +22,6 @@ export class DelayFx<R, E, A> extends BaseFx<R, E, A> {
   }
 
   run<R2>(sink: Sink<R2, E, A>) {
-    return this.fx.run(Sink(flow(sink.event, Effect.delay(this.duration)), sink.error, sink.end))
+    return this.fx.run(Sink((a) => pipe(a, sink.event, Effect.delay(this.duration)), sink.error, sink.end))
   }
 }

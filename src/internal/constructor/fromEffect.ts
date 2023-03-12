@@ -1,4 +1,4 @@
-import { flow } from "@effect/data/Function"
+import { pipe } from "@effect/data/Function"
 import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
@@ -25,7 +25,7 @@ export class FromEffect<Services, Errors, Output> extends BaseFx<Services, Error
   }
 
   run<Services2>(sink: Sink<Services2, Errors, Output>) {
-    return Effect.matchCauseEffect(this.effect, sink.error, flow(sink.event, Effect.flatMap(sink.end)))
+    return Effect.matchCauseEffect(this.effect, sink.error, (a) => pipe(sink.event(a), Effect.flatMap(sink.end)))
   }
 }
 

@@ -1,4 +1,4 @@
-import { flow } from "@effect/data/Function"
+import { pipe } from "@effect/data/Function"
 import { methodWithTrace } from "@effect/io/Debug"
 import * as Exit from "@effect/io/Exit"
 import { Sink } from "@typed/fx/Fx"
@@ -18,8 +18,8 @@ export class ExitFx<R, E, A> extends BaseFx<R, never, Exit.Exit<E, A>> {
 
   run<R2>(sink: Sink<R2, never, Exit.Exit<E, A>>) {
     return this.fx.run(Sink(
-      flow(Exit.succeed, sink.event),
-      flow(Exit.failCause, sink.event),
+      (a) => pipe(a, Exit.succeed, sink.event),
+      (a) => pipe(a, Exit.failCause, sink.event),
       sink.end
     ))
   }

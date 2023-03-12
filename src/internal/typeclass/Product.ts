@@ -1,4 +1,3 @@
-import { flow } from "@effect/data/Function"
 import * as P from "@effect/data/typeclass/Product"
 
 import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
@@ -10,10 +9,7 @@ import { SemiProduct } from "@typed/fx/internal/typeclass/SemiProduct"
 export const Product: P.Product<FxTypeLambda> = {
   ...SemiProduct,
   ...Of,
-  productAll: flow(
-    collectAll,
-    map((a) => Array.from(a))
-  )
+  productAll: (iterable) => map(collectAll(iterable), (a) => Array.from(a))
 }
 
 export const struct: <R extends Readonly<Record<string, Fx<any, any, any>>>>(
