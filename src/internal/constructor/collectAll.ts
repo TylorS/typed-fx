@@ -1,12 +1,12 @@
 import * as Chunk from "@effect/data/Chunk"
-import { bodyWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import { Sink } from "@typed/fx/Fx"
 import type { Fx } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
-export const collectAll: <R, E, A>(fx: Iterable<Fx<R, E, A>>) => Fx<R, E, Chunk.Chunk<A>> = bodyWithTrace((trace) =>
+export const collectAll: <R, E, A>(fx: Iterable<Fx<R, E, A>>) => Fx<R, E, Chunk.Chunk<A>> = methodWithTrace((trace) =>
   <R, E, A>(fx: Iterable<Fx<R, E, A>>) => new CollectAllFx(fx).traced(trace)
 )
 

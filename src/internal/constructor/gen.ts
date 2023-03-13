@@ -1,19 +1,20 @@
-import { bodyWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
+import type { Scope } from "@typed/fx/internal/_externals"
 import { fromFxEffect } from "@typed/fx/internal/constructor/fromFxEffect"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const gen: <Eff extends Effect.EffectGen<any, any, any>, R, E, A>(
   f: (resume: EffectResume) => Generator<Eff, Fx<R, E, A>, unknown>
-) => Fx<R | GenResources<Eff>, E | GenErrors<Eff>, A> = bodyWithTrace((trace) =>
+) => Fx<R | Exclude<GenResources<Eff>, Scope.Scope>, E | GenErrors<Eff>, A> = methodWithTrace((trace) =>
   <Eff extends Effect.EffectGen<any, any, any>, R, E, A>(
     f: (resume: EffectResume) => Generator<Eff, Fx<R, E, A>>
-  ): Fx<R | GenResources<Eff>, E | GenErrors<Eff>, A> => new GenFx(f).traced(trace)
+  ): Fx<R | Exclude<GenResources<Eff>, Scope.Scope>, E | GenErrors<Eff>, A> => new GenFx(f).traced(trace)
 )
 
 export class GenFx<Eff extends Effect.EffectGen<any, any, any>, R, E, A>
-  extends BaseFx<R | GenResources<Eff>, E | GenErrors<Eff>, A>
+  extends BaseFx<R | Exclude<GenResources<Eff>, Scope.Scope>, E | GenErrors<Eff>, A>
 {
   readonly _tag = "Gen" as const
 
@@ -25,7 +26,9 @@ export class GenFx<Eff extends Effect.EffectGen<any, any, any>, R, E, A>
    * @macro traced
    */
   run<R2>(sink: Sink<R2, E | GenErrors<Eff>, A>) {
-    return fromFxEffect<GenResources<Eff>, GenErrors<Eff>, R, E, A>(Effect.gen(this.f)).run(sink)
+    // Type-cast necessary to exclude Scope from the resources in the generator as it's always returd via run()
+    return fromFxEffect<Exclude<GenResources<Eff>, Scope.Scope>, GenErrors<Eff>, R, E, A>(Effect.gen(this.f) as any)
+      .run(sink)
   }
 }
 

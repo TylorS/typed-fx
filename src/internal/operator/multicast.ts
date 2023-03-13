@@ -10,25 +10,29 @@ import type { Scope } from "@effect/io/Scope"
 import { methodWithTrace } from "@effect/io/Debug"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
-import { asap } from "../RefCounter"
+import { asap } from "@typed/fx/internal/RefCounter"
 
 export const multicast: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast").traced(trace)
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast", false).traced(trace)
 )
 
 export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> implements Sink<never, E, A> {
   protected observers: Array<MulticastObserver<any, E, A>> = []
   protected fiber: RuntimeFiber<never, unknown> | undefined
+  protected start: Effect.Effect<R | Scope, never, Fiber.RuntimeFiber<never, unknown>>
 
-  constructor(readonly fx: Fx<R, E, A>, readonly _tag: Tag) {
+  constructor(readonly fx: Fx<R, E, A>, readonly _tag: Tag, readonly sync: boolean) {
     super()
     this.event = this.event.bind(this)
     this.error = this.error.bind(this)
+    this.end = this.end.bind(this)
+
+    this.start = sync ? Effect.forkScoped(fx.run(this)) : pipe(fx.run(this), Effect.scheduleForked(asap))
   }
 
   run<R2>(sink: Sink<R2, E, A>): Effect.Effect<R | R2 | Scope, never, void> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const { fx, observers } = this
+    const { observers, start } = this
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this
@@ -43,7 +47,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
       }
 
       if (observers.push(observer) === 1) {
-        that.fiber = yield* $(pipe(fx.run(that), Effect.scheduleForked(asap)))
+        that.fiber = yield* $(start)
       }
 
       yield* $(Deferred.await(deferred))

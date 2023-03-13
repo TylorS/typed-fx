@@ -12,7 +12,7 @@ import { asap } from "@typed/fx/internal/RefCounter"
 import { MulticastFx } from "./multicast"
 
 export const hold: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>
-  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, MutableRef.make(Option.none()), "Hold").traced(trace)
+  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, MutableRef.make(Option.none()), "Hold", false).traced(trace)
 )
 
 export const hold_: {
@@ -22,7 +22,7 @@ export const hold_: {
   2,
   (trace) =>
     <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>): Fx<R, E, A> =>
-      new HoldFx(fx, value, "Hold").traced(trace)
+      new HoldFx(fx, value, "Hold", false).traced(trace)
 )
 
 export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Tag> implements Fx<R, E, A> {
@@ -31,13 +31,15 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
 
   constructor(
     readonly fx: Fx<R, E, A>,
-    protected current: MutableRef.MutableRef<Option.Option<A>>,
-    readonly tag: Tag
+    readonly current: MutableRef.MutableRef<Option.Option<A>>,
+    readonly tag: Tag,
+    readonly sync: boolean
   ) {
-    super(fx, tag)
+    super(fx, tag, sync)
 
     this.event = this.event.bind(this)
     this.error = this.error.bind(this)
+    this.end = this.end.bind(this)
   }
 
   run<R2>(sink: Sink<R2, E, A>): Effect.Effect<Scope | R | R2, never, void> {

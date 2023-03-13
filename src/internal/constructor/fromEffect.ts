@@ -1,5 +1,5 @@
 import { pipe } from "@effect/data/Function"
-import { bodyWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
@@ -11,7 +11,7 @@ import { BaseFx } from "@typed/fx/internal/Fx"
  */
 export const fromEffect: <Services = never, Errors = never, Output = unknown>(
   effect: Effect.Effect<Services, Errors, Output>
-) => Fx<Services, Errors, Output> = bodyWithTrace((trace) =>
+) => Fx<Services, Errors, Output> = methodWithTrace((trace) =>
   <Services, Errors, Output>(
     effect: Effect.Effect<Services, Errors, Output>
   ): Fx<Services, Errors, Output> => new FromEffect(effect).traced(trace)
