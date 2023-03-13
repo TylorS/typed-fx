@@ -31,7 +31,7 @@ export const observe_ = <R, E, A, R2, E2>(
 ): Effect.Effect<R | R2 | Scope, E | E2, void> =>
   Effect.gen(function*($) {
     const deferred = yield* $(Deferred.make<E | E2, void>())
-    const end = Deferred.succeed(deferred, undefined as void)
+    const end = Deferred.succeed(deferred, undefined)
     const error = (cause: Cause<E | E2>) => isInterruptedOnly(cause) ? end : Deferred.failCause(deferred, cause)
 
     yield* $(

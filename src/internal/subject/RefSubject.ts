@@ -17,20 +17,65 @@ import type { Subject } from "@typed/fx/internal/subject/Subject"
 export interface RefSubject<E, A> extends Subject<E, A> {
   readonly [RefSubject.TypeId]: RefSubject.TypeId
 
+  // Ref methods
+
+  /**
+   * Get the current value of the Ref. The value will be initialized if it hasn't
+   * been already.
+   */
   readonly get: Effect.Effect<never, E, A>
-  readonly set: (a: A) => Effect.Effect<never, E, A>
+
+  /**
+   * Set the current value of the Ref. Cannot fail because no value needs
+   * to be initialized.
+   */
+  readonly set: (a: A) => Effect.Effect<never, never, A>
+
+  /**
+   * Modify the current value of the Ref with the specified effectful function.
+   * The current value will be initialized if it hasn't been already.
+   */
   readonly modifyEffect: <R2, E2, B>(
     f: (a: A) => Effect.Effect<R2, E2, readonly [B, A]>
   ) => Effect.Effect<R2, E | E2, B>
+
+  /**
+   * Modify the current value of the Ref with the specified function. The current
+   * value will be initialized if it hasn't been already.
+   */
   readonly modify: <B>(f: (a: A) => readonly [B, A]) => Effect.Effect<never, E, B>
+
+  /**
+   * Update the current value of the Ref with the specified effectful function.
+   * The current value will be initialized if it hasn't been already.
+   */
   readonly updateEffect: <R2, E2>(f: (a: A) => Effect.Effect<R2, E2, A>) => Effect.Effect<R2, E | E2, A>
+
+  /**
+   * Update the current value of the Ref with the specified function. The current
+   * value will be initialized if it hasn't been already.
+   */
   readonly update: (f: (a: A) => A) => Effect.Effect<never, E, A>
+
+  /**
+   * Delete the current value of the Ref. Option.none() will be returned if the
+   * has not been initialized yet. Option.some(a) will be returned if the Ref
+   * has been initialized previously.
+   */
   readonly delete: Effect.Effect<never, never, Option.Option<A>>
 
+  // Computed methods
+
+  /**
+   * Compute a value from the current value of the Ref with an Effect.
+   */
   readonly mapEffect: <R2, E2, B>(
     f: (a: A) => Effect.Effect<R2, E2, B>
   ) => Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
 
+  /**
+   * Compute a value from the current value of the Ref.
+   */
   readonly map: <B>(f: (a: A) => B) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
 }
 
@@ -138,8 +183,8 @@ export namespace RefSubject {
       return this.modifyEffect((a) => Effect.sync(() => f(a)))
     }
 
-    set(a: A): Effect.Effect<never, E, A> {
-      return this.modify(() => [a, a])
+    set(a: A): Effect.Effect<never, never, A> {
+      return this.event(a)
     }
 
     updateEffect<R2, E2>(f: (a: A) => Effect.Effect<R2, E2, A>): Effect.Effect<R2, E | E2, A> {
@@ -177,14 +222,38 @@ export namespace RefSubject {
       return Effect.suspendSucceed(() => {
         MutableRef.set(this.current, Option.some(a))
 
-        return super.event(a)
+        return Effect.as(super.event(a), a)
       })
+    }
+
+    // Ensure the current value is deleted when the subject is ended
+    protected cleanup() {
+      return Effect.flatMap(super.cleanup(), () => Effect.sync(() => MutableRef.set(this.current, Option.none<A>())))
     }
   }
 }
 
+/**
+ * A Computed is a readonly view of a current value that is computed from
+ * the current value of a RefSubject.
+ */
 export interface Computed<E, A> extends Fx<never, E, A> {
+  /**
+   * The current value of the Computed.
+   */
   readonly get: Effect.Effect<never, E, A>
+
+  /**
+   * Compute a new value from the current value of the Computed with an Effect.
+   */
+  readonly mapEffect: <R2, E2, B>(
+    f: (a: A) => Effect.Effect<R2, E2, B>
+  ) => Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
+
+  /**
+   * Compute a new value from the current value of the Computed.
+   */
+  readonly map: <B>(f: (a: A) => B) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
 }
 
 export const makeComputed: {
@@ -205,7 +274,9 @@ export const makeComputed: {
       const computed = yield* $(makeRef(Effect.flatMap(ref.get, f)))
 
       yield* $(
-        Effect.forkScoped(Effect.catchAllCause(observe_(ref, (a) => computed.updateEffect(() => f(a))), computed.error))
+        Effect.forkScoped(
+          Effect.matchCauseEffect(observe_(ref, (a) => computed.updateEffect(() => f(a))), computed.error, computed.end)
+        )
       )
 
       return computed

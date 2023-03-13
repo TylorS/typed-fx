@@ -74,10 +74,8 @@ describe("RefSubject", () => {
       await Effect.runPromise(test)
     })
   })
-})
 
-describe("Computed", () => {
-  describe("get", () => {
+  describe("map", () => {
     it("computes the value from another ref", async () => {
       const test = Effect.scoped(Effect.gen(function*($) {
         const ref = yield* $(makeRef(Effect.succeed(1)))
@@ -89,6 +87,29 @@ describe("Computed", () => {
       }))
 
       await Effect.runPromise(test)
+    })
+  })
+
+  describe("Computed", () => {
+    describe("map", () => {
+      it("computes the value from another Computed", async () => {
+        const test = Effect.scoped(Effect.gen(function*($) {
+          const ref = yield* $(makeRef(Effect.succeed(1)))
+          const addOne = yield* $(ref.map((a) => a + 1))
+          const multiplyTwo = yield* $(addOne.map((a) => a * 2))
+
+          // Initial
+          deepStrictEqual(yield* $(addOne.get), 2)
+          deepStrictEqual(yield* $(multiplyTwo.get), 4)
+
+          // Update ref value
+          deepStrictEqual(yield* $(ref.set(2)), 2)
+          deepStrictEqual(yield* $(addOne.get), 3)
+          deepStrictEqual(yield* $(multiplyTwo.get), 6)
+        }))
+
+        await Effect.runPromise(test)
+      })
     })
   })
 })
