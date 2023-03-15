@@ -1,11 +1,13 @@
 import { equals } from "@effect/data/Equal"
 import * as MutableRef from "@effect/data/MutableRef"
-import type { Equivalence } from "@effect/data/typeclass/Equivalence"
+import * as RA from "@effect/data/ReadonlyArray"
+import * as RR from "@effect/data/ReadonlyRecord"
+import * as Equivalence from "@effect/data/typeclass/Equivalence"
 import { dualWithTrace } from "@effect/io/Debug"
 import type { RuntimeFiber } from "@effect/io/Fiber"
-import type { Fx } from "@typed/fx/Fx"
+import type { Fx, Sink } from "@typed/fx/Fx"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
-import { Effect, Fiber, Option } from "@typed/fx/internal/_externals"
+import { Effect, Fiber, Option, pipe } from "@typed/fx/internal/_externals"
 import { observe_ } from "@typed/fx/internal/run"
 import { HoldSubjectImpl } from "@typed/fx/internal/subject/HoldSubject"
 import type { Subject } from "@typed/fx/internal/subject/Subject"
@@ -14,8 +16,10 @@ import type { Subject } from "@typed/fx/internal/subject/Subject"
  * A RefSubject is a lazily-instantiated Reference to a value. It also
  * implements
  */
-export interface RefSubject<E, A> extends Subject<E, A> {
+export interface RefSubject<in out E, in out A> extends Subject<E, A> {
   readonly [RefSubject.TypeId]: RefSubject.TypeId
+
+  readonly eq: Equivalence.Equivalence<A>
 
   // Ref methods
 
@@ -81,7 +85,7 @@ export interface RefSubject<E, A> extends Subject<E, A> {
 
 export function makeRef<R, E, A>(
   initialize: Effect.Effect<R, E, A>,
-  eq: Equivalence<A> = equals
+  eq: Equivalence.Equivalence<A> = equals
 ): Effect.Effect<R, never, RefSubject<E, A>> {
   return Effect.contextWith((ctx: Context.Context<R>) =>
     RefSubject.unsafeMake(Effect.provideContext(initialize, ctx), eq)
@@ -90,7 +94,7 @@ export function makeRef<R, E, A>(
 
 export function makeScopedRef<R, E, A>(
   initialize: Effect.Effect<R, E, A>,
-  eq: Equivalence<A> = equals
+  eq: Equivalence.Equivalence<A> = equals
 ): Effect.Effect<R | Scope.Scope, never, RefSubject<E, A>> {
   return Effect.gen(function*($) {
     const subject = yield* $(makeRef(initialize, eq))
@@ -105,8 +109,108 @@ export namespace RefSubject {
   export const TypeId = Symbol.for("@typed/fx/RefSubject")
   export type TypeId = typeof TypeId
 
-  export function unsafeMake<E, A>(initialize: Effect.Effect<never, E, A>, eq: Equivalence<A>): RefSubject<E, A> {
+  export type Any = RefSubject<any, any> | RefSubject<never, any>
+
+  export function unsafeMake<E, A>(
+    initialize: Effect.Effect<never, E, A>,
+    eq: Equivalence.Equivalence<A>
+  ): RefSubject<E, A> {
     return new RefSubjectImpl<E, A>(initialize, eq, MutableRef.make(Option.none<A>()))
+  }
+
+  export function struct<P extends Readonly<Record<string, Any>>>(
+    properties: P
+  ): Effect.Effect<
+    Scope.Scope,
+    never,
+    RefSubject<Fx.ErrorsOf<P[string]>, { readonly [K in keyof P]: Fx.OutputOf<P[K]> }>
+  > {
+    type Val = { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
+
+    return Effect.gen(function*($) {
+      const ref = yield* $(makeRef(
+        Effect.allPar(RR.map(properties, (property) => property.get)) as Effect.Effect<
+          never,
+          Fx.ErrorsOf<P[string]>,
+          Val
+        >,
+        Equivalence.struct(RR.map(properties, (property) => property.eq))
+      ))
+
+      yield* $(
+        Effect.forkScoped(
+          observe_(
+            ref,
+            (a) => Effect.allPar(RR.map(a, (x, i) => properties[i].set(x)))
+          )
+        )
+      )
+
+      yield* $(
+        Effect.forkScoped(
+          Effect.allPar(
+            RR.map(properties, (property, k) =>
+              Effect.catchAllCause(
+                observe_(property, (x) => ref.update((y) => ({ ...y, [k]: x }))),
+                ref.error
+              ))
+          )
+        )
+      )
+
+      yield* $(Effect.yieldNow())
+
+      return ref
+    })
+  }
+
+  export function tuple<P extends RA.NonEmptyReadonlyArray<Any>>(...properties: P): Effect.Effect<
+    Scope.Scope,
+    never,
+    RefSubject<Fx.ErrorsOf<P[number]>, { readonly [K in keyof P]: Fx.OutputOf<P[K]> }>
+  > {
+    type Val = { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
+
+    return Effect.gen(function*($) {
+      const ref = yield* $(makeRef(
+        Effect.allPar(RA.map(properties, (property) => property.get)) as Effect.Effect<
+          never,
+          Fx.ErrorsOf<P[number]>,
+          Val
+        >,
+        Equivalence.tuple(...RA.mapNonEmpty(properties, (property) => property.eq))
+      ))
+
+      yield* $(
+        Effect.forkScoped(
+          observe_(
+            ref,
+            (a) => Effect.allPar(RA.map(a, (x, i) => properties[i].set(x))) as Effect.Effect<never, never, Val>
+          )
+        )
+      )
+
+      yield* $(
+        Effect.forkScoped(
+          Effect.allPar(
+            RA.map(properties, (property, k) =>
+              Effect.catchAllCause(
+                observe_(property, (x) =>
+                  ref.update((y) => {
+                    const next = y.slice(0)
+                    next[k] = x
+                    return next as Val
+                  })),
+                ref.error
+              ))
+          )
+        )
+      )
+
+      yield* $(Effect.yieldNow())
+
+      return ref
+    })
   }
 
   class RefSubjectImpl<E, A> extends HoldSubjectImpl<E, A, "RefSubject"> implements RefSubject<E, A> {
@@ -119,14 +223,24 @@ export namespace RefSubject {
 
     constructor(
       readonly initialize: Effect.Effect<never, E, A>,
-      readonly eq: Equivalence<A>,
+      readonly eq: Equivalence.Equivalence<A>,
       readonly current: MutableRef.MutableRef<Option.Option<A>>
     ) {
       super(current, "RefSubject")
+
+      this.setAndSend = this.setAndSend.bind(this)
+    }
+
+    run<R>(sink: Sink<R, E, A>) {
+      return pipe(
+        // Ensure Ref is initialized
+        Effect.catchAllCause(this.get, sink.error),
+        Effect.zipRight(super.run(sink))
+      )
     }
 
     event(a: A) {
-      return this.lock(this.setAndSend(a))
+      return this.set(a)
     }
 
     readonly get: Effect.Effect<never, E, A> = Effect.suspendSucceed(() => {
@@ -142,40 +256,21 @@ export namespace RefSubject {
         return Fiber.join<E, A>(fiberOrNull)
       }
 
-      return Effect.flatMap(Effect.forkDaemon(this.initialize), (actualFiber) => {
+      return this.lock(Effect.flatMap(Effect.fork(this.initialize), (actualFiber) => {
         MutableRef.set(this.initFiber, actualFiber)
 
-        return Effect.tap(
-          Effect.ensuring(
-            Fiber.join(actualFiber),
-            Effect.sync(() => {
-              MutableRef.set(this.initFiber, null)
-            })
-          ),
-          (a) =>
-            Effect.sync(() => {
-              MutableRef.set(this.current, Option.some(a))
-            })
+        return pipe(
+          Fiber.join(actualFiber),
+          Effect.ensuring(Effect.sync(() => MutableRef.set(this.initFiber, null))),
+          Effect.tap((a) => Effect.sync(() => MutableRef.set(this.current, Option.some(a))))
         )
-      })
+      }))
     })
 
     modifyEffect<R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, readonly [B, A]>): Effect.Effect<R2, E | E2, B> {
-      const { eq, setAndSend } = this
-
-      return this.lock(
-        Effect.flatMap(
-          this.get,
-          (currentValue) =>
-            Effect.flatMap(f(currentValue), ([b, a]) =>
-              Effect.suspendSucceed(() => {
-                if (eq(currentValue, a)) {
-                  return Effect.succeed(b)
-                }
-
-                return Effect.as(setAndSend(a), b)
-              }))
-        )
+      return Effect.flatMap(
+        this.get,
+        (currentValue) => Effect.flatMap(f(currentValue), ([b, a]) => Effect.as(this.setAndSend(a), b))
       )
     }
 
@@ -184,7 +279,7 @@ export namespace RefSubject {
     }
 
     set(a: A): Effect.Effect<never, never, A> {
-      return this.event(a)
+      return this.lock(this.setAndSend(a))
     }
 
     updateEffect<R2, E2>(f: (a: A) => Effect.Effect<R2, E2, A>): Effect.Effect<R2, E | E2, A> {
@@ -218,8 +313,14 @@ export namespace RefSubject {
       return this.mapEffect((a) => Effect.sync(() => f(a)))
     }
 
-    protected setAndSend = (a: A) => {
+    protected setAndSend(a: A) {
       return Effect.suspendSucceed(() => {
+        const current = MutableRef.get(this.current)
+
+        if (Option.isSome(current) && this.eq(current.value, a)) {
+          return Effect.succeed(a)
+        }
+
         MutableRef.set(this.current, Option.some(a))
 
         return Effect.as(super.event(a), a)
@@ -275,7 +376,11 @@ export const makeComputed: {
 
       yield* $(
         Effect.forkScoped(
-          Effect.matchCauseEffect(observe_(ref, (a) => computed.updateEffect(() => f(a))), computed.error, computed.end)
+          Effect.matchCauseEffect(
+            observe_(ref, (a) => computed.updateEffect(() => f(a))),
+            computed.error,
+            computed.end
+          )
         )
       )
 

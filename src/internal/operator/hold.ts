@@ -107,7 +107,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
       return pipe(
         interrupt,
         Effect.flatMap(() => this.flushPending()),
-        Effect.scheduleForked(asap),
+        this.sync ? Effect.forkScoped : Effect.scheduleForked(asap),
         Effect.tap((f) =>
           Effect.sync(() => {
             this.scheduledFiber = f

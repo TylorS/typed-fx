@@ -1,9 +1,10 @@
-import { Effect, Option } from "@typed/fx/internal/_externals"
-import { makeRef } from "@typed/fx/internal/subject/RefSubject"
+import { Effect, Fiber, Option } from "@typed/fx/internal/_externals"
+import { collectAll } from "@typed/fx/internal/run/collectAll"
+import { makeRef, RefSubject } from "@typed/fx/internal/subject/RefSubject"
 import { deepStrictEqual } from "assert"
 import { describe, it } from "vitest"
 
-describe("RefSubject", () => {
+describe.only("RefSubject", () => {
   describe("get", () => {
     it("lazily instantiates the value", async () => {
       const test = Effect.gen(function*($) {
@@ -110,6 +111,69 @@ describe("RefSubject", () => {
 
         await Effect.runPromise(test)
       })
+    })
+  })
+
+  describe("Fx", () => {
+    it("is can be observed", async () => {
+      const test = Effect.gen(function*($) {
+        const ref = yield* $(makeRef(Effect.succeed(1)))
+        const fiber = yield* $(Effect.fork(collectAll(ref)))
+
+        yield* $(Effect.yieldNow())
+
+        yield* $(ref.set(2))
+        yield* $(ref.set(3))
+        yield* $(ref.end())
+
+        const results = yield* $(Fiber.join(fiber))
+
+        deepStrictEqual(results, [1, 2, 3])
+      })
+
+      await Effect.runPromise(test)
+    })
+  })
+
+  describe("tuple", () => {
+    it("bidirectionally maps a tuple of refs", async () => {
+      const test = Effect.scoped(Effect.gen(function*($) {
+        const a = yield* $(makeRef(Effect.succeed(1)))
+        const b = yield* $(makeRef(Effect.succeed(2)))
+        const c = yield* $(makeRef(Effect.succeed(3)))
+        const ref = yield* $(RefSubject.tuple(a, b, c))
+
+        deepStrictEqual(yield* $(ref.get), [1, 2, 3])
+
+        yield* $(ref.set([2, 3, 4]))
+
+        deepStrictEqual(yield* $(a.get), 2)
+        deepStrictEqual(yield* $(b.get), 3)
+        deepStrictEqual(yield* $(c.get), 4)
+      }))
+
+      await Effect.runPromise(test)
+    })
+  })
+
+  describe("struct", () => {
+    it("bidirectionally maps a struct of refs", async () => {
+      const test = Effect.scoped(Effect.gen(function*($) {
+        const a = yield* $(makeRef(Effect.succeed(1)))
+        const b = yield* $(makeRef(Effect.succeed(2)))
+        const c = yield* $(makeRef(Effect.succeed(3)))
+        const ref = yield* $(RefSubject.struct({ a, b, c }))
+
+        deepStrictEqual(yield* $(ref.get), { a: 1, b: 2, c: 3 })
+
+        yield* $(ref.set({ a: 2, b: 3, c: 4 }))
+
+        deepStrictEqual(yield* $(a.get), 2)
+        deepStrictEqual(yield* $(b.get), 3)
+        deepStrictEqual(yield* $(c.get), 4)
+      }))
+
+      await Effect.runPromise(test)
     })
   })
 })

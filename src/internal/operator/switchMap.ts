@@ -1,6 +1,5 @@
 import { identity, pipe } from "@effect/data/Function"
 import type { FlatMap } from "@effect/data/typeclass/FlatMap"
-import * as Cause from "@effect/io/Cause"
 import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 
@@ -45,14 +44,8 @@ class SwitchMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
                       : Effect.asUnit(counter.increment),
                     Effect.flatMap((_: unknown) =>
                       pipe(
-                        f(a).run(
-                          Sink(
-                            sink.event,
-                            (e) => pipe(e, sink.error, Effect.zipLeft(resetRef)),
-                            () => pipe(counter.decrement, Effect.zipLeft(resetRef))
-                          )
-                        ),
-                        Effect.onError((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
+                        counter.run(f(a), sink),
+                        Effect.zipLeft(resetRef),
                         Effect.forkScoped
                       )
                     )

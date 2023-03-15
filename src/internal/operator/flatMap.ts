@@ -1,6 +1,5 @@
 import { identity, pipe } from "@effect/data/Function"
 import type { FlatMap } from "@effect/data/typeclass/FlatMap"
-import * as Cause from "@effect/io/Cause"
 import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 
@@ -31,9 +30,7 @@ class FlatMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
           Sink(
             (a) =>
               pipe(
-                counter.increment,
-                Effect.flatMap(() => this.f(a).run(Sink(sink.event, sink.error, () => counter.decrement))),
-                Effect.onError((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
+                counter.run(this.f(a), sink),
                 Effect.forkScoped
               ),
             sink.error,

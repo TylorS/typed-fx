@@ -6,6 +6,9 @@ import * as Fiber from "@effect/io/Fiber"
 import * as Ref from "@effect/io/Ref"
 import * as Schedule from "@effect/io/Schedule"
 import type { Scope } from "@effect/io/Scope"
+import type { Fx, Sink } from "@typed/fx/Fx"
+import { Cause } from "@typed/fx/internal/_externals"
+import { observe } from "@typed/fx/internal/run"
 
 const zero = millis(0)
 export const asap = Schedule.delayed(Schedule.once(), () => zero)
@@ -30,6 +33,20 @@ export class RefCounter {
   )
 
   readonly wait = Deferred.await(this.deferred)
+
+  readonly run = <R, E, A, R2>(
+    fx: Fx<R, E, A>,
+    sink: Sink<R2, E, A>
+  ): Effect.Effect<R | R2 | Scope, never, unknown> =>
+    pipe(
+      this.increment,
+      Effect.zipRight(observe(fx, sink.event)),
+      Effect.matchCauseEffect(
+        (cause): Effect.Effect<Scope | R2, never, unknown> =>
+          Cause.isInterruptedOnly(cause) ? this.decrement : sink.error(cause),
+        () => this.decrement
+      )
+    )
 
   private checkShouldClose = Effect.suspendSucceed(() => {
     const interrupt = this.fiber ? Fiber.interrupt(this.fiber) : Effect.unit()

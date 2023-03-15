@@ -17,7 +17,7 @@ export const multicast: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTr
 )
 
 export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> implements Sink<never, E, A> {
-  protected observers: Array<MulticastObserver<any, E, A>> = []
+  readonly observers: Array<MulticastObserver<any, E, A>> = []
   protected fiber: RuntimeFiber<never, unknown> | undefined
   protected start: Effect.Effect<R | Scope, never, Fiber.RuntimeFiber<never, unknown>>
 
@@ -27,7 +27,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
     this.error = this.error.bind(this)
     this.end = this.end.bind(this)
 
-    this.start = sync ? Effect.forkScoped(fx.run(this)) : pipe(fx.run(this), Effect.scheduleForked(asap))
+    this.start = sync ? Effect.forkScoped(fx.run(this)) : Effect.scheduleForked(fx.run(this), asap)
   }
 
   run<R2>(sink: Sink<R2, E, A>): Effect.Effect<R | R2 | Scope, never, void> {
@@ -46,7 +46,9 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
         deferred
       }
 
-      if (observers.push(observer) === 1) {
+      const total = observers.push(observer)
+
+      if (total === 1) {
         that.fiber = yield* $(start)
       }
 
@@ -59,8 +61,8 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
   }
 
   event(a: A) {
-    return Effect.suspendSucceed(() =>
-      Effect.forEachDiscard(this.observers.slice(0), (observer) => this.runEvent(a, observer))
+    return Effect.suspendSucceed(
+      () => Effect.forEachParDiscard(this.observers.slice(0), (observer) => this.runEvent(a, observer))
     )
   }
 
