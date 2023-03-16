@@ -15,7 +15,7 @@ export class MapFx<R, E, A, B> extends BaseFx<R, E, B> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E, B>) {
+  run(sink: Sink<E, B>) {
     return this.fx.run(Sink(
       (a) => sink.event(this.f(a)),
       sink.error,

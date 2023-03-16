@@ -17,7 +17,7 @@ export class ContextWithFx<R, R2, E2, A> extends BaseFx<R | R2, E2, A> {
     super()
   }
 
-  run<R3>(sink: Sink<R3, E2, A>) {
+  run(sink: Sink<E2, A>) {
     return Effect.contextWithEffect((context: Context.Context<R>) => this.f(context).run(sink))
   }
 }

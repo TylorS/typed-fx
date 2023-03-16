@@ -20,7 +20,7 @@ export class AbsorbWithFx<R, E, A> extends BaseFx<R, unknown, A> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, unknown, A>) {
+  run(sink: Sink<unknown, A>) {
     return this.fx.run(Sink(
       sink.event,
       (cause) => sink.error(Cause.fail(Cause.squashWith(cause, this.f))),

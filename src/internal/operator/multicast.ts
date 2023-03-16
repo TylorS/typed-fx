@@ -1,4 +1,3 @@
-import type { Context } from "@effect/data/Context"
 import { pipe } from "@effect/data/Function"
 import type { Cause } from "@effect/io/Cause"
 import * as Deferred from "@effect/io/Deferred"
@@ -16,8 +15,8 @@ export const multicast: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTr
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast", false).traced(trace)
 )
 
-export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> implements Sink<never, E, A> {
-  readonly observers: Array<MulticastObserver<any, E, A>> = []
+export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> implements Sink<E, A> {
+  readonly observers: Array<MulticastObserver<E, A>> = []
   protected fiber: RuntimeFiber<never, unknown> | undefined
   protected start: Effect.Effect<R | Scope, never, Fiber.RuntimeFiber<never, unknown>>
 
@@ -30,7 +29,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
     this.start = sync ? Effect.forkScoped(fx.run(this)) : Effect.scheduleForked(fx.run(this), asap)
   }
 
-  run<R2>(sink: Sink<R2, E, A>): Effect.Effect<R | R2 | Scope, never, void> {
+  run(sink: Sink<E, A>): Effect.Effect<R | Scope, never, void> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const { observers, start } = this
 
@@ -39,10 +38,8 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
 
     return Effect.gen(function*($) {
       const deferred = yield* $(Deferred.make<never, void>())
-      const context = yield* $(Effect.context<R | R2>())
-      const observer: MulticastObserver<R2, E, A> = {
+      const observer: MulticastObserver<E, A> = {
         sink,
-        context,
         deferred
       }
 
@@ -75,7 +72,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
     )
   }
 
-  end(): Effect.Effect<never, never, void> {
+  end() {
     return Effect.suspendSucceed(() =>
       pipe(
         Effect.forEachParDiscard(this.observers.slice(0), (observer) => this.runEnd(observer)),
@@ -84,29 +81,27 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
     )
   }
 
-  protected runEvent(a: A, observer: MulticastObserver<any, E, A>) {
-    return pipe(observer.sink.event(a), Effect.provideContext(observer.context))
+  protected runEvent(a: A, observer: MulticastObserver<E, A>) {
+    return observer.sink.event(a)
   }
 
-  protected runError(cause: Cause<E>, observer: MulticastObserver<any, E, A>) {
+  protected runError(cause: Cause<E>, observer: MulticastObserver<E, A>) {
     return pipe(
       observer.sink.error(cause),
-      Effect.provideContext(observer.context),
       Effect.tap(() => Effect.sync(() => this.removeObserver(observer))),
       Effect.intoDeferred(observer.deferred)
     )
   }
 
-  protected runEnd(observer: MulticastObserver<any, E, A>) {
+  protected runEnd(observer: MulticastObserver<E, A>) {
     return pipe(
       observer.sink.end(),
-      Effect.provideContext(observer.context),
       Effect.tap(() => Effect.sync(() => this.removeObserver(observer))),
       Effect.intoDeferred(observer.deferred)
     )
   }
 
-  protected removeObserver(observer: MulticastObserver<any, E, A>) {
+  protected removeObserver(observer: MulticastObserver<E, A>) {
     const { observers } = this
     const index = observers.indexOf(observer)
 
@@ -125,8 +120,7 @@ export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> im
   }
 }
 
-export interface MulticastObserver<R, E, A> {
-  readonly sink: Sink<R, E, A>
-  readonly context: Context<R>
+export interface MulticastObserver<E, A> {
+  readonly sink: Sink<E, A>
   readonly deferred: Deferred.Deferred<never, unknown>
 }

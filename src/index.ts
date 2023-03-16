@@ -16,7 +16,7 @@ export {
    * import * as Duration from '@effect/data/Duration'
    *
    * const stream: Fx.Fx<never, never, number> = Fx.at(Duration.millis(100), 42)
-   * const effect: Effect.Effect<never, never, readoly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readoly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [42])
@@ -32,7 +32,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, never, never> = Fx.empty()
-   * const effect: Effect.Effect<never, never, readonly never[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly never[]> = Fx.runCollectAll(stream)
    * const result: readonly never[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [])
@@ -49,7 +49,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, string, never> = Fx.fail('error')
-   * const effect: Effect.Effect<never, string, readonly never[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, string, readonly never[]> = Fx.runCollectAll(stream)
    * const result: Either.Either<string, readonly never[]> = await Effect.runPromiseEither(effect)
    *
    * assert.deepStrictEqual(result, Either.left('error'))
@@ -67,7 +67,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, string, never> = Fx.failCause(Cause.fail('error'))
-   * const effect: Effect.Effect<never, string, readonly never[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, string, readonly never[]> = Fx.runCollectAll(stream)
    * const result: Either.Either<string, readonly never[]> = await Effect.runPromiseEither(effect)
    *
    * assert.deepStrictEqual(result, Either.left('error'))
@@ -83,7 +83,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, never, number> = Fx.fromArray([1, 2, 3])
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [1, 2, 3])
@@ -99,7 +99,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, never, number> = Fx.fromEffect(Effect.succeed(42))
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [42])
@@ -115,7 +115,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, never, number> = Fx.fromFxEffect(Effect.succeed(Fx.succeed(42)))
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [42])
@@ -138,7 +138,7 @@ export {
    *   return Fx.succeed(x + y)
    * })
    *
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [3])
@@ -160,7 +160,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, never, number> = Fx.succeed(42)
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [42])
@@ -185,7 +185,7 @@ export {
    *
    *   return Fx.succeed(value)
    * })
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: Exit.Exit<never, readonly number[]> = await Effect.runPromiseExit(effect)
    *
    * if (value > 0.5) {
@@ -205,7 +205,7 @@ export {
    * import * as Fx from '@typed/fx'
    *
    * const stream: Fx.Fx<never, never, number> = Fx.suspendSucceed(() => Fx.succeed(42))
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [42])
@@ -225,7 +225,7 @@ export {
    * import * as Duration from '@effect/data/Duration'
    *
    * const stream: Fx.Fx<never, never, number> = Fx.delay(Fx.succeed(42), Duration.millis(1000))
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.collectAll(stream)
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
    * const result: readonly number[] = await Effect.runPromise(effect)
    *
    * assert.deepStrictEqual(result, [42])
@@ -294,12 +294,6 @@ export {
 
 export {
   /**
-   * Collect all the values of an Fx into an Array
-   * @since 1.0.0
-   * @category Run
-   */
-  collectAll,
-  /**
    * Activate an Fx.
    * @since 1.0.0
    * @category Run
@@ -312,5 +306,11 @@ export {
    * @since 1.0.0
    * @category Run
    */
-  observe
+  observe,
+  /**
+   * Collect all the values of an Fx into an Array
+   * @since 1.0.0
+   * @category Run
+   */
+  runCollectAll
 } from "./internal/run/index"

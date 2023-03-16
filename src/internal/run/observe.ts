@@ -30,12 +30,15 @@ export const observe_ = <R, E, A, R2, E2>(
   f: (a: A) => Effect.Effect<R2, E2, unknown>
 ): Effect.Effect<R | R2 | Scope, E | E2, void> =>
   Effect.gen(function*($) {
+    const context = yield* $(Effect.context<R | R2 | Scope>())
     const deferred = yield* $(Deferred.make<E | E2, void>())
     const end = Deferred.succeed(deferred, undefined)
     const error = (cause: Cause<E | E2>) => isInterruptedOnly(cause) ? end : Deferred.failCause(deferred, cause)
 
     yield* $(
-      Effect.forkScoped(fx.run(Sink((a) => pipe(a, f, Effect.catchAllCause(error)), error, () => end)))
+      Effect.forkScoped(
+        fx.run(Sink((a) => pipe(a, f, Effect.catchAllCause(error), Effect.provideContext(context)), error, () => end))
+      )
     )
 
     return yield* $(Deferred.await(deferred))

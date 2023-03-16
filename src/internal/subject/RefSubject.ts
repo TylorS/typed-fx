@@ -47,13 +47,17 @@ export interface RefSubject<in out E, in out A> extends Subject<E, A> {
    * Modify the current value of the Ref with the specified function. The current
    * value will be initialized if it hasn't been already.
    */
-  readonly modify: <B>(f: (a: A) => readonly [B, A]) => Effect.Effect<never, E, B>
+  readonly modify: <B>(
+    f: (a: A) => readonly [B, A]
+  ) => Effect.Effect<never, E, B>
 
   /**
    * Update the current value of the Ref with the specified effectful function.
    * The current value will be initialized if it hasn't been already.
    */
-  readonly updateEffect: <R2, E2>(f: (a: A) => Effect.Effect<R2, E2, A>) => Effect.Effect<R2, E | E2, A>
+  readonly updateEffect: <R2, E2>(
+    f: (a: A) => Effect.Effect<R2, E2, A>
+  ) => Effect.Effect<R2, E | E2, A>
 
   /**
    * Update the current value of the Ref with the specified function. The current
@@ -80,7 +84,9 @@ export interface RefSubject<in out E, in out A> extends Subject<E, A> {
   /**
    * Compute a value from the current value of the Ref.
    */
-  readonly map: <B>(f: (a: A) => B) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
+  readonly map: <B>(
+    f: (a: A) => B
+  ) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
 }
 
 export function makeRef<R, E, A>(
@@ -115,7 +121,11 @@ export namespace RefSubject {
     initialize: Effect.Effect<never, E, A>,
     eq: Equivalence.Equivalence<A>
   ): RefSubject<E, A> {
-    return new RefSubjectImpl<E, A>(initialize, eq, MutableRef.make(Option.none<A>()))
+    return new RefSubjectImpl<E, A>(
+      initialize,
+      eq,
+      MutableRef.make(Option.none<A>())
+    )
   }
 
   export function struct<P extends Readonly<Record<string, Any>>>(
@@ -123,26 +133,26 @@ export namespace RefSubject {
   ): Effect.Effect<
     Scope.Scope,
     never,
-    RefSubject<Fx.ErrorsOf<P[string]>, { readonly [K in keyof P]: Fx.OutputOf<P[K]> }>
+    RefSubject<
+      Fx.ErrorsOf<P[string]>,
+      { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
+    >
   > {
     type Val = { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
 
     return Effect.gen(function*($) {
-      const ref = yield* $(makeRef(
-        Effect.allPar(RR.map(properties, (property) => property.get)) as Effect.Effect<
-          never,
-          Fx.ErrorsOf<P[string]>,
-          Val
-        >,
-        Equivalence.struct(RR.map(properties, (property) => property.eq))
-      ))
+      const ref = yield* $(
+        makeRef(
+          Effect.allPar(
+            RR.map(properties, (property) => property.get)
+          ) as Effect.Effect<never, Fx.ErrorsOf<P[string]>, Val>,
+          Equivalence.struct(RR.map(properties, (property) => property.eq))
+        )
+      )
 
       yield* $(
         Effect.forkScoped(
-          observe_(
-            ref,
-            (a) => Effect.allPar(RR.map(a, (x, i) => properties[i].set(x)))
-          )
+          observe_(ref, (a) => Effect.allPar(RR.map(a, (x, i) => properties[i].set(x))))
         )
       )
 
@@ -164,28 +174,38 @@ export namespace RefSubject {
     })
   }
 
-  export function tuple<P extends RA.NonEmptyReadonlyArray<Any>>(...properties: P): Effect.Effect<
+  export function tuple<P extends RA.NonEmptyReadonlyArray<Any>>(
+    ...properties: P
+  ): Effect.Effect<
     Scope.Scope,
     never,
-    RefSubject<Fx.ErrorsOf<P[number]>, { readonly [K in keyof P]: Fx.OutputOf<P[K]> }>
+    RefSubject<
+      Fx.ErrorsOf<P[number]>,
+      { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
+    >
   > {
     type Val = { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
 
     return Effect.gen(function*($) {
-      const ref = yield* $(makeRef(
-        Effect.allPar(RA.map(properties, (property) => property.get)) as Effect.Effect<
-          never,
-          Fx.ErrorsOf<P[number]>,
-          Val
-        >,
-        Equivalence.tuple(...RA.mapNonEmpty(properties, (property) => property.eq))
-      ))
+      const ref = yield* $(
+        makeRef(
+          Effect.allPar(
+            RA.map(properties, (property) => property.get)
+          ) as Effect.Effect<never, Fx.ErrorsOf<P[number]>, Val>,
+          Equivalence.tuple(
+            ...RA.mapNonEmpty(properties, (property) => property.eq)
+          )
+        )
+      )
 
       yield* $(
         Effect.forkScoped(
           observe_(
             ref,
-            (a) => Effect.allPar(RA.map(a, (x, i) => properties[i].set(x))) as Effect.Effect<never, never, Val>
+            (a) =>
+              Effect.allPar(
+                RA.map(a, (x, i) => properties[i].set(x))
+              ) as Effect.Effect<never, never, Val>
           )
         )
       )
@@ -231,7 +251,7 @@ export namespace RefSubject {
       this.setAndSend = this.setAndSend.bind(this)
     }
 
-    run<R>(sink: Sink<R, E, A>) {
+    run(sink: Sink<E, A>) {
       return pipe(
         // Ensure Ref is initialized
         Effect.catchAllCause(this.get, sink.error),
@@ -256,18 +276,24 @@ export namespace RefSubject {
         return Fiber.join<E, A>(fiberOrNull)
       }
 
-      return this.lock(Effect.flatMap(Effect.fork(this.initialize), (actualFiber) => {
-        MutableRef.set(this.initFiber, actualFiber)
+      return this.lock(
+        Effect.flatMap(Effect.fork(this.initialize), (actualFiber) => {
+          MutableRef.set(this.initFiber, actualFiber)
 
-        return pipe(
-          Fiber.join(actualFiber),
-          Effect.ensuring(Effect.sync(() => MutableRef.set(this.initFiber, null))),
-          Effect.tap((a) => Effect.sync(() => MutableRef.set(this.current, Option.some(a))))
-        )
-      }))
+          return pipe(
+            Fiber.join(actualFiber),
+            Effect.ensuring(
+              Effect.sync(() => MutableRef.set(this.initFiber, null))
+            ),
+            Effect.tap((a) => Effect.sync(() => MutableRef.set(this.current, Option.some(a))))
+          )
+        })
+      )
     })
 
-    modifyEffect<R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, readonly [B, A]>): Effect.Effect<R2, E | E2, B> {
+    modifyEffect<R2, E2, B>(
+      f: (a: A) => Effect.Effect<R2, E2, readonly [B, A]>
+    ): Effect.Effect<R2, E | E2, B> {
       return Effect.flatMap(
         this.get,
         (currentValue) => Effect.flatMap(f(currentValue), ([b, a]) => Effect.as(this.setAndSend(a), b))
@@ -282,7 +308,9 @@ export namespace RefSubject {
       return this.lock(this.setAndSend(a))
     }
 
-    updateEffect<R2, E2>(f: (a: A) => Effect.Effect<R2, E2, A>): Effect.Effect<R2, E | E2, A> {
+    updateEffect<R2, E2>(
+      f: (a: A) => Effect.Effect<R2, E2, A>
+    ): Effect.Effect<R2, E | E2, A> {
       return this.modifyEffect((a) => Effect.map(f(a), (a) => [a, a]))
     }
 
@@ -354,7 +382,9 @@ export interface Computed<E, A> extends Fx<never, E, A> {
   /**
    * Compute a new value from the current value of the Computed.
    */
-  readonly map: <B>(f: (a: A) => B) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
+  readonly map: <B>(
+    f: (a: A) => B
+  ) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
 }
 
 export const makeComputed: {
@@ -363,27 +393,30 @@ export const makeComputed: {
     f: (a: A) => Effect.Effect<R2, E2, B>
   ): Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
 
-  <A, R2, E2, B>(
-    f: (a: A) => Effect.Effect<R2, E2, B>
-  ): <E>(ref: RefSubject<E, A>) => Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
-} = dualWithTrace(2, (trace) =>
-  function makeComputed<E, A, R2, E2, B>(
-    ref: RefSubject<E, A>,
-    f: (a: A) => Effect.Effect<R2, E2, B>
-  ): Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>> {
-    return Effect.gen(function*($) {
-      const computed = yield* $(makeRef(Effect.flatMap(ref.get, f)))
+  <A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>): <E>(
+    ref: RefSubject<E, A>
+  ) => Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
+} = dualWithTrace(
+  2,
+  (trace) =>
+    function makeComputed<E, A, R2, E2, B>(
+      ref: RefSubject<E, A>,
+      f: (a: A) => Effect.Effect<R2, E2, B>
+    ): Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>> {
+      return Effect.gen(function*($) {
+        const computed = yield* $(makeRef(Effect.flatMap(ref.get, f)))
 
-      yield* $(
-        Effect.forkScoped(
-          Effect.matchCauseEffect(
-            observe_(ref, (a) => computed.updateEffect(() => f(a))),
-            computed.error,
-            computed.end
+        yield* $(
+          Effect.forkScoped(
+            Effect.matchCauseEffect(
+              observe_(ref, (a) => computed.updateEffect(() => f(a))),
+              computed.error,
+              computed.end
+            )
           )
         )
-      )
 
-      return computed
-    }).traced(trace)
-  })
+        return computed
+      }).traced(trace)
+    }
+)

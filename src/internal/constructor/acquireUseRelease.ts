@@ -36,7 +36,7 @@ export class AcquireUseReleaseFx<R, E, A, R2, E2, B, R3> extends BaseFx<R | R2 |
     super()
   }
 
-  run<R4>(sink: Sink<R4, E | E2, B>) {
+  run(sink: Sink<E | E2, B>) {
     return Effect.catchAllCause(
       Effect.acquireUseRelease(
         this.acquire,

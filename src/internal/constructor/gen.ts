@@ -25,7 +25,7 @@ export class GenFx<Eff extends Effect.EffectGen<any, any, any>, R, E, A>
   /**
    * @macro traced
    */
-  run<R2>(sink: Sink<R2, E | GenErrors<Eff>, A>) {
+  run(sink: Sink<E | GenErrors<Eff>, A>) {
     // Type-cast necessary to exclude Scope from the resources in the generator as it's always returd via run()
     return fromFxEffect<Exclude<GenResources<Eff>, Scope.Scope>, GenErrors<Eff>, R, E, A>(Effect.gen(this.f) as any)
       .run(sink)

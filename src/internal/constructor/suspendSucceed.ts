@@ -13,7 +13,7 @@ export class SuspendSucceedFx<R, E, A> extends BaseFx<R, E, A> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E, A>) {
+  run(sink: Sink<E, A>) {
     return this.f().run(sink)
   }
 }

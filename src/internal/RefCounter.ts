@@ -5,10 +5,9 @@ import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
 import * as Ref from "@effect/io/Ref"
 import * as Schedule from "@effect/io/Schedule"
-import type { Scope } from "@effect/io/Scope"
-import type { Fx, Sink } from "@typed/fx/Fx"
-import { Cause } from "@typed/fx/internal/_externals"
-import { observe } from "@typed/fx/internal/run"
+import type { Fx } from "@typed/fx/Fx"
+import { Sink } from "@typed/fx/Fx"
+import { Cause, Scope } from "@typed/fx/internal/_externals"
 
 const zero = millis(0)
 export const asap = Schedule.delayed(Schedule.once(), () => zero)
@@ -34,18 +33,19 @@ export class RefCounter {
 
   readonly wait = Deferred.await(this.deferred)
 
-  readonly run = <R, E, A, R2>(
+  readonly refCounted = <R, E, A>(
     fx: Fx<R, E, A>,
-    sink: Sink<R2, E, A>
-  ): Effect.Effect<R | R2 | Scope, never, unknown> =>
-    pipe(
-      this.increment,
-      Effect.zipRight(observe(fx, sink.event)),
-      Effect.matchCauseEffect(
-        (cause): Effect.Effect<Scope | R2, never, unknown> =>
-          Cause.isInterruptedOnly(cause) ? this.decrement : sink.error(cause),
-        () => this.decrement
-      )
+    sink: Sink<E, A>
+  ): Effect.Effect<R | Scope.Scope, never, unknown> =>
+    Effect.scopeWith((scope) =>
+      fx.run(Sink(
+        sink.event,
+        (cause) =>
+          Cause.isInterruptedOnly(cause) ?
+            Effect.provideService(this.decrement, Scope.Tag, scope) :
+            sink.error(cause),
+        () => Effect.provideService(this.decrement, Scope.Tag, scope)
+      ))
     )
 
   private checkShouldClose = Effect.suspendSucceed(() => {
@@ -55,7 +55,7 @@ export class RefCounter {
 
     return pipe(
       interrupt,
-      Effect.flatMap(() => Ref.get(this.count)),
+      Effect.zipParRight(Ref.get(this.count)),
       Effect.flatMap((x) => x === 0 ? Effect.intoDeferred(Effect.unit(), this.deferred) : Effect.unit()),
       Effect.scheduleForked(asap),
       Effect.tap((fiber) =>
@@ -69,14 +69,15 @@ export class RefCounter {
 
 export function withRefCounter<R, E, A, R2, E2, B>(
   initialCount: number,
-  f: (counter: RefCounter) => Effect.Effect<R, E, A>,
+  f: (counter: RefCounter, scope: Scope.Scope) => Effect.Effect<R, E, A>,
   onEnd: () => Effect.Effect<R2, E2, B>
-): Effect.Effect<R | R2 | Scope, E | E2, B> {
+): Effect.Effect<R | R2 | Scope.Scope, E | E2, B> {
   return Effect.gen(function*($) {
+    const scope = yield* $(Effect.scope())
     const deferred = yield* $(Deferred.make<never, void>())
     const counter = new RefCounter(initialCount, deferred)
 
-    const fiber = yield* $(Effect.forkScoped(f(counter)))
+    const fiber = yield* $(Effect.forkScoped(f(counter, scope)))
 
     yield* $(counter.wait)
 

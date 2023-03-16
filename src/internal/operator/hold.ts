@@ -26,7 +26,7 @@ export const hold_: {
 )
 
 export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Tag> implements Fx<R, E, A> {
-  protected pendingSinks: Array<readonly [Sink<any, E, A>, Array<A>]> = []
+  protected pendingSinks: Array<readonly [Sink<E, A>, Array<A>]> = []
   protected scheduledFiber: Fiber.RuntimeFiber<any, any> | undefined = undefined
 
   constructor(
@@ -42,7 +42,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
     this.end = this.end.bind(this)
   }
 
-  run<R2>(sink: Sink<R2, E, A>): Effect.Effect<Scope | R | R2, never, void> {
+  run(sink: Sink<E, A>): Effect.Effect<Scope | R, never, void> {
     return Effect.suspendSucceed(() => {
       if (Option.isSome(MutableRef.get(this.current))) {
         return pipe(
@@ -84,7 +84,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
     )
   }
 
-  protected scheduleFlush(sink: Sink<any, E, A>) {
+  protected scheduleFlush(sink: Sink<E, A>) {
     return Effect.suspendSucceed(() => {
       this.pendingSinks.push([
         sink,
@@ -142,7 +142,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
     })
   }
 
-  protected findObserver(sink: Sink<any, E, A>) {
+  protected findObserver(sink: Sink<E, A>) {
     return this.observers.find((x) => x.sink === sink)
   }
 

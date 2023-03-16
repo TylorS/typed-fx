@@ -16,7 +16,7 @@ export class AbsolveFx<R, E, E2, A> extends BaseFx<R, E | E2, A> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E | E2, A>) {
+  run(sink: Sink<E | E2, A>) {
     return this.fx.run(Sink(
       Either.match((e2) => sink.error(Cause.fail(e2)), sink.event),
       sink.error,

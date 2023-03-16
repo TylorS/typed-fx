@@ -42,7 +42,7 @@ export class BindFx<R, E, N extends string, K, R2, E2, A>
     super()
   }
 
-  run<R3>(sink: Sink<R3, E | E2, MergeObjects<K, { readonly [_ in N]: A }>>) {
+  run(sink: Sink<E | E2, MergeObjects<K, { readonly [_ in N]: A }>>) {
     return flatMap(this.self, (k) => map(this.f(k), (a) => ({ ...k, [this.tag]: a } as any))).run(sink)
   }
 }

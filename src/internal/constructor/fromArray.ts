@@ -1,5 +1,5 @@
 import { methodWithTrace } from "@effect/io/Debug"
-import { forEachDiscard, matchCauseEffect } from "@effect/io/Effect"
+import * as Effect from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
@@ -16,7 +16,7 @@ export class FromArrayFx<T extends ReadonlyArray<any>> extends BaseFx<never, nev
     super()
   }
 
-  run<R>(sink: Sink<R, never, T[number]>) {
-    return matchCauseEffect(forEachDiscard(this.array, sink.event), sink.error, sink.end)
+  run(sink: Sink<never, T[number]>) {
+    return Effect.matchCauseEffect(Effect.forEachDiscard(this.array, sink.event), sink.error, sink.end)
   }
 }

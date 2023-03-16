@@ -19,7 +19,7 @@ export abstract class BaseFx<R, E, A> implements fx.Fx<R, E, A> {
   /**
    * @macro traced
    */
-  abstract run<R2>(sink: fx.Sink<R2, E, A>): Effect<R | R2 | Scope, never, void>
+  abstract run(sink: fx.Sink<E, A>): Effect<R | Scope, never, unknown>
 
   traced(trace: Trace): fx.Fx<R, E, A> {
     return trace ? new Traced(this, trace) : this

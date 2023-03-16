@@ -1,10 +1,10 @@
-import { Effect, Fiber, Option } from "@typed/fx/internal/_externals"
-import { collectAll } from "@typed/fx/internal/run/collectAll"
+import { Chunk, Effect, Fiber, Option } from "@typed/fx/internal/_externals"
+import { runCollectAll } from "@typed/fx/internal/run/runCollectAll"
 import { makeRef, RefSubject } from "@typed/fx/internal/subject/RefSubject"
 import { deepStrictEqual } from "assert"
 import { describe, it } from "vitest"
 
-describe.only("RefSubject", () => {
+describe("RefSubject", () => {
   describe("get", () => {
     it("lazily instantiates the value", async () => {
       const test = Effect.gen(function*($) {
@@ -118,7 +118,7 @@ describe.only("RefSubject", () => {
     it("is can be observed", async () => {
       const test = Effect.gen(function*($) {
         const ref = yield* $(makeRef(Effect.succeed(1)))
-        const fiber = yield* $(Effect.fork(collectAll(ref)))
+        const fiber = yield* $(Effect.fork(runCollectAll(ref)))
 
         yield* $(Effect.yieldNow())
 
@@ -128,7 +128,7 @@ describe.only("RefSubject", () => {
 
         const results = yield* $(Fiber.join(fiber))
 
-        deepStrictEqual(results, [1, 2, 3])
+        deepStrictEqual(Chunk.toReadonlyArray(results), [1, 2, 3])
       })
 
       await Effect.runPromise(test)

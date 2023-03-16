@@ -18,7 +18,7 @@ export class ServiceWithFx<A, R, E, B> extends BaseFx<R | A, E, B> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E, B>) {
+  run(sink: Sink<E, B>) {
     return Effect.serviceWithEffect(this.tag, (a) => this.f(a).run(sink))
   }
 }

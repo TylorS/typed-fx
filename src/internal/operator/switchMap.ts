@@ -4,8 +4,10 @@ import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 
 import * as RS from "@effect/io/Ref/Synchronized"
+import type { Scope } from "@effect/io/Scope"
 import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
 import { Sink } from "@typed/fx/Fx"
+import type { Context } from "@typed/fx/internal/_externals"
 import { Fiber } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
@@ -24,38 +26,41 @@ class SwitchMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
     super()
   }
 
-  run<R3>(sink: Sink<R3, E | E2, B>) {
+  run(sink: Sink<E | E2, B>) {
     const { f, fx } = this
 
-    return withRefCounter(
-      1,
-      (counter) =>
-        Effect.gen(function*($) {
-          const refFiber = yield* $(RS.make<Fiber.RuntimeFiber<never, unknown> | null>(null))
-          const resetRef = RS.set<Fiber.RuntimeFiber<never, unknown> | null>(refFiber, null)
+    return Effect.contextWithEffect((context: Context.Context<R | R2 | Scope>) =>
+      withRefCounter(
+        // Start with 1 to account for the outer Fx
+        1,
+        (counter) =>
+          Effect.gen(function*($) {
+            const refFiber = yield* $(RS.make<Fiber.RuntimeFiber<never, unknown> | null>(null))
+            const resetRef = RS.set<Fiber.RuntimeFiber<never, unknown> | null>(refFiber, null)
 
-          return yield* $(fx.run(
-            Sink(
-              (a) =>
-                RS.updateEffect(refFiber, (fiber) =>
-                  pipe(
-                    fiber
-                      ? Effect.asUnit(Fiber.interrupt(fiber))
-                      : Effect.asUnit(counter.increment),
-                    Effect.flatMap((_: unknown) =>
-                      pipe(
-                        counter.run(f(a), sink),
-                        Effect.zipLeft(resetRef),
-                        Effect.forkScoped
-                      )
-                    )
-                  )),
-              sink.error,
-              () => counter.decrement
-            )
-          ))
-        }),
-      sink.end
+            return yield* $(fx.run(
+              Sink(
+                (a) =>
+                  RS.updateEffect(refFiber, (fiber) =>
+                    Effect.flatMap(
+                      fiber
+                        ? Fiber.interrupt(fiber)
+                        : Effect.asUnit(counter.increment),
+                      () =>
+                        pipe(
+                          counter.refCounted(f(a), sink),
+                          Effect.zipLeft(resetRef),
+                          Effect.forkScoped,
+                          Effect.provideContext(context)
+                        )
+                    )),
+                sink.error,
+                () => Effect.provideContext(counter.decrement, context)
+              )
+            ))
+          }),
+        sink.end
+      )
     )
   }
 }

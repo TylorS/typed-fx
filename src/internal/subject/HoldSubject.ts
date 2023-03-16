@@ -1,11 +1,11 @@
 import * as MutableRef from "@effect/data/MutableRef"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import type { Scope } from "@typed/fx/internal/_externals"
 import { Effect, Option } from "@typed/fx/internal/_externals"
 import { never } from "@typed/fx/internal/constructor/never"
 import { HoldFx } from "@typed/fx/internal/operator"
+import type { Subject } from "@typed/fx/internal/subject/Subject"
 
-export interface HoldSubject<in out E, in out A> extends Fx<never, E, A>, Sink<never, E, A> {
+export interface HoldSubject<in out E, in out A> extends Subject<E, A> {
   readonly current: MutableRef.MutableRef<Option.Option<A>>
 }
 

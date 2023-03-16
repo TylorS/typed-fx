@@ -13,7 +13,7 @@ export class Traced<R, E, A> implements Fx<R, E, A> {
   readonly _tag = "Traced"
   constructor(readonly fx: Fx<R, E, A>, readonly trace: Trace) {}
 
-  run<R2>(sink: Sink<R2, E, A>): Effect<R | R2 | Scope, never, void> {
+  run(sink: Sink<E, A>): Effect<R | Scope, never, void> {
     const { fx, trace } = this
 
     return fx.run(sink).traced(trace)

@@ -21,14 +21,14 @@ export const bindValue: {
       self: Fx<R, E, K>,
       tag: Exclude<N, keyof K>,
       f: (_: K) => A
-    ) => new BindFx(self, tag, f).traced(trace)
+    ) => new BindValueFx(self, tag, f).traced(trace)
 )
 
 type MergeObjects<T, U> = {
   readonly [K in keyof T | keyof U]: K extends keyof T ? T[K] : K extends keyof U ? U[K] : never
 }
 
-export class BindFx<R, E, N extends string, K, A> extends BaseFx<R, E, MergeObjects<K, { readonly [_ in N]: A }>> {
+export class BindValueFx<R, E, N extends string, K, A> extends BaseFx<R, E, MergeObjects<K, { readonly [_ in N]: A }>> {
   readonly _tag = "Bind"
 
   constructor(
@@ -39,7 +39,7 @@ export class BindFx<R, E, N extends string, K, A> extends BaseFx<R, E, MergeObje
     super()
   }
 
-  run<R3>(sink: Sink<R3, E, MergeObjects<K, { readonly [_ in N]: A }>>) {
+  run(sink: Sink<E, MergeObjects<K, { readonly [_ in N]: A }>>) {
     return map(this.self, (k) => ({ ...k, [this.tag]: this.f(k) } as any)).run(sink)
   }
 }

@@ -20,7 +20,7 @@ export class FromFxEffect<R, E, R2, E2, A> extends BaseFx<R | R2, E | E2, A> {
   /**
    * @macro traced
    */
-  run<R3>(sink: Sink<R3, E | E2, A>) {
+  run(sink: Sink<E | E2, A>) {
     return matchCauseEffect(this.effect, sink.error, (fx) => fx.run(sink))
   }
 }

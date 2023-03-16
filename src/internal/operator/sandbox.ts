@@ -15,7 +15,7 @@ export class SandboxFx<R, E, A> extends BaseFx<R, Cause.Cause<E>, A> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, Cause.Cause<E>, A>) {
+  run(sink: Sink<Cause.Cause<E>, A>) {
     return this.fx.run(Sink(
       sink.event,
       (cause) => sink.error(Cause.fail(cause)),

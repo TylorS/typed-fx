@@ -6,8 +6,8 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 import { isMap } from "@typed/fx/internal/operator/map"
 
 export const bimap: {
-  <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B): Fx<R, E, B>
-  <A, B>(f: (a: A) => B): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, B>
+  <R, E, E2, A, B>(fx: Fx<R, E, A>, f: (a: E) => E2, g: (a: A) => B): Fx<R, E2, B>
+  <E, E2, A, B>(f: (a: E) => E2, g: (a: A) => B): <R>(fx: Fx<R, E, A>) => Fx<R, E2, B>
 } = dualWithTrace(
   3,
   (trace) => <R, E, E2, A, B>(fx: Fx<R, E, A>, f: (a: E) => E2, g: (a: A) => B) => BimapFx.make(fx, f, g).traced(trace)
@@ -20,7 +20,7 @@ export class BimapFx<R, E, E2, A, B> extends BaseFx<R, E2, B> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E2, B>) {
+  run(sink: Sink<E2, B>) {
     return this.fx.run(Sink(
       (a) => sink.event(this.g(a)),
       (e) => sink.error(Cause.map(e, this.f)),

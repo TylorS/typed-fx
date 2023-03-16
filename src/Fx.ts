@@ -31,9 +31,9 @@ export interface Fx<out Services, out Errors, out Output> {
    * The main API for running an Fx.
    * @macro traced
    */
-  run<Services2>(
-    services: Sink<Services2, Errors, Output>
-  ): Effect<Services | Services2 | Scope, never, unknown>
+  run(
+    sink: Sink<Errors, Output>
+  ): Effect<Services | Scope, never, unknown>
 
   /**
    * Add a trace to an Fx.
@@ -74,10 +74,10 @@ export namespace Fx {
  * @since 1.0.0
  * @category Model
  */
-export interface Sink<out Services, in Errors, in Output> {
-  readonly event: (event: Output) => Effect<Services, never, unknown>
-  readonly error: (error: Cause<Errors>) => Effect<Services, never, unknown>
-  readonly end: () => Effect<Services, never, unknown>
+export interface Sink<in Errors, in Output> {
+  readonly event: (event: Output) => Effect<never, never, unknown>
+  readonly error: (error: Cause<Errors>) => Effect<never, never, unknown>
+  readonly end: () => Effect<never, never, unknown>
 }
 
 /**
@@ -85,12 +85,12 @@ export interface Sink<out Services, in Errors, in Output> {
  * @since 1.0.0
  * @category Constructor
  */
-export function Sink<Services1, Services2, Services3, Errors, Output>(
-  event: Sink<Services1, Errors, Output>["event"],
-  error: Sink<Services2, Errors, Output>["error"],
-  end: Sink<Services3, Errors, Output>["end"]
-): Sink<Services1 | Services2 | Services3, Errors, Output> {
-  const sink: Sink<Services1 | Services2 | Services3, Errors, Output> = {
+export function Sink<Errors, Output>(
+  event: Sink<Errors, Output>["event"],
+  error: Sink<Errors, Output>["error"],
+  end: Sink<Errors, Output>["end"]
+): Sink<Errors, Output> {
+  const sink: Sink<Errors, Output> = {
     event: methodWithTrace((trace, restore) => (a) => restore(event)(a).traced(trace)),
     error: methodWithTrace((trace, restore) => (e) => restore(error)(e).traced(trace)),
     end: methodWithTrace((trace, restore) => () => restore(end)().traced(trace))

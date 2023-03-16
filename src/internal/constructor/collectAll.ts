@@ -3,6 +3,7 @@ import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import { Sink } from "@typed/fx/Fx"
 import type { Fx } from "@typed/fx/Fx"
+import { Scope } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
@@ -17,34 +18,38 @@ export class CollectAllFx<R, E, A> extends BaseFx<R, E, Chunk.Chunk<A>> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E, Chunk.Chunk<A>>) {
+  run(sink: Sink<E, Chunk.Chunk<A>>) {
     const fx = Array.from(this.fx)
     const length = fx.length
 
-    return withRefCounter(length, (counter) =>
+    return withRefCounter(length, (counter, scope) =>
       Effect.gen(function*($) {
         const values = Array(length)
         let remaining = length
 
         for (let i = 0; i < length; i++) {
-          yield* $(Effect.forkScoped(fx[i].run(Sink(
-            (a) =>
-              Effect.suspendSucceed(() => {
-                if (!(i in values)) {
-                  remaining--
-                }
+          yield* $(Effect.forkScoped(
+            fx[i].run(
+              Sink(
+                (a) =>
+                  Effect.suspendSucceed(() => {
+                    if (!(i in values)) {
+                      remaining--
+                    }
 
-                values[i] = a
+                    values[i] = a
 
-                if (remaining === 0) {
-                  return sink.event(Chunk.unsafeFromArray(values.slice(0)))
-                }
+                    if (remaining === 0) {
+                      return sink.event(Chunk.unsafeFromArray(values.slice(0)))
+                    }
 
-                return Effect.unit()
-              }),
-            sink.error,
-            () => counter.decrement
-          ))))
+                    return Effect.unit()
+                  }),
+                sink.error,
+                () => Effect.provideService(counter.decrement, Scope.Tag, scope)
+              )
+            )
+          ))
         }
       }), sink.end)
   }

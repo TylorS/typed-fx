@@ -2,6 +2,7 @@ import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import { Sink } from "@typed/fx/Fx"
 import type { Fx } from "@typed/fx/Fx"
+import { Scope } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
@@ -16,11 +17,11 @@ export class CollectAllDiscardFx<R, E, A> extends BaseFx<R, E, void> {
     super()
   }
 
-  run<R2>(sink: Sink<R2, E, void>) {
+  run(sink: Sink<E, void>) {
     const fx = Array.from(this.fx)
     const length = fx.length
 
-    return withRefCounter(length, (counter) =>
+    return withRefCounter(length, (counter, scope) =>
       Effect.gen(function*($) {
         const values = Array(length)
         let remaining = length
@@ -42,7 +43,7 @@ export class CollectAllDiscardFx<R, E, A> extends BaseFx<R, E, void> {
                 return Effect.unit()
               }),
             sink.error,
-            () => counter.decrement
+            () => Effect.provideService(counter.decrement, Scope.Tag, scope)
           ))))
         }
       }), sink.end)
