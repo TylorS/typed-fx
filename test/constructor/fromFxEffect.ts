@@ -2,7 +2,7 @@ import * as Cause from "@effect/io/Cause"
 import * as Effect from "@effect/io/Effect"
 import * as Exit from "@effect/io/Exit"
 import { fromEffect, runCollectAll } from "@typed/fx"
-import { fromFxEffect } from "@typed/fx/internal/constructor/fromFxEffect"
+import { fromFxEffect } from "@typed/fx/internal/conversion/fromFxEffect"
 import { testCause, testCollectAll } from "@typed/fx/test/util"
 import { describe, it } from "vitest"
 

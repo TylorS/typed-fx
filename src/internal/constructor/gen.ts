@@ -2,7 +2,7 @@ import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Fx, Sink } from "@typed/fx/Fx"
 import type { Scope } from "@typed/fx/internal/_externals"
-import { fromFxEffect } from "@typed/fx/internal/constructor/fromFxEffect"
+import { fromFxEffect } from "@typed/fx/internal/conversion/fromFxEffect"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const gen: <Eff extends Effect.EffectGen<any, any, any>, R, E, A>(

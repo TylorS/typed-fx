@@ -1,6 +1,6 @@
 import { pipe } from "@effect/data/Function"
 import { succeed } from "@typed/fx"
-import { bindValue } from "@typed/fx/internal/operator"
+import { bindValue } from "@typed/fx/internal/do"
 import { testCollectAll } from "@typed/fx/test/util"
 
 describe(__filename, () => {

@@ -1,5 +1,5 @@
 import { succeedRight } from "@typed/fx/internal/constructor/succeedRight"
-import { absolve, absorbWith } from "@typed/fx/internal/operator"
+import { absolve, absorbWith } from "@typed/fx/internal/error"
 import { testCollectAll } from "@typed/fx/test/util"
 
 describe(__filename, () => {

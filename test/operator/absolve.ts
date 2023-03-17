@@ -1,7 +1,7 @@
 import { identity } from "@effect/data/Function"
 import { fail } from "@typed/fx"
 import { Cause } from "@typed/fx/internal/_externals"
-import { absorbWith } from "@typed/fx/internal/operator"
+import { absorbWith } from "@typed/fx/internal/error"
 import { testCause } from "@typed/fx/test/util"
 
 describe(__filename, () => {
