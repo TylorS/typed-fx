@@ -9,11 +9,11 @@ export const orElseOptional = dualWithTrace(
   2,
   (trace) =>
     <R, E, A, R1, E1, A1>(self: Fx<R, Option.Option<E>, A>, that: () => Fx<R1, Option.Option<E1>, A1>) =>
-      new OrElseOptionalFx(self, that).traced(trace)
+      new OrElseOptionalFx(self, that).transform((e) => e.traced(trace))
 )
 
 export class OrElseOptionalFx<R, E, A, R1, E1, A1> extends BaseFx<R | R1, Option.Option<E | E1>, A | A1> {
-  readonly _tag = "OrElseOptional" as const
+  readonly name = "OrElseOptional" as const
 
   constructor(readonly self: Fx<R, Option.Option<E>, A>, readonly that: () => Fx<R1, Option.Option<E1>, A1>) {
     super()

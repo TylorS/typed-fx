@@ -22,5 +22,7 @@ export const provideServiceFx: {
       service: Tag<S>,
       implementation: Fx<R2, E2, S>
     ): Fx<R2 | Exclude<R, S>, E | E2, A> =>
-      pipe(implementation, switchMap((s) => fx.transform(Effect.provideService(service, s)))).traced(trace)
+      pipe(implementation, switchMap((s) => fx.transform(Effect.provideService(service, s)))).transform((e) =>
+        e.traced(trace)
+      )
 )

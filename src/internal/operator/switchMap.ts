@@ -14,13 +14,15 @@ import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const switchMap: FlatMap<FxTypeLambda>["flatMap"] = dualWithTrace(
   2,
-  (trace) => <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) => new SwitchMapFx(fx, f).traced(trace)
+  (trace) =>
+    <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) =>
+      new SwitchMapFx(fx, f).transform((e) => e.traced(trace))
 )
 
 export const switchLatest: <R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>) => Fx<R | R2, E | E2, A> = switchMap(identity)
 
 class SwitchMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
-  readonly _tag = "SwitchMap" as const
+  readonly name = "SwitchMap" as const
 
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => Fx<R2, E2, B>) {
     super()

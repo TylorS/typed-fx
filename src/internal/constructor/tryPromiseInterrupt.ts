@@ -8,4 +8,7 @@ export const tryPromiseInterrupt: <A>(
 ) => Fx<never, unknown, A> = methodWithTrace((
   trace,
   restore
-) => <A>(f: (signal: AbortSignal) => Promise<A>) => fromEffect(Effect.tryPromiseInterrupt(restore(f))).traced(trace))
+) =>
+  <A>(f: (signal: AbortSignal) => Promise<A>) =>
+    fromEffect(Effect.tryPromiseInterrupt(restore(f))).transform((e) => e.traced(trace))
+)

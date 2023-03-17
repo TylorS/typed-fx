@@ -11,7 +11,8 @@ export function testCollectAll<E, A>(
   expected: ReadonlyArray<A>
 ) {
   it(name, async () => {
-    expect(Chunk.toReadonlyArray(await Effect.runPromise(fx.value))).toEqual(expected)
+    const test = runCollectAll(fx)
+    expect(Chunk.toReadonlyArray(await Effect.runPromise(test))).toEqual(expected)
   })
 }
 

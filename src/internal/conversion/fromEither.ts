@@ -5,5 +5,5 @@ import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const fromEither: <E, A>(either: Either<E, A>) => Fx<never, E, A> = methodWithTrace((trace) =>
-  (either) => fromEffect(Effect.fromEither(either)).traced(trace)
+  (either) => fromEffect(Effect.fromEither(either)).transform((e) => e.traced(trace))
 )

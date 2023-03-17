@@ -6,10 +6,13 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 export const map: {
   <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B): Fx<R, E, B>
   <A, B>(f: (a: A) => B): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, B>
-} = dualWithTrace(2, (trace) => <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f).traced(trace))
+} = dualWithTrace(
+  2,
+  (trace) => <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f).transform((e) => e.traced(trace))
+)
 
 export class MapFx<R, E, A, B> extends BaseFx<R, E, B> {
-  readonly _tag = "Map" as const
+  readonly name = "Map" as const
 
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => B) {
     super()

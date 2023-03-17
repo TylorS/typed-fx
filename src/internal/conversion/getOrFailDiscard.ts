@@ -6,4 +6,7 @@ import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const getOrFailDiscard: <A>(option: Option.Option<A>) => Fx<never, void, A> = methodWithTrace((
   trace
-) => <A>(option: Option.Option<A>): Fx<never, void, A> => fromEffect(Effect.getOrFailDiscard(option).traced(trace)))
+) =>
+  <A>(option: Option.Option<A>): Fx<never, void, A> =>
+    fromEffect(Effect.getOrFailDiscard(option).transform((e) => e.traced(trace)))
+)

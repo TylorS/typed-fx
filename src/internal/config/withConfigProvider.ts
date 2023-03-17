@@ -10,5 +10,5 @@ export const withConfigProvider: {
   2,
   (trace) =>
     <R, E, A>(fx: Fx<R, E, A>, provider: ConfigProvider) =>
-      fx.transform(Effect.withConfigProvider(provider)).traced(trace)
+      fx.transform(Effect.withConfigProvider(provider)).transform((e) => e.traced(trace))
 )

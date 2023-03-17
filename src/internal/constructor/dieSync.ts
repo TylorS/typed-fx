@@ -5,5 +5,5 @@ import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const dieSync: (error: LazyArg<unknown>) => Fx<never, never, never> = methodWithTrace((trace) =>
-  (error) => fromEffect(Effect.dieSync(error)).traced(trace)
+  (error) => fromEffect(Effect.dieSync(error)).transform((e) => e.traced(trace))
 )

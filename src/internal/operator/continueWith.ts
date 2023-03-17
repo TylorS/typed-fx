@@ -19,7 +19,7 @@ export const continueWith: {
 ): Fx<R | R2, E | E2, A | B> => new ContinueWithFx(fx, f))
 
 export class ContinueWithFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, A | B> {
-  readonly _tag = "ContinueWith"
+  readonly name = "ContinueWith"
 
   constructor(readonly fx: Fx<R, E, A>, readonly f: () => Fx<R2, E2, B>) {
     super()

@@ -4,5 +4,5 @@ import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const promise: <A>(promise: () => Promise<A>) => Fx<never, never, A> = methodWithTrace(
-  (trace) => (promise) => fromEffect(Effect.promise(promise)).traced(trace)
+  (trace) => (promise) => fromEffect(Effect.promise(promise)).transform((e) => e.traced(trace))
 )

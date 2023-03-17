@@ -7,11 +7,11 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const collectAllDiscard: <R, E, A>(fx: Iterable<Fx<R, E, A>>) => Fx<R, E, void> = methodWithTrace((trace) =>
-  <R, E, A>(fx: Iterable<Fx<R, E, A>>) => new CollectAllDiscardFx(fx).traced(trace)
+  <R, E, A>(fx: Iterable<Fx<R, E, A>>) => new CollectAllDiscardFx(fx).transform((e) => e.traced(trace))
 )
 
 export class CollectAllDiscardFx<R, E, A> extends BaseFx<R, E, void> {
-  readonly _tag = "CollectAllDiscard" as const
+  readonly name = "CollectAllDiscard" as const
 
   constructor(readonly fx: Iterable<Fx<R, E, A>>) {
     super()

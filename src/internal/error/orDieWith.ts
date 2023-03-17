@@ -10,11 +10,12 @@ export const orDieWith: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A>(self: Fx<R, E, A>, f: (error: E) => unknown): Fx<R, never, A> => new OrDieWithFx(self, f).traced(trace)
+    <R, E, A>(self: Fx<R, E, A>, f: (error: E) => unknown): Fx<R, never, A> =>
+      new OrDieWithFx(self, f).transform((e) => e.traced(trace))
 )
 
 class OrDieWithFx<R, E, A> extends BaseFx<R, never, A> {
-  readonly _tag = "OrDieWithFx" as const
+  readonly name = "OrDieWithFx" as const
 
   constructor(readonly self: Fx<R, E, A>, readonly f: (error: E) => unknown) {
     super()

@@ -16,5 +16,5 @@ export const asyncInterruptEither: <R, E, A, R2>(
       callback: (_: Effect.Effect<R, E, A>) => void
     ) => Either.Either<Effect.Effect<R2, never, void>, Effect.Effect<R, E, A>>,
     blockingOn?: FiberId.None | FiberId.Runtime | FiberId.Composite | undefined
-  ) => fromEffect(Effect.asyncInterruptEither<R | R2, E, A>(register, blockingOn)).traced(trace)
+  ) => fromEffect(Effect.asyncInterruptEither<R | R2, E, A>(register, blockingOn)).transform((e) => e.traced(trace))
 )

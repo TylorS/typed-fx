@@ -8,11 +8,11 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const collectAll: <R, E, A>(fx: Iterable<Fx<R, E, A>>) => Fx<R, E, Chunk.Chunk<A>> = methodWithTrace((trace) =>
-  <R, E, A>(fx: Iterable<Fx<R, E, A>>) => new CollectAllFx(fx).traced(trace)
+  <R, E, A>(fx: Iterable<Fx<R, E, A>>) => new CollectAllFx(fx).transform((e) => e.traced(trace))
 )
 
 export class CollectAllFx<R, E, A> extends BaseFx<R, E, Chunk.Chunk<A>> {
-  readonly _tag = "CollectAll" as const
+  readonly name = "CollectAll" as const
 
   constructor(readonly fx: Iterable<Fx<R, E, A>>) {
     super()

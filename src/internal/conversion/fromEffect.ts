@@ -14,11 +14,11 @@ export const fromEffect: <Services = never, Errors = never, Output = unknown>(
 ) => Fx<Services, Errors, Output> = methodWithTrace((trace) =>
   <Services, Errors, Output>(
     effect: Effect.Effect<Services, Errors, Output>
-  ): Fx<Services, Errors, Output> => new FromEffect(effect).traced(trace)
+  ): Fx<Services, Errors, Output> => new FromEffect(effect).transform((e) => e.traced(trace))
 )
 
 export class FromEffect<Services, Errors, Output> extends BaseFx<Services, Errors, Output> {
-  readonly _tag = "FromEffect" as const
+  readonly name = "FromEffect" as const
 
   constructor(readonly effect: Effect.Effect<Services, Errors, Output>) {
     super()

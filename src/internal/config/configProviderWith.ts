@@ -7,11 +7,13 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 export const configProviderWith: <R, E, A>(f: (config: ConfigProvider) => Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace(
   (
     trace
-  ) => <R, E, A>(f: (config: ConfigProvider) => Fx<R, E, A>) => new ConfigProviderWithFx(f).traced(trace)
+  ) =>
+    <R, E, A>(f: (config: ConfigProvider) => Fx<R, E, A>) =>
+      new ConfigProviderWithFx(f).transform((e) => e.traced(trace))
 )
 
 class ConfigProviderWithFx<R, E, A> extends BaseFx<R, E, A> {
-  readonly _tag = "ConfigProviderWith"
+  readonly name = "ConfigProviderWith"
   constructor(readonly f: (config: ConfigProvider) => Fx<R, E, A>) {
     super()
   }

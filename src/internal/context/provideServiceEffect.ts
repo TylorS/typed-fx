@@ -21,5 +21,5 @@ export const provideServiceEffect: {
       service: Tag<S>,
       implementation: Effect.Effect<R2, E2, S>
     ): Fx<R2 | Exclude<R, S>, E | E2, A> =>
-      fx.transform(Effect.provideServiceEffect(service, implementation)).traced(trace)
+      fx.transform(Effect.provideServiceEffect(service, implementation)).transform((e) => e.traced(trace))
 )

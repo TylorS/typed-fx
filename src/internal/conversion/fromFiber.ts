@@ -5,5 +5,5 @@ import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const fromFiber: <Errors, Output>(fiber: Fiber<Errors, Output>) => Fx<never, Errors, Output> = methodWithTrace(
-  (trace) => (fiber) => fromEffect(Effect.fromFiber(fiber)).traced(trace)
+  (trace) => (fiber) => fromEffect(Effect.fromFiber(fiber)).transform((e) => e.traced(trace))
 )

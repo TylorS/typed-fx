@@ -10,5 +10,5 @@ export const provideSomeLayer: {
   2,
   (trace) =>
     <R, S, E, A, R2, E2>(fx: Fx<R | S, E, A>, layer: Layer<R2, E2, S>): Fx<R2 | Exclude<R, S>, E | E2, A> =>
-      fx.transform(Effect.provideSomeLayer(layer)).traced(trace)
+      fx.transform(Effect.provideSomeLayer(layer)).transform((e) => e.traced(trace))
 )

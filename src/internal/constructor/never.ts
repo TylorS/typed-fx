@@ -2,7 +2,7 @@ import { Effect } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export class NeverFx extends BaseFx<never, never, never> {
-  readonly _tag = "Never" as const
+  readonly name = "Never" as const
 
   constructor() {
     super()

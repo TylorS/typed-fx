@@ -10,5 +10,5 @@ export const at: {
   (delay: Duration): <A>(value: A) => Fx<never, never, A>
 } = dualWithTrace(2, (trace) =>
   <A>(value: A, delay: Duration): Fx<never, never, A> => {
-    return fromEffect(Effect.as(Effect.sleep(delay), value)).traced(trace)
+    return fromEffect(Effect.as(Effect.sleep(delay), value)).transform((e) => e.traced(trace))
   })

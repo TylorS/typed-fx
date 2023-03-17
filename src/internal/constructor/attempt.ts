@@ -7,5 +7,5 @@ import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 export const attempt: <A>(
   f: LazyArg<A>
 ) => Fx<never, unknown, A> = methodWithTrace((trace) =>
-  <A>(f: LazyArg<A>) => fromEffect(Effect.attempt(f)).traced(trace)
+  <A>(f: LazyArg<A>) => fromEffect(Effect.attempt(f)).transform((e) => e.traced(trace))
 )

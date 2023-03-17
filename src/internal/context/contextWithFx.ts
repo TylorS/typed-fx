@@ -8,10 +8,10 @@ export const contextWithFx: <R, R2, E2, A>(
   f: (context: Context.Context<R>) => Fx<R2, E2, A>
 ) => Fx<R | R2, E2, A> = bodyWithTrace((
   trace
-) => (f) => new ContextWithFx(f).traced(trace))
+) => (f) => new ContextWithFx(f).transform((e) => e.traced(trace)))
 
 export class ContextWithFx<R, R2, E2, A> extends BaseFx<R | R2, E2, A> {
-  readonly _tag = "ContextWithFx"
+  readonly name = "ContextWithFx"
 
   constructor(readonly f: (context: Context.Context<R>) => Fx<R2, E2, A>) {
     super()

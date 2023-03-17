@@ -18,7 +18,7 @@ export function fromEmitter<E, A, R = never, E2 = never>(
 }
 
 export class FromEmitterFx<E, A, R, E2> extends BaseFx<Exclude<R, Scope.Scope>, E | E2, A> {
-  readonly _tag = "FromEmitter" as const
+  readonly name = "FromEmitter" as const
 
   constructor(readonly f: (sink: Emitter<E, A>) => Effect.Effect<R | Scope.Scope, E2, unknown>) {
     super()

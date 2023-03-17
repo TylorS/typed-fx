@@ -13,7 +13,9 @@ import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const flatMap: FlatMap<FxTypeLambda>["flatMap"] = dualWithTrace(
   2,
-  (trace) => <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) => FlatMapFx.make(fx, f).traced(trace)
+  (trace) =>
+    <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) =>
+      FlatMapFx.make(fx, f).transform((e) => e.traced(trace))
 )
 
 export const flatten: <R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>) => Fx<R | R2, E | E2, A> = flatMap(identity)
@@ -22,7 +24,7 @@ export const flatMapEffect = <A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B
   <R, E>(fx: Fx<R, E, A>) => FlatMapFx.make(fx, (a) => fromEffect(f(a)))
 
 class FlatMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
-  readonly _tag = "FlatMap" as const
+  readonly name = "FlatMap" as const
 
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => Fx<R2, E2, B>) {
     super()

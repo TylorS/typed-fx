@@ -15,7 +15,7 @@ export const gen: <Eff extends Effect.EffectGen<any, any, any>, R, E, A>(
       R | Exclude<GenResources<Eff>, Scope.Scope>,
       E | GenErrors<Eff>,
       A
-    > => new GenFx(f).traced(trace)
+    > => new GenFx(f).transform((e) => e.traced(trace))
 )
 
 export class GenFx<
@@ -28,7 +28,7 @@ export class GenFx<
   E | GenErrors<Eff>,
   A
 > {
-  readonly _tag = "Gen" as const
+  readonly name = "Gen" as const
 
   constructor(
     readonly f: (resume: EffectResume) => Generator<Eff, Fx<R, E, A>>

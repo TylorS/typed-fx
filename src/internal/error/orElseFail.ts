@@ -9,11 +9,12 @@ export const orElseFail: {
   <E2>(orFail: () => E2): <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E2, A>
 } = dualWithTrace(
   2,
-  (trace) => <R, E, A, E2>(fx: Fx<R, E, A>, orFail: () => E2) => new OrElseFailFx(fx, orFail).traced(trace)
+  (trace) =>
+    <R, E, A, E2>(fx: Fx<R, E, A>, orFail: () => E2) => new OrElseFailFx(fx, orFail).transform((e) => e.traced(trace))
 )
 
 export class OrElseFailFx<R, E, A, E2> extends BaseFx<R, E2, A> {
-  readonly _tag = "OrElseFail" as const
+  readonly name = "OrElseFail" as const
 
   constructor(readonly fx: Fx<R, E, A>, readonly orFail: () => E2) {
     super()

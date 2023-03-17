@@ -6,5 +6,5 @@ import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const fromEitherCause: <E, A>(either: Either<Cause<E>, A>) => Fx<never, E, A> = methodWithTrace((trace) =>
-  (either) => fromEffect(Effect.fromEitherCause(either)).traced(trace)
+  (either) => fromEffect(Effect.fromEitherCause(either)).transform((e) => e.traced(trace))
 )

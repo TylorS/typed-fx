@@ -5,7 +5,7 @@ import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export class EmptyFx extends BaseFx<never, never, never> {
-  readonly _tag = "Empty"
+  readonly name = "Empty"
 
   run(sink: Sink<never, never>): Effect.Effect<Scope, never, void> {
     return sink.end()
@@ -14,4 +14,6 @@ export class EmptyFx extends BaseFx<never, never, never> {
 
 const empty_ = new EmptyFx()
 
-export const empty: () => Fx<never, never, never> = methodWithTrace((trace) => () => empty_.traced(trace))
+export const empty: () => Fx<never, never, never> = methodWithTrace((trace) =>
+  () => empty_.transform((e) => e.traced(trace))
+)

@@ -5,5 +5,5 @@ import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const clock: (_: void) => Fx.WithService<Clock, Clock> = bodyWithTrace((trace) =>
-  (_: void) => fromEffect(Effect.clock()).traced(trace)
+  (_: void) => fromEffect(Effect.clock()).transform((e) => e.traced(trace))
 )

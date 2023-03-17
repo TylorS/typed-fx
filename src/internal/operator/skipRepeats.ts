@@ -15,7 +15,7 @@ export function skipRepeats<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
 }
 
 class SkipRepeatsWithFx<R, E, A> extends BaseFx<R, E, A> {
-  readonly _tag = "SkipRepeatsWith" as const
+  readonly name = "SkipRepeatsWith" as const
 
   constructor(readonly fx: Fx<R, E, A>, readonly eq: Equivalence<A>) {
     super()

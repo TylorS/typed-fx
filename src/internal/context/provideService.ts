@@ -10,5 +10,5 @@ export const provideService: {
   3,
   (trace) =>
     <R, S, E, A>(fx: Fx<R | S, E, A>, service: Tag<S>, implementation: S): Fx<Exclude<R, S>, E, A> =>
-      fx.transform(Effect.provideService(service, implementation)).traced(trace)
+      fx.transform(Effect.provideService(service, implementation)).transform((e) => e.traced(trace))
 )

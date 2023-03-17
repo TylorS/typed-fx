@@ -10,11 +10,10 @@
 
 import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
-import type { Trace } from "@effect/io/Debug"
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Effect, EffectGen } from "@effect/io/Effect"
+import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
-import type { Chunk } from "@typed/fx/internal/_externals"
+import type { Fiber } from "@typed/fx/internal/_externals"
 
 /**
  * A `Fx` is a push-based reactive data structure that declaratively represents a multi-shot Effects.
@@ -28,8 +27,8 @@ import type { Chunk } from "@typed/fx/internal/_externals"
  * @since 1.0.0
  * @category Model
  */
-export interface Fx<out Services, out Errors, out Output> extends EffectGen<Services, Errors, Chunk.Chunk<Output>> {
-  readonly _tag: string
+export interface Fx<out Services, out Errors, out Output> extends Effect<Services | Scope, Errors, unknown> {
+  readonly name: string
 
   /**
    * The main API for running an Fx.
@@ -40,16 +39,20 @@ export interface Fx<out Services, out Errors, out Output> extends EffectGen<Serv
   ): Effect<Services | Scope, never, unknown>
 
   /**
-   * Add a trace to an Fx.
-   */
-  traced(trace: Trace): Fx<Services, Errors, Output>
-
-  /**
    * Transform the output of an Fx.
    */
   transform<R2 = never, E2 = never>(
     f: (effect: Effect<Services | Scope, never, unknown>) => Effect<R2 | Scope, E2, unknown>
   ): Fx<Exclude<R2, Scope>, Errors | E2, Output>
+
+  readonly observe: <R2, E2, B>(
+    f: (o: Output) => Effect<R2, E2, B>
+  ) => Effect<Services | R2 | Scope, Errors | E2, unknown>
+
+  /**
+   * Drain and Fork the Fx.
+   */
+  readonly fork: Effect<Services | Scope, never, Fiber.RuntimeFiber<Errors, unknown>>
 }
 
 export namespace Fx {

@@ -6,11 +6,11 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 export const fromArray: <T extends ReadonlyArray<any>>(array: readonly [...T]) => Fx<never, never, T[number]> =
   methodWithTrace((trace) =>
     <T extends ReadonlyArray<any>>(array: readonly [...T]): Fx<never, never, T[number]> =>
-      new FromArrayFx(array).traced(trace)
+      new FromArrayFx(array).transform((e) => e.traced(trace))
   )
 
 export class FromArrayFx<T extends ReadonlyArray<any>> extends BaseFx<never, never, T[number]> {
-  readonly _tag = "FromArray" as const
+  readonly name = "FromArray" as const
 
   constructor(readonly array: T) {
     super()

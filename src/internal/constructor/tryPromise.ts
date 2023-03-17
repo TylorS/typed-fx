@@ -8,4 +8,4 @@ export const tryPromise: <A>(
 ) => Fx<never, unknown, A> = methodWithTrace((
   trace,
   restore
-) => <A>(f: () => Promise<A>) => fromEffect(Effect.tryPromise(restore(f))).traced(trace))
+) => <A>(f: () => Promise<A>) => fromEffect(Effect.tryPromise(restore(f))).transform((e) => e.traced(trace)))

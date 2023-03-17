@@ -21,7 +21,7 @@ export const bindValue: {
       self: Fx<R, E, K>,
       tag: Exclude<N, keyof K>,
       f: (_: K) => A
-    ) => new BindValueFx(self, tag, f).traced(trace)
+    ) => new BindValueFx(self, tag, f).transform((e) => e.traced(trace))
 )
 
 type MergeObjects<T, U> = {
@@ -29,7 +29,7 @@ type MergeObjects<T, U> = {
 }
 
 export class BindValueFx<R, E, N extends string, K, A> extends BaseFx<R, E, MergeObjects<K, { readonly [_ in N]: A }>> {
-  readonly _tag = "Bind"
+  readonly name = "Bind"
 
   constructor(
     readonly self: Fx<R, E, K>,

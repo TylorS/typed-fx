@@ -8,11 +8,11 @@ export const fromFxEffect: <R, E, R2 = never, E2 = never, A = unknown>(
   effect: Effect<R, E, Fx<R2, E2, A>>
 ) => Fx<Exclude<R, Scope.Scope> | R2, E | E2, A> = methodWithTrace((trace) =>
   <R, E, R2 = never, E2 = never, A = unknown>(effect: Effect<R, E, Fx<R2, E2, A>>) =>
-    new FromFxEffect(effect).traced(trace)
+    new FromFxEffect(effect).transform((e) => e.traced(trace))
 )
 
 export class FromFxEffect<R, E, R2, E2, A> extends BaseFx<Exclude<R, Scope.Scope> | R2, E | E2, A> {
-  readonly _tag = "FromFxEffect" as const
+  readonly name = "FromFxEffect" as const
 
   constructor(readonly effect: Effect<R, E, Fx<R2, E2, A>>) {
     super()
