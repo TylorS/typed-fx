@@ -5,8 +5,10 @@ describe(__filename, () => {
   describe("Fx", () => {
     it("extends Effect", async () => {
       const test = Effect.scoped(Effect.gen(function*($) {
-        yield* $(succeed(1))
-        const fiber = yield* $(succeed(2).fork)
+        const values: Array<number> = []
+
+        yield* $(succeed(1).observe((value) => Effect.succeed(values.push(value))))
+        const fiber = yield* $(succeed(2).forkObserve((value) => Effect.succeed(values.push(value))))
 
         yield* $(Fiber.join(fiber))
       }))

@@ -151,9 +151,7 @@ export namespace RefSubject {
       )
 
       yield* $(
-        Effect.forkScoped(
-          observe_(ref, (a) => Effect.allPar(RR.map(a, (x, i) => properties[i].set(x))))
-        )
+        ref.forkObserve((a) => Effect.allPar(RR.map(a, (x, i) => properties[i].set(x))))
       )
 
       yield* $(
@@ -161,7 +159,7 @@ export namespace RefSubject {
           Effect.allPar(
             RR.map(properties, (property, k) =>
               Effect.catchAllCause(
-                observe_(property, (x) => ref.update((y) => ({ ...y, [k]: x }))),
+                property.observe((x) => ref.update((y) => ({ ...y, [k]: x }))),
                 ref.error
               ))
           )
@@ -199,14 +197,11 @@ export namespace RefSubject {
       )
 
       yield* $(
-        Effect.forkScoped(
-          observe_(
-            ref,
-            (a) =>
-              Effect.allPar(
-                RA.map(a, (x, i) => properties[i].set(x))
-              ) as Effect.Effect<never, never, Val>
-          )
+        ref.forkObserve(
+          (a) =>
+            Effect.allPar(
+              RA.map(a, (x, i) => properties[i].set(x))
+            ) as Effect.Effect<never, never, Val>
         )
       )
 
@@ -215,12 +210,13 @@ export namespace RefSubject {
           Effect.allPar(
             RA.map(properties, (property, k) =>
               Effect.catchAllCause(
-                observe_(property, (x) =>
+                property.observe((x) =>
                   ref.update((y) => {
                     const next = y.slice(0)
                     next[k] = x
                     return next as Val
-                  })),
+                  })
+                ),
                 ref.error
               ))
           )

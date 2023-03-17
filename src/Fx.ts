@@ -13,7 +13,7 @@ import type { Cause } from "@effect/io/Cause"
 import { methodWithTrace } from "@effect/io/Debug"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
-import type { Fiber } from "@typed/fx/internal/_externals"
+import type { Chunk, Fiber } from "@typed/fx/internal/_externals"
 
 /**
  * A `Fx` is a push-based reactive data structure that declaratively represents a multi-shot Effects.
@@ -27,7 +27,7 @@ import type { Fiber } from "@typed/fx/internal/_externals"
  * @since 1.0.0
  * @category Model
  */
-export interface Fx<out Services, out Errors, out Output> extends Effect<Services | Scope, Errors, unknown> {
+export interface Fx<out Services, out Errors, out Output> {
   readonly name: string
 
   /**
@@ -45,14 +45,44 @@ export interface Fx<out Services, out Errors, out Output> extends Effect<Service
     f: (effect: Effect<Services | Scope, never, unknown>) => Effect<R2 | Scope, E2, unknown>
   ): Fx<Exclude<R2, Scope>, Errors | E2, Output>
 
+  /**
+   * Construct a new Fx by applying a Effectful function to every element of this Fx.
+   */
   readonly observe: <R2, E2, B>(
     f: (o: Output) => Effect<R2, E2, B>
   ) => Effect<Services | R2 | Scope, Errors | E2, unknown>
 
   /**
+   * Construct a new Fx by applying a Effectful function to every element of this Fx
+   * and fork the resulting Effect.
+   */
+  readonly forkObserve: <R2, E2, B>(
+    f: (o: Output) => Effect<R2, E2, B>
+  ) => Effect<Services | R2 | Scope, never, Fiber.RuntimeFiber<Errors | E2, unknown>>
+
+  /**
+   * Consume all events of an Fx.
+   */
+  readonly drain: Effect<Services | Scope, Errors, unknown>
+
+  /**
    * Drain and Fork the Fx.
    */
-  readonly fork: Effect<Services | Scope, never, Fiber.RuntimeFiber<Errors, unknown>>
+  readonly forkDrain: Effect<Services | Scope, never, Fiber.RuntimeFiber<Errors, unknown>>
+
+  /**
+   * Collect all events of an Fx in a Chunk.
+   */
+  readonly collectAll: Effect<Services | Scope, Errors, Chunk.Chunk<Output>>
+
+  /**
+   * Collect all events of an Fx in a Chunk and fork the resulting Effect.
+   */
+  readonly forkCollectAll: Effect<
+    Services | Scope,
+    never,
+    Fiber.RuntimeFiber<Errors, Chunk.Chunk<Output>>
+  >
 }
 
 export namespace Fx {
