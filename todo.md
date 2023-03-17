@@ -10,7 +10,7 @@
 - [ ] loop
 - [ ] zipItems
 - [ ] withItems
-- [ ] switchMap
+- [x] switchMap
 - [ ] flatMapConcurrently
 - [ ] combine + combineAll
 - [ ] zip + zipAll
@@ -42,20 +42,15 @@
 - [ ] Effect.catchTags
 - [ ] Effect.cause
 - [ ] Effect.checkInterruptible
-- [ ] Effect.clock
-- [ ] Effect.clockWith
+- [x] Effect.clock
+- [x] Effect.clockWith
 - [ ] Effect.collect
 - [ ] Effect.collectAll
 - [ ] Effect.collectAllDiscard
-- [ ] Effect.collectAllPar
-- [ ] Effect.collectAllParDiscard
 - [ ] Effect.collectAllSuccesses
-- [ ] Effect.collectAllSuccessesPar
 - [ ] Effect.collectAllWith
 - [ ] Effect.collectAllWithEffect
-- [ ] Effect.collectAllWithPar
 - [ ] Effect.collectFirst
-- [ ] Effect.collectPar
 - [ ] Effect.collectWhile
 - [ ] Effect.daemonChildren
 - [x] Effect.delay
@@ -67,7 +62,6 @@
 - [ ] Effect.ensuringChildren
 - [ ] Effect.eventually
 - [ ] Effect.exists
-- [ ] Effect.existsPar
 - [x] Effect.exit
 - [x] Effect.fail
 - [x] Effect.failCause
@@ -75,14 +69,12 @@
 - [ ] Effect.failSync
 - [ ] Effect.filter
 - [ ] Effect.filterNot
-- [ ] Effect.filterNotPar
 - [ ] Effect.filterOrDie
 - [ ] Effect.filterOrDieMessage
 - [ ] Effect.filterOrElse
 - [ ] Effect.filterOrElseWith
 - [ ] Effect.filterOrElseWith
 - [ ] Effect.filterOrFail
-- [ ] Effect.filterPar
 - [ ] Effect.find
 - [ ] Effect.firstSuccessOf
 - [ ] Effect.flattenErrorOption

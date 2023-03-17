@@ -1,7 +1,7 @@
 import { methodWithTrace } from "@effect/io/Debug"
 import type { Fx } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
-import { fromEffect } from "@typed/fx/internal/constructor/fromEffect"
+import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const sync: <A>(
   f: () => A

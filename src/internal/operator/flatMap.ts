@@ -7,7 +7,7 @@ import type { Scope } from "@effect/io/Scope"
 
 import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
 import { Sink } from "@typed/fx/Fx"
-import { fromEffect } from "@typed/fx/internal/constructor"
+import { fromEffect } from "@typed/fx/internal/conversion"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 

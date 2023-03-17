@@ -3,7 +3,7 @@ import * as Effect from "@effect/io/Effect"
 
 import { dualWithTrace } from "@effect/io/Debug"
 import type { Fx } from "@typed/fx/Fx"
-import { fromEffect } from "./fromEffect"
+import { fromEffect } from "../conversion/fromEffect"
 
 export const at: {
   <A>(value: A, delay: Duration): Fx<never, never, A>

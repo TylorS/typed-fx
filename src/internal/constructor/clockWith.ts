@@ -1,9 +1,9 @@
 import * as Clock from "@effect/io/Clock"
 import type { Fx } from "@typed/fx/Fx"
 import type { Effect } from "@typed/fx/internal/_externals"
-import { serviceWith } from "@typed/fx/internal/constructor/serviceWith"
 import { serviceWithEffect } from "@typed/fx/internal/constructor/serviceWithEffect"
 import { serviceWithFx } from "@typed/fx/internal/constructor/serviceWithFx"
+import { serviceWith } from "@typed/fx/internal/context/serviceWith"
 
 export const clockWith = <A>(f: (a: Clock.Clock) => A) => serviceWith(Clock.Tag, f)
 

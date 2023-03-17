@@ -1,7 +1,7 @@
 import { Tag } from "@effect/data/Context"
 import { runCollectAll } from "@typed/fx"
 import { Chunk, Effect, pipe } from "@typed/fx/internal/_externals"
-import { serviceWith } from "@typed/fx/internal/constructor/serviceWith"
+import { serviceWith } from "@typed/fx/internal/context/serviceWith"
 
 describe(__filename, () => {
   describe(serviceWith.name, () => {

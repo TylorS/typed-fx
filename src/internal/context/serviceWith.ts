@@ -1,7 +1,7 @@
 import type { Fx } from "@typed/fx/Fx"
 import type { Context } from "@typed/fx/internal/_externals"
 import { Debug, Effect } from "@typed/fx/internal/_externals"
-import { fromEffect } from "@typed/fx/internal/constructor/fromEffect"
+import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const serviceWith: {
   <A, B>(

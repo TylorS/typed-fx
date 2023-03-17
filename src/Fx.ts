@@ -39,6 +39,13 @@ export interface Fx<out Services, out Errors, out Output> {
    * Add a trace to an Fx.
    */
   traced(trace: Trace): Fx<Services, Errors, Output>
+
+  /**
+   * Transform the output of an Fx.
+   */
+  transform<R2 = never, E2 = never>(
+    f: (effect: Effect<Services | Scope, never, unknown>) => Effect<R2 | Scope, E2, unknown>
+  ): Fx<Exclude<R2, Scope>, Errors | E2, Output>
 }
 
 export namespace Fx {

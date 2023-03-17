@@ -1,6 +1,6 @@
 import { identity } from "@effect/data/Function"
 import type { Fx } from "@typed/fx/Fx"
-import { absorbWith } from "@typed/fx/internal/operator/absorbWith"
+import { absorbWith } from "@typed/fx/internal/error/absorbWith"
 
 export const absorb: <R, E, A>(
   fx: Fx<R, E, A>

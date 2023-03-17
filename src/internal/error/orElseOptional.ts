@@ -1,0 +1,33 @@
+import { dualWithTrace } from "@effect/io/Debug"
+import { Sink } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/Fx"
+import { Effect } from "@typed/fx/internal/_externals"
+import type { Context, Option, Scope } from "@typed/fx/internal/_externals"
+import { BaseFx } from "@typed/fx/internal/Fx"
+
+export const orElseOptional = dualWithTrace(
+  2,
+  (trace) =>
+    <R, E, A, R1, E1, A1>(self: Fx<R, Option.Option<E>, A>, that: () => Fx<R1, Option.Option<E1>, A1>) =>
+      new OrElseOptionalFx(self, that).traced(trace)
+)
+
+export class OrElseOptionalFx<R, E, A, R1, E1, A1> extends BaseFx<R | R1, Option.Option<E | E1>, A | A1> {
+  readonly _tag = "OrElseOptional" as const
+
+  constructor(readonly self: Fx<R, Option.Option<E>, A>, readonly that: () => Fx<R1, Option.Option<E1>, A1>) {
+    super()
+  }
+
+  run(sink: Sink<Option.Option<E | E1>, A | A1>) {
+    return Effect.contextWith((ctx: Context.Context<R1 | Scope.Scope>) =>
+      this.self.run(
+        Sink(
+          (a) => sink.event(a),
+          () => Effect.provideContext(this.that().run(sink), ctx),
+          sink.end
+        )
+      )
+    )
+  }
+}

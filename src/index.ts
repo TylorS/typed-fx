@@ -74,54 +74,6 @@ export {
    */
   failCause,
   /**
-   * Construct a Fx from an array of values.
-   * @since 1.0.0
-   * @category Constructor
-   * @example
-   * import * as assert from 'assert'
-   * import * as Effect from '@effect/io/Effect'
-   * import * as Fx from '@typed/fx'
-   *
-   * const stream: Fx.Fx<never, never, number> = Fx.fromArray([1, 2, 3])
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
-   * const result: readonly number[] = await Effect.runPromise(effect)
-   *
-   * assert.deepStrictEqual(result, [1, 2, 3])
-   */
-  fromArray,
-  /**
-   * Construct a Fx from an Effect.
-   * @since 1.0.0
-   * @category Constructor
-   * @example
-   * import * as assert from 'assert'
-   * import * as Effect from '@effect/io/Effect'
-   * import * as Fx from '@typed/fx'
-   *
-   * const stream: Fx.Fx<never, never, number> = Fx.fromEffect(Effect.succeed(42))
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
-   * const result: readonly number[] = await Effect.runPromise(effect)
-   *
-   * assert.deepStrictEqual(result, [42])
-   */
-  fromEffect,
-  /**
-   * Construct a Fx from an Effect returning an Fx.
-   * @since 1.0.0
-   * @category Constructor
-   * @example
-   * import * as assert from 'assert'
-   * import * as Effect from '@effect/io/Effect'
-   * import * as Fx from '@typed/fx'
-   *
-   * const stream: Fx.Fx<never, never, number> = Fx.fromFxEffect(Effect.succeed(Fx.succeed(42)))
-   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
-   * const result: readonly number[] = await Effect.runPromise(effect)
-   *
-   * assert.deepStrictEqual(result, [42])
-   */
-  fromFxEffect,
-  /**
    * Construct a Fx from an Generator of Effects returning an Fx.
    * @since 1.0.0
    * @category Constructor
@@ -144,12 +96,6 @@ export {
    * assert.deepStrictEqual(result, [3])
    */
   gen,
-  /**
-   * Detect if an Fx is a FromEffect instance. Useful for creating fusion optimizations.
-   * @since 1.0.0
-   * @category Type Guard
-   */
-  isFromEffect,
   /**
    * Construct a successful Fx from a value.
    * @since 1.0.0
@@ -282,14 +228,7 @@ export {
    * @since 1.0.0
    * @category Operator
    */
-  multicast,
-  /**
-   * Run an Effect for all failures within an Fx making any interrupt end the Fx
-   * instead of failing.
-   * @since 1.0.0
-   * @category Operator
-   */
-  onNonInterruptCause
+  multicast
 } from "./internal/operator/index"
 
 export {
@@ -314,3 +253,54 @@ export {
    */
   runCollectAll
 } from "./internal/run/index"
+
+export {
+  /**
+   * Construct a Fx from an array of values.
+   * @since 1.0.0
+   * @category Constructor
+   * @example
+   * import * as assert from 'assert'
+   * import * as Effect from '@effect/io/Effect'
+   * import * as Fx from '@typed/fx'
+   *
+   * const stream: Fx.Fx<never, never, number> = Fx.fromArray([1, 2, 3])
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
+   * const result: readonly number[] = await Effect.runPromise(effect)
+   *
+   * assert.deepStrictEqual(result, [1, 2, 3])
+   */
+  fromArray,
+  /**
+   * Construct a Fx from an Effect.
+   * @since 1.0.0
+   * @category Constructor
+   * @example
+   * import * as assert from 'assert'
+   * import * as Effect from '@effect/io/Effect'
+   * import * as Fx from '@typed/fx'
+   *
+   * const stream: Fx.Fx<never, never, number> = Fx.fromEffect(Effect.succeed(42))
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
+   * const result: readonly number[] = await Effect.runPromise(effect)
+   *
+   * assert.deepStrictEqual(result, [42])
+   */
+  fromEffect,
+  /**
+   * Construct a Fx from an Effect returning an Fx.
+   * @since 1.0.0
+   * @category Constructor
+   * @example
+   * import * as assert from 'assert'
+   * import * as Effect from '@effect/io/Effect'
+   * import * as Fx from '@typed/fx'
+   *
+   * const stream: Fx.Fx<never, never, number> = Fx.fromFxEffect(Effect.succeed(Fx.succeed(42)))
+   * const effect: Effect.Effect<never, never, readonly number[]> = Fx.runCollectAll(stream)
+   * const result: readonly number[] = await Effect.runPromise(effect)
+   *
+   * assert.deepStrictEqual(result, [42])
+   */
+  fromFxEffect
+} from "./internal/conversion/index"
