@@ -27,18 +27,19 @@ export abstract class BaseFx<R, E, A> implements fx.Fx<R, E, A> {
     return new TransformedFx<R, E, A, R2, E2>(this, f)
   }
 
-  observe<R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>): Effect.Effect<R | R2 | Scope, E | E2, unknown> {
-    return run.observe<R, E, A, R2, E2>(this, f)
+  readonly observe = <R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>): Effect.Effect<R | R2, E | E2, unknown> => {
+    return run.observe(this, f)
   }
 
-  forkObserve<R2, E2, B>(
+  readonly forkObserve = <R2, E2, B>(
     f: (a: A) => Effect.Effect<R2, E2, B>
-  ): Effect.Effect<R | R2 | Scope, never, RuntimeFiber<E | E2, unknown>> {
+  ): Effect.Effect<R | R2 | Scope, never, RuntimeFiber<E | E2, unknown>> => {
     return Effect.forkScoped(this.observe(f))
   }
 
   readonly drain: fx.Fx<R, E, A>["drain"] = run.drain(this)
   readonly forkDrain: fx.Fx<R, E, A>["forkDrain"] = Effect.forkScoped(this.drain)
+
   readonly collectAll: fx.Fx<R, E, A>["collectAll"] = run.runCollectAll(this)
   readonly forkCollectAll: fx.Fx<R, E, A>["forkCollectAll"] = Effect.forkScoped(this.collectAll)
 }

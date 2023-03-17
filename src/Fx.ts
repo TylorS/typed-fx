@@ -50,7 +50,7 @@ export interface Fx<out Services, out Errors, out Output> {
    */
   readonly observe: <R2, E2, B>(
     f: (o: Output) => Effect<R2, E2, B>
-  ) => Effect<Services | R2 | Scope, Errors | E2, unknown>
+  ) => Effect<Services | R2, Errors | E2, unknown>
 
   /**
    * Construct a new Fx by applying a Effectful function to every element of this Fx
@@ -63,7 +63,7 @@ export interface Fx<out Services, out Errors, out Output> {
   /**
    * Consume all events of an Fx.
    */
-  readonly drain: Effect<Services | Scope, Errors, unknown>
+  readonly drain: Effect<Services, Errors, unknown>
 
   /**
    * Drain and Fork the Fx.
@@ -73,7 +73,7 @@ export interface Fx<out Services, out Errors, out Output> {
   /**
    * Collect all events of an Fx in a Chunk.
    */
-  readonly collectAll: Effect<Services | Scope, Errors, Chunk.Chunk<Output>>
+  readonly collectAll: Effect<Services, Errors, Chunk.Chunk<Output>>
 
   /**
    * Collect all events of an Fx in a Chunk and fork the resulting Effect.
