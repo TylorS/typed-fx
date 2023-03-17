@@ -12,8 +12,9 @@ import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
 import type { Trace } from "@effect/io/Debug"
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Effect } from "@effect/io/Effect"
+import type { Effect, EffectGen } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
+import type { Chunk } from "@typed/fx/internal/_externals"
 
 /**
  * A `Fx` is a push-based reactive data structure that declaratively represents a multi-shot Effects.
@@ -21,10 +22,13 @@ import type { Scope } from "@effect/io/Scope"
  *
  * It makes use of Scope to ensure that all resources are properly released including any "nested" Fx
  * being run by higher-order Fx operators like flatMap or switchMap but not limited to.
+ *
+ * Fx extends the EffectGen interface to allow being yield*ed in a Generator. It is a shortcut
+ * to runCollectAll and is mostly useful in tests.
  * @since 1.0.0
  * @category Model
  */
-export interface Fx<out Services, out Errors, out Output> {
+export interface Fx<out Services, out Errors, out Output> extends EffectGen<Services, Errors, Chunk.Chunk<Output>> {
   readonly _tag: string
 
   /**

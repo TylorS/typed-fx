@@ -58,6 +58,9 @@
           "1002": "none"
         }
       }
+    ],
+    "types": [
+      "vitest/globals"
     ]
   },
   "include": [],
