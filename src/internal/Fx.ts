@@ -1,5 +1,4 @@
 import * as Effect from "@effect/io/Effect"
-import type { RuntimeFiber } from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 import type * as fx from "@typed/fx/Fx"
 import * as run from "@typed/fx/internal/run"
@@ -21,21 +20,10 @@ export abstract class BaseFx<R, E, A> implements fx.Fx<R, E, A> {
    */
   abstract run(sink: fx.Sink<E, A>): Effect.Effect<R | Scope, never, unknown>
 
-  transform<R2 = never, E2 = never>(
-    f: (fx: Effect.Effect<R | Scope, never, unknown>) => Effect.Effect<R2 | Scope, E2, unknown>
-  ): fx.Fx<Exclude<R2, Scope>, E | E2, A> {
-    return new TransformedFx<R, E, A, R2, E2>(this, f)
-  }
+  readonly transform: fx.Fx<R, E, A>["transform"] = (f) => new TransformedFx(this, f)
 
-  readonly observe = <R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>): Effect.Effect<R | R2, E | E2, unknown> => {
-    return run.observe(this, f)
-  }
-
-  readonly forkObserve = <R2, E2, B>(
-    f: (a: A) => Effect.Effect<R2, E2, B>
-  ): Effect.Effect<R | R2 | Scope, never, RuntimeFiber<E | E2, unknown>> => {
-    return Effect.forkScoped(this.observe(f))
-  }
+  readonly observe: fx.Fx<R, E, A>["observe"] = (f) => run.observe(this, f)
+  readonly forkObserve: fx.Fx<R, E, A>["forkObserve"] = (f) => Effect.forkScoped(this.observe(f))
 
   readonly drain: fx.Fx<R, E, A>["drain"] = run.drain(this)
   readonly forkDrain: fx.Fx<R, E, A>["forkDrain"] = Effect.forkScoped(this.drain)
