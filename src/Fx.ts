@@ -8,6 +8,7 @@
  * @since 1.0.0
  */
 
+import type { Equal } from "@effect/data/Equal"
 import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
 import { methodWithTrace } from "@effect/io/Debug"
@@ -27,7 +28,7 @@ import type { Chunk, Fiber } from "@typed/fx/internal/_externals"
  * @since 1.0.0
  * @category Model
  */
-export interface Fx<out Services, out Errors, out Output> {
+export interface Fx<out Services, out Errors, out Output> extends Equal {
   readonly name: string
 
   /**

@@ -1,3 +1,5 @@
+import * as Equal from "@effect/data/Equal"
+import * as Hash from "@effect/data/Hash"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 import type * as fx from "@typed/fx/Fx"
@@ -29,7 +31,15 @@ export abstract class BaseFx<R, E, A> implements fx.Fx<R, E, A> {
   readonly forkDrain: fx.Fx<R, E, A>["forkDrain"] = Effect.forkScoped(this.drain)
 
   readonly collectAll: fx.Fx<R, E, A>["collectAll"] = run.runCollectAll(this)
-  readonly forkCollectAll: fx.Fx<R, E, A>["forkCollectAll"] = Effect.forkScoped(this.collectAll)
+  readonly forkCollectAll: fx.Fx<R, E, A>["forkCollectAll"] = Effect.forkScoped(this.collectAll);
+
+  [Hash.symbol]() {
+    return Hash.random(this)
+  }
+
+  [Equal.symbol](that: Equal.Equal): boolean {
+    return this === that
+  }
 }
 
 export class TransformedFx<R, E, A, R2, E2> extends BaseFx<Exclude<R2, Scope>, E | E2, A> {

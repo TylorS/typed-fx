@@ -15,12 +15,12 @@ export const multicast: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTr
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast", false).transform((e) => e.traced(trace))
 )
 
-export class MulticastFx<R, E, A, Tag extends string> extends BaseFx<R, E, A> implements Sink<E, A> {
+export class MulticastFx<R, E, A, Name extends string> extends BaseFx<R, E, A> implements Sink<E, A> {
   readonly observers: Array<MulticastObserver<E, A>> = []
   protected fiber: RuntimeFiber<never, unknown> | undefined
   protected start: Effect.Effect<R | Scope, never, Fiber.RuntimeFiber<never, unknown>>
 
-  constructor(readonly fx: Fx<R, E, A>, readonly name: Tag, readonly sync: boolean) {
+  constructor(readonly fx: Fx<R, E, A>, readonly name: Name, readonly sync: boolean) {
     super()
     this.event = this.event.bind(this)
     this.error = this.error.bind(this)
