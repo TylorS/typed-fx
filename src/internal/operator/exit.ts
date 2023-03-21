@@ -6,7 +6,7 @@ import type { Fx } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const exit: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, never, Exit.Exit<E, A>> = methodWithTrace((trace) =>
-  (fx) => new ExitFx(fx).transform((e) => e.traced(trace))
+  (fx) => new ExitFx(fx).traced(trace)
 )
 
 export class ExitFx<R, E, A> extends BaseFx<R, never, Exit.Exit<E, A>> {

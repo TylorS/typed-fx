@@ -11,8 +11,7 @@ export const orElse: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A, R1, E1, A1>(self: Fx<R, E, A>, that: () => Fx<R1, E1, A1>) =>
-      new OrElseFx(self, that).transform((e) => e.traced(trace))
+    <R, E, A, R1, E1, A1>(self: Fx<R, E, A>, that: () => Fx<R1, E1, A1>) => new OrElseFx(self, that).traced(trace)
 )
 
 class OrElseFx<R, E, A, R1, E1, A1> extends BaseFx<R | R1, E | E1, A | A1> {

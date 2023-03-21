@@ -10,5 +10,5 @@ export const updateService: {
   3,
   (trace) =>
     <R, E, A, S>(fx: Fx<R | S, E, A>, service: Tag<S>, f: (service: S) => S): Fx<R | S, E, A> =>
-      fx.transform(Effect.updateService(service, f)).transform((e) => e.traced(trace))
+      fx.transform(Effect.updateService(service, f)).traced(trace)
 )

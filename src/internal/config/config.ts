@@ -6,5 +6,5 @@ import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const config: <A>(config: Config<A>) => Fx<never, ConfigError, A> = methodWithTrace((trace) =>
-  <A>(config: Config<A>) => fromEffect(Effect.config(config)).transform((e) => e.traced(trace))
+  <A>(config: Config<A>) => fromEffect(Effect.config(config)).traced(trace)
 )

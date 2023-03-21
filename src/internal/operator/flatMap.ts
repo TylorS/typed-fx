@@ -1,21 +1,27 @@
 import type { Context } from "@effect/data/Context"
 import { identity, pipe } from "@effect/data/Function"
-import type { FlatMap } from "@effect/data/typeclass/FlatMap"
 import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/Fx"
 import { Sink } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
-export const flatMap: FlatMap<FxTypeLambda>["flatMap"] = dualWithTrace(
+export const flatMap: {
+  <R, E, A, R2, E2, B>(
+    fx: Fx<R, E, A>,
+    f: (a: A) => Fx<R2, E2, B>
+  ): Fx<Exclude<R, Scope> | Exclude<R2, Scope>, E | E2, B>
+
+  <A, R2, E2, B>(
+    f: (a: A) => Fx<R2, E2, B>
+  ): <R, E>(fx: Fx<R, E, A>) => Fx<Exclude<R, Scope> | Exclude<R2, Scope>, E | E2, B>
+} = dualWithTrace(
   2,
-  (trace) =>
-    <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) =>
-      FlatMapFx.make(fx, f).transform((e) => e.traced(trace))
+  (trace) => <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) => FlatMapFx.make(fx, f).traced(trace)
 )
 
 export const flatten: <R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>) => Fx<R | R2, E | E2, A> = flatMap(identity)

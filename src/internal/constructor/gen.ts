@@ -15,7 +15,7 @@ export const gen: <Eff extends Effect.EffectGen<any, any, any>, R, E, A>(
       R | Exclude<GenResources<Eff>, Scope.Scope>,
       E | GenErrors<Eff>,
       A
-    > => new GenFx(f).transform((e) => e.traced(trace))
+    > => new GenFx(f).traced(trace)
 )
 
 export class GenFx<

@@ -16,7 +16,7 @@ export const contramapContext: {
   <R1, R2, E, A>(
     fx: Fx<R2, E, A>,
     f: (r: Context.Context<R1>) => Context.Context<R2>
-  ): Fx<R1, E, A> => new ContramapContextFx(fx, restore(f)).transform((e) => e.traced(trace)))
+  ): Fx<R1, E, A> => new ContramapContextFx(fx, restore(f)).traced(trace))
 
 export class ContramapContextFx<R1, R2, E, A> extends BaseFx<R1, E, A> {
   readonly name = "ContramapContext"

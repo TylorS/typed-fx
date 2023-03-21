@@ -9,6 +9,5 @@ export const withPermit: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A>(fx: Fx<R, E, A>, semaphore: Semaphore): Fx<R, E, A> =>
-      new WithPermitsFx(fx, semaphore, 1).transform((e) => e.traced(trace))
+    <R, E, A>(fx: Fx<R, E, A>, semaphore: Semaphore): Fx<R, E, A> => new WithPermitsFx(fx, semaphore, 1).traced(trace)
 )

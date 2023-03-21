@@ -8,4 +8,4 @@ export const contextWithEffect: <R, R2, E2, A>(
   f: (context: Context.Context<R>) => Effect.Effect<R2, E2, A>
 ) => Fx<R | R2, E2, A> = bodyWithTrace((
   trace
-) => (f) => fromEffect(Effect.contextWithEffect(f)).transform((e) => e.traced(trace)))
+) => (f) => fromEffect(Effect.contextWithEffect(f)).traced(trace))

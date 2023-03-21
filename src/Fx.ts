@@ -11,6 +11,7 @@
 import type { Equal } from "@effect/data/Equal"
 import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
+import type { Trace } from "@effect/io/Debug"
 import { methodWithTrace } from "@effect/io/Debug"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
@@ -38,6 +39,12 @@ export interface Fx<out Services, out Errors, out Output> extends Equal {
   run(
     sink: Sink<Errors, Output>
   ): Effect<Services | Scope, never, unknown>
+
+  /**
+   * Add a trace to an Fx
+   */
+
+  traced(trace: Trace): Fx<Services, Errors, Output>
 
   /**
    * Transform the output of an Fx.
@@ -142,6 +149,19 @@ export function Sink<Errors, Output>(
   }
 
   return sink
+}
+
+export namespace Sink {
+  export function traced<Errors, Output>(
+    sink: Sink<Errors, Output>,
+    trace: Trace
+  ): Sink<Errors, Output> {
+    return Sink(
+      (a) => sink.event(a).traced(trace),
+      (e) => sink.error(e).traced(trace),
+      () => sink.end().traced(trace)
+    )
+  }
 }
 
 /**

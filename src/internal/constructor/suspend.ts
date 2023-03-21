@@ -4,7 +4,7 @@ import type { Fx, Sink } from "@typed/fx/Fx"
 import { BaseFx } from "@typed/fx/internal/Fx"
 
 export const suspend: <R, E, A>(f: () => Fx<R, E, A>) => Fx<R, unknown, A> = methodWithTrace((trace) =>
-  <R, E, A>(f: () => Fx<R, E, A>): Fx<R, unknown, A> => new SuspendFx(f).transform((e) => e.traced(trace))
+  <R, E, A>(f: () => Fx<R, E, A>): Fx<R, unknown, A> => new SuspendFx(f).traced(trace)
 )
 
 export class SuspendFx<R, E, A> extends BaseFx<R, unknown, A> {

@@ -22,7 +22,7 @@ export const acquireUseRelease: {
       acquire: Effect.Effect<R, E, A>,
       use: (a: A) => Fx<R2, E2, B>,
       release: (a: A, exit: Exit<never, unknown>) => Effect.Effect<R3, never, C>
-    ) => new AcquireUseReleaseFx(acquire, use, release).transform((e) => e.traced(trace))
+    ) => new AcquireUseReleaseFx(acquire, use, release).traced(trace)
 )
 
 export class AcquireUseReleaseFx<R, E, A, R2, E2, B, R3> extends BaseFx<R | R2 | R3, E | E2, B> {

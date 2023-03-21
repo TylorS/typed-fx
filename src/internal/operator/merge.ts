@@ -15,8 +15,7 @@ export const mergeAll: <Streams extends ReadonlyArray<Fx<any, any, any>>>(
   Fx.OutputOf<Streams[number]>
 > = methodWithTrace(
   (trace) =>
-    <Streams extends ReadonlyArray<Fx<any, any, any>>>(...streams: Streams) =>
-      new MergeAllFx(streams).transform((e) => e.traced(trace))
+    <Streams extends ReadonlyArray<Fx<any, any, any>>>(...streams: Streams) => new MergeAllFx(streams).traced(trace)
 )
 
 export const merge: {
@@ -34,7 +33,7 @@ export const merge: {
     <R, E, A, R2, E2, B>(
       first: Fx<R, E, A>,
       second: Fx<R2, E2, B>
-    ): Fx<R | R2, E | E2, A | B> => mergeAll(first, second).transform((e) => e.traced(trace))
+    ): Fx<R | R2, E | E2, A | B> => mergeAll(first, second).traced(trace)
 )
 
 export class MergeAllFx<

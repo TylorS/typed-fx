@@ -4,5 +4,5 @@ import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const fail: <E>(error: E) => Fx<never, E, never> = methodWithTrace((trace) =>
-  (error) => fromEffect(Effect.fail(error)).transform((e) => e.traced(trace))
+  (error) => fromEffect(Effect.fail(error)).traced(trace)
 )

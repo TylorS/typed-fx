@@ -14,8 +14,7 @@ export const tap: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Effect.Effect<R2, E2, B>) =>
-      TapFx.make(fx, f).transform((e) => e.traced(trace))
+    <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Effect.Effect<R2, E2, B>) => TapFx.make(fx, f).traced(trace)
 )
 
 export const tapSync: {
@@ -24,8 +23,7 @@ export const tapSync: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) =>
-      TapFx.make(fx, (a) => Effect.sync(() => f(a))).transform((e) => e.traced(trace))
+    <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => TapFx.make(fx, (a) => Effect.sync(() => f(a))).traced(trace)
 )
 
 class TapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, A> {

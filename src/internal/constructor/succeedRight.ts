@@ -7,5 +7,5 @@ import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 export const succeedRight: <A>(
   a: A
 ) => Fx<never, never, Either.Either<never, A>> = methodWithTrace((trace) =>
-  <A>(a: A) => fromEffect(Effect.succeedRight(a)).transform((e) => e.traced(trace))
+  <A>(a: A) => fromEffect(Effect.succeedRight(a)).traced(trace)
 )

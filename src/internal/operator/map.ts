@@ -8,7 +8,7 @@ export const map: {
   <A, B>(f: (a: A) => B): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, B>
 } = dualWithTrace(
   2,
-  (trace) => <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f).transform((e) => e.traced(trace))
+  (trace) => <R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B) => MapFx.make(fx, f).traced(trace)
 )
 
 export class MapFx<R, E, A, B> extends BaseFx<R, E, B> {

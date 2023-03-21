@@ -11,5 +11,5 @@ export const asyncInterrupt: <R, E, A, R2>(
   <R, E, A, R2>(
     register: (callback: (_: Effect.Effect<R, E, A>) => void) => Effect.Effect<R2, never, void>,
     blockingOn?: FiberId.None | FiberId.Runtime | FiberId.Composite | undefined
-  ) => fromEffect(Effect.asyncInterrupt<R | R2, E, A>(register, blockingOn)).transform((e) => e.traced(trace))
+  ) => fromEffect(Effect.asyncInterrupt<R | R2, E, A>(register, blockingOn)).traced(trace)
 )

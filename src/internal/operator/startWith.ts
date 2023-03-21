@@ -9,6 +9,5 @@ export const startWith: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A, B>(fx: Fx<R, E, A>, value: B): Fx<R, E, A | B> =>
-      continueWith(succeed(value), () => fx).transform((e) => e.traced(trace))
+    <R, E, A, B>(fx: Fx<R, E, A>, value: B): Fx<R, E, A | B> => continueWith(succeed(value), () => fx).traced(trace)
 )

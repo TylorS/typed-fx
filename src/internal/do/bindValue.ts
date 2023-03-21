@@ -21,7 +21,7 @@ export const bindValue: {
       self: Fx<R, E, K>,
       tag: Exclude<N, keyof K>,
       f: (_: K) => A
-    ) => new BindValueFx(self, tag, f).transform((e) => e.traced(trace))
+    ) => new BindValueFx(self, tag, f).traced(trace)
 )
 
 type MergeObjects<T, U> = {

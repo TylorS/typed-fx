@@ -13,5 +13,5 @@ export const none = methodWithTrace((trace) =>
         () => unit,
         fail
       )
-    ).transform((e) => e.traced(trace))
+    ).traced(trace)
 )

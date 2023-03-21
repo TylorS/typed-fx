@@ -10,8 +10,7 @@ export const absorbWith: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A>(fx: Fx<R, E, A>, f: (e: E) => unknown): Fx<R, unknown, A> =>
-      new AbsorbWithFx(fx, f).transform((e) => e.traced(trace))
+    <R, E, A>(fx: Fx<R, E, A>, f: (e: E) => unknown): Fx<R, unknown, A> => new AbsorbWithFx(fx, f).traced(trace)
 )
 
 export class AbsorbWithFx<R, E, A> extends BaseFx<R, unknown, A> {

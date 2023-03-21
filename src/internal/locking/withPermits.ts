@@ -13,7 +13,7 @@ export const withPermits: {
   3,
   (trace) =>
     <R, E, A>(fx: Fx<R, E, A>, semaphore: Semaphore, permits: number): Fx<R, E, A> =>
-      new WithPermitsFx(fx, semaphore, permits).transform((e) => e.traced(trace))
+      new WithPermitsFx(fx, semaphore, permits).traced(trace)
 )
 
 export class WithPermitsFx<R, E, A> extends BaseFx<R, E, A> {

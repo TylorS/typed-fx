@@ -9,5 +9,5 @@ export const getOrFail: <A>(option: Option.Option<A>) => Fx<never, NoSuchElement
   trace
 ) =>
   <A>(option: Option.Option<A>): Fx<never, NoSuchElementException, A> =>
-    fromEffect(Effect.getOrFail(option).transform((e) => e.traced(trace)))
+    fromEffect(Effect.getOrFail(option).traced(trace))
 )

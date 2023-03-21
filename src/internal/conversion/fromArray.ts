@@ -6,7 +6,7 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 export const fromArray: <T extends ReadonlyArray<any>>(array: readonly [...T]) => Fx<never, never, T[number]> =
   methodWithTrace((trace) =>
     <T extends ReadonlyArray<any>>(array: readonly [...T]): Fx<never, never, T[number]> =>
-      new FromArrayFx(array).transform((e) => e.traced(trace))
+      new FromArrayFx(array).traced(trace)
   )
 
 export class FromArrayFx<T extends ReadonlyArray<any>> extends BaseFx<never, never, T[number]> {

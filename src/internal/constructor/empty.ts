@@ -14,6 +14,4 @@ export class EmptyFx extends BaseFx<never, never, never> {
 
 const empty_ = new EmptyFx()
 
-export const empty: () => Fx<never, never, never> = methodWithTrace((trace) =>
-  () => empty_.transform((e) => e.traced(trace))
-)
+export const empty: () => Fx<never, never, never> = methodWithTrace((trace) => () => empty_.traced(trace))

@@ -25,7 +25,7 @@ const catch_: {
       tag: N,
       k: K,
       f: (e: Extract<E, { readonly [_ in N]: K }>) => Fx<R2, E2, B>
-    ): Fx<R | R2, E | E2, A | B> => new CatchFx(fx, tag, k, f).transform((e) => e.traced(trace))
+    ): Fx<R | R2, E | E2, A | B> => new CatchFx(fx, tag, k, f).traced(trace)
 )
 
 export { catch_ as catch }

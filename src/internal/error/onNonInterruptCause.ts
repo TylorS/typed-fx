@@ -23,7 +23,7 @@ export const onNonInterruptCause: {
     <R, E, A, R2, E2, B>(
       fx: Fx<R, E, A>,
       f: (cause: Cause.Cause<E>) => Effect.Effect<R2, E2, B>
-    ): Fx<R | R2, E | E2, A> => new OnNonInterruptCauseFx(fx, f).transform((e) => e.traced(trace))
+    ): Fx<R | R2, E | E2, A> => new OnNonInterruptCauseFx(fx, f).traced(trace)
 )
 
 export class OnNonInterruptCauseFx<R, E, A, R2, E2, B> extends BaseFx<

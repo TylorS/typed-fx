@@ -15,4 +15,4 @@ export const collect: {
   ): Fx<R, E, Chunk<B>> =>
     fromEffect(
       Effect.collect(elements, f)
-    ).transform((e) => e.traced(trace)))
+    ).traced(trace))

@@ -14,7 +14,5 @@ export const serviceWith: {
   ): (tag: Context.Tag<A>) => Fx<A, never, B>
 } = Debug.dualWithTrace(
   2,
-  (trace) =>
-    <A, B>(tag: Context.Tag<A>, f: (a: A) => B) =>
-      fromEffect(Effect.serviceWith(tag, f)).transform((e) => e.traced(trace))
+  (trace) => <A, B>(tag: Context.Tag<A>, f: (a: A) => B) => fromEffect(Effect.serviceWith(tag, f)).traced(trace)
 )

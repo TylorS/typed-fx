@@ -7,6 +7,5 @@ import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 export const randomWith: <R, E, A>(
   f: (random: Random) => Effect.Effect<R, E, A>
 ) => Fx<R, E, A> = methodWithTrace((trace, restore) =>
-  <R, E, A>(f: (random: Random) => Effect.Effect<R, E, A>) =>
-    fromEffect(Effect.randomWith(restore(f))).transform((e) => e.traced(trace))
+  <R, E, A>(f: (random: Random) => Effect.Effect<R, E, A>) => fromEffect(Effect.randomWith(restore(f))).traced(trace)
 )

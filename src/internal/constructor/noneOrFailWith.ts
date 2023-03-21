@@ -17,7 +17,4 @@ export const noneOrFailWith: {
   <A, E>(
     option: Option.Option<A>,
     f: (a: A) => E
-  ) =>
-    Option.match(option, () =>
-      unit.transform((e) => e.traced(trace)), (a) =>
-      fail(restore(f)(a)).transform((e) => e.traced(trace))))
+  ) => Option.match(option, () => unit.traced(trace), (a) => fail(restore(f)(a)).traced(trace)))

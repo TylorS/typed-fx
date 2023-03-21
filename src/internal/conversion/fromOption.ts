@@ -5,5 +5,5 @@ import type { Fx } from "@typed/fx/Fx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const fromOption: <A>(option: Option<A>) => Fx<never, Option<never>, A> = methodWithTrace((trace) =>
-  (option) => fromEffect(Effect.fromOption(option)).transform((e) => e.traced(trace))
+  (option) => fromEffect(Effect.fromOption(option)).traced(trace)
 )

@@ -17,7 +17,7 @@ export const orElseEither: {
   2,
   (trace) =>
     <R, E, A, R1, E1, A1>(self: Fx<R, E, A>, that: () => Fx<R1, E1, Either.Either<A, A1>>) =>
-      new OrElseEitherFx(self, that).transform((e) => e.traced(trace))
+      new OrElseEitherFx(self, that).traced(trace)
 )
 
 class OrElseEitherFx<R, E, A, R1, E1, A1> extends BaseFx<R | R1, E | E1, Either.Either<A, A1>> {

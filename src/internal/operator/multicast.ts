@@ -12,7 +12,7 @@ import { BaseFx } from "@typed/fx/internal/Fx"
 import { asap } from "@typed/fx/internal/RefCounter"
 
 export const multicast: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>
-  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast", false).transform((e) => e.traced(trace))
+  <R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> => new MulticastFx(fx, "Multicast", false).traced(trace)
 )
 
 export class MulticastFx<R, E, A, Name extends string> extends BaseFx<R, E, A> implements Sink<E, A> {

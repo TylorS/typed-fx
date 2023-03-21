@@ -10,8 +10,7 @@ export const absolveWith: {
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A, E2, B>(fx: Fx<R, E, A>, f: (e: A) => Either.Either<E2, B>) =>
-      new AbsolveWithFx(fx, f).transform((e) => e.traced(trace))
+    <R, E, A, E2, B>(fx: Fx<R, E, A>, f: (e: A) => Either.Either<E2, B>) => new AbsolveWithFx(fx, f).traced(trace)
 )
 
 export class AbsolveWithFx<R, E, A, E2, B> extends BaseFx<R, E | E2, B> {

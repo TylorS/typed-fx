@@ -11,5 +11,5 @@ export const tryCatchPromiseInterrupt: <A, E>(
   restore
 ) =>
   <A, E>(f: (signal: AbortSignal) => Promise<A>, onFail: (error: unknown) => E) =>
-    fromEffect(Effect.tryCatchPromiseInterrupt(restore(f), restore(onFail))).transform((e) => e.traced(trace))
+    fromEffect(Effect.tryCatchPromiseInterrupt(restore(f), restore(onFail))).traced(trace)
 )

@@ -1,22 +1,28 @@
 import { identity, pipe } from "@effect/data/Function"
-import type { FlatMap } from "@effect/data/typeclass/FlatMap"
 import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 
 import * as RS from "@effect/io/Ref/Synchronized"
 import type { Scope } from "@effect/io/Scope"
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/Fx"
 import { Sink } from "@typed/fx/Fx"
 import type { Context } from "@typed/fx/internal/_externals"
 import { Fiber } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
-export const switchMap: FlatMap<FxTypeLambda>["flatMap"] = dualWithTrace(
+export const switchMap: {
+  <R, E, A, R2, E2, B>(
+    fx: Fx<R, E, A>,
+    f: (a: A) => Fx<R2, E2, B>
+  ): Fx<Exclude<R, Scope> | Exclude<R2, Scope>, E | E2, B>
+
+  <A, R2, E2, B>(
+    f: (a: A) => Fx<R2, E2, B>
+  ): <R, E>(fx: Fx<R, E, A>) => Fx<Exclude<R, Scope> | Exclude<R2, Scope>, E | E2, B>
+} = dualWithTrace(
   2,
-  (trace) =>
-    <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) =>
-      new SwitchMapFx(fx, f).transform((e) => e.traced(trace))
+  (trace) => <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Fx<R2, E2, B>) => new SwitchMapFx(fx, f).traced(trace)
 )
 
 export const switchLatest: <R, E, R2, E2, A>(fx: Fx<R, E, Fx<R2, E2, A>>) => Fx<R | R2, E | E2, A> = switchMap(identity)

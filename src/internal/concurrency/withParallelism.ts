@@ -9,5 +9,5 @@ export const withParallelism: {
   2,
   (trace) =>
     <R, E, A>(self: Fx<R, E, A>, concurrency: number) =>
-      self.transform(Effect.withParallelism(concurrency)).transform((e) => e.traced(trace))
+      self.transform(Effect.withParallelism(concurrency)).traced(trace)
 )

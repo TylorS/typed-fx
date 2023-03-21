@@ -10,9 +10,7 @@ export const delay: {
   (duration: Duration): <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A>
 } = dualWithTrace(
   2,
-  (trace) =>
-    <R, E, A>(fx: Fx<R, E, A>, duration: Duration): Fx<R, E, A> =>
-      new DelayFx(fx, duration).transform((e) => e.traced(trace))
+  (trace) => <R, E, A>(fx: Fx<R, E, A>, duration: Duration): Fx<R, E, A> => new DelayFx(fx, duration).traced(trace)
 )
 
 export class DelayFx<R, E, A> extends BaseFx<R, E, A> {

@@ -11,5 +11,5 @@ export const getOrFailWith: {
   2,
   (trace) =>
     <A, E>(option: Option.Option<A>, f: () => E): Fx<never, E, A> =>
-      fromEffect(Effect.getOrFailWith(option, f).transform((e) => e.traced(trace)))
+      fromEffect(Effect.getOrFailWith(option, f).traced(trace))
 )

@@ -1,8 +1,9 @@
 import * as Equal from "@effect/data/Equal"
 import * as Hash from "@effect/data/Hash"
+import type { Trace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
-import type * as fx from "@typed/fx/Fx"
+import * as fx from "@typed/fx/Fx"
 import * as run from "@typed/fx/internal/run"
 
 export function isFx(value: unknown): value is fx.Fx<unknown, unknown, unknown> {
@@ -22,6 +23,7 @@ export abstract class BaseFx<R, E, A> implements fx.Fx<R, E, A> {
    */
   abstract run(sink: fx.Sink<E, A>): Effect.Effect<R | Scope, never, unknown>
 
+  readonly traced: fx.Fx<R, E, A>["traced"] = (trace) => trace ? new TracedFx(this, trace) : this
   readonly transform: fx.Fx<R, E, A>["transform"] = (f) => new TransformedFx(this, f)
 
   readonly observe: fx.Fx<R, E, A>["observe"] = (f) => run.observe(this, f)
@@ -54,6 +56,25 @@ export class TransformedFx<R, E, A, R2, E2> extends BaseFx<Exclude<R2, Scope>, E
 
   run(sink: fx.Sink<E | E2, A>): Effect.Effect<Scope | Exclude<R2, Scope>, never, unknown> {
     return Effect.catchAllCause(this.f(this.self.run(sink)), sink.error) as Effect.Effect<
+      Exclude<R2, Scope> | Scope,
+      never,
+      unknown
+    >
+  }
+}
+
+export class TracedFx<R, E, A, R2, E2> extends BaseFx<Exclude<R2, Scope>, E | E2, A> {
+  readonly name = "Traced" as const
+
+  constructor(
+    readonly self: fx.Fx<R, E, A>,
+    readonly trace: Trace
+  ) {
+    super()
+  }
+
+  run(sink: fx.Sink<E | E2, A>) {
+    return this.self.run(fx.Sink.traced(sink, this.trace)).traced(this.trace) as Effect.Effect<
       Exclude<R2, Scope> | Scope,
       never,
       unknown

@@ -10,5 +10,5 @@ export const serviceWithEffect: {
   2,
   (trace) =>
     <A, R2, E2, B>(tag: Context.Tag<A>, f: (a: A) => Effect.Effect<R2, E2, B>) =>
-      fromEffect(Effect.serviceWithEffect(tag, f)).transform((e) => e.traced(trace))
+      fromEffect(Effect.serviceWithEffect(tag, f)).traced(trace)
 )

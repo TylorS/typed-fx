@@ -11,5 +11,5 @@ export const tryCatch: <A, E>(
   restore
 ) =>
   <A, E>(f: () => A, onFail: (error: unknown) => E) =>
-    fromEffect(Effect.tryCatch(restore(f), restore(onFail))).transform((e) => e.traced(trace))
+    fromEffect(Effect.tryCatch(restore(f), restore(onFail))).traced(trace)
 )

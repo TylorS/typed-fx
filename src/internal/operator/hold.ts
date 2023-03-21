@@ -12,8 +12,7 @@ import { asap } from "@typed/fx/internal/RefCounter"
 import { MulticastFx } from "./multicast"
 
 export const hold: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>
-  <R, E, A>(fx: Fx<R, E, A>) =>
-    new HoldFx(fx, MutableRef.make(Option.none()), "Hold", false).transform((e) => e.traced(trace))
+  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, MutableRef.make(Option.none()), "Hold", false).traced(trace)
 )
 
 export const hold_: {
@@ -23,7 +22,7 @@ export const hold_: {
   2,
   (trace) =>
     <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>): Fx<R, E, A> =>
-      new HoldFx(fx, value, "Hold", false).transform((e) => e.traced(trace))
+      new HoldFx(fx, value, "Hold", false).traced(trace)
 )
 
 export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Tag> implements Fx<R, E, A> {

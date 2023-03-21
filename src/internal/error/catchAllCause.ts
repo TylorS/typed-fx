@@ -13,7 +13,7 @@ export const catchAllCause: {
   2,
   (trace) =>
     <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (cause: Cause.Cause<E>) => Fx<R2, E2, B>) =>
-      new CatchAllCauseFx(fx, f).transform((e) => e.traced(trace))
+      new CatchAllCauseFx(fx, f).traced(trace)
 )
 
 export class CatchAllCauseFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E2, A | B> {

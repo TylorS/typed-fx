@@ -22,7 +22,7 @@ export const bind: {
       self: Fx<R, E, K>,
       tag: Exclude<N, keyof K>,
       f: (_: K) => Fx<R2, E2, A>
-    ) => new BindFx(self, tag, f).transform((e) => e.traced(trace))
+    ) => new BindFx(self, tag, f).traced(trace)
 )
 
 type MergeObjects<T, U> = {

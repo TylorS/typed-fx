@@ -10,9 +10,7 @@ export const bimap: {
   <E, E2, A, B>(f: (a: E) => E2, g: (a: A) => B): <R>(fx: Fx<R, E, A>) => Fx<R, E2, B>
 } = dualWithTrace(
   3,
-  (trace) =>
-    <R, E, E2, A, B>(fx: Fx<R, E, A>, f: (a: E) => E2, g: (a: A) => B) =>
-      BimapFx.make(fx, f, g).transform((e) => e.traced(trace))
+  (trace) => <R, E, E2, A, B>(fx: Fx<R, E, A>, f: (a: E) => E2, g: (a: A) => B) => BimapFx.make(fx, f, g).traced(trace)
 )
 
 export class BimapFx<R, E, E2, A, B> extends BaseFx<R, E2, B> {

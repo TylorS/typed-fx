@@ -5,5 +5,5 @@ import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
 export const succeedSome: <A>(a: A) => Fx<never, never, Option.Option<A>> = methodWithTrace((trace) =>
-  <A>(_: A) => fromEffect(Effect.succeedSome(_)).transform((e) => e.traced(trace))
+  <A>(_: A) => fromEffect(Effect.succeedSome(_)).traced(trace)
 )

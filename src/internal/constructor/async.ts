@@ -8,5 +8,5 @@ export const async: <R, E, A>(
   register: (callback: (_: Effect.Effect<R, E, A>) => void) => void,
   blockingOn?: FiberId.None | FiberId.Runtime | FiberId.Composite | undefined
 ) => Fx<R, E, A> = methodWithTrace((trace) =>
-  (register, blockingOn) => fromEffect(Effect.async(register, blockingOn)).transform((e) => e.traced(trace))
+  (register, blockingOn) => fromEffect(Effect.async(register, blockingOn)).traced(trace)
 )

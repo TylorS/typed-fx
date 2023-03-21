@@ -8,4 +8,4 @@ export const sync: <A>(
 ) => Fx<never, never, A> = methodWithTrace((
   trace,
   restore
-) => <A>(f: () => A) => fromEffect(Effect.sync(restore(f))).transform((e) => e.traced(trace)))
+) => <A>(f: () => A) => fromEffect(Effect.sync(restore(f))).traced(trace))
