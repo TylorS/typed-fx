@@ -80,12 +80,12 @@
     "@types/chai": "^4.3.4",
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.0",
-    "@types/node": "^18.15.3",
+    "@types/node": "^18.15.5",
     "@types/prettier": "2.7.2",
-    "@typescript-eslint/eslint-plugin": "^5.55.0",
-    "@typescript-eslint/parser": "^5.55.0",
+    "@typescript-eslint/eslint-plugin": "^5.56.0",
+    "@typescript-eslint/parser": "^5.56.0",
     "@vitejs/plugin-react": "^3.1.0",
-    "@vitest/coverage-c8": "^0.29.3",
+    "@vitest/coverage-c8": "^0.29.7",
     "babel-plugin-annotate-pure-calls": "^0.4.0",
     "concurrently": "^7.6.0",
     "cpx": "^1.5.0",
@@ -100,15 +100,15 @@
     "eslint-plugin-simple-import-sort": "^10.0.0",
     "eslint-plugin-sort-destructure-keys": "^1.5.0",
     "fast-check": "^3.7.1",
-    "glob": "^9.3.0",
+    "glob": "^9.3.1",
     "madge": "^6.0.0",
     "picocolors": "^1.0.0",
-    "prettier": "^2.8.4",
+    "prettier": "^2.8.6",
     "rimraf": "^4.4.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.2",
-    "vite": "^4.2.0",
-    "vitest": "0.29.3"
+    "vite": "^4.2.1",
+    "vitest": "0.29.7"
   },
   "pnpm": {
     "patchedDependencies": {
@@ -121,7 +121,7 @@
     "global": []
   },
   "dependencies": {
-    "@effect/data": "^0.4.1",
-    "@effect/io": "^0.8.0"
+    "@effect/data": "^0.5.0",
+    "@effect/io": "^0.10.0"
   }
 }

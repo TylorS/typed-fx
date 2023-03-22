@@ -1,6 +1,6 @@
 import { succeed } from "@typed/fx"
 import { Effect } from "@typed/fx/internal/_externals"
-import { onNonInterruptCause } from "@typed/fx/internal/error"
+import { onNonInterruptCause } from "@typed/fx/internal/operator"
 import { testCollectAll } from "@typed/fx/test/util"
 
 describe(__filename, () => {

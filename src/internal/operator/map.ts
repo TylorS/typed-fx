@@ -19,11 +19,9 @@ export class MapFx<R, E, A, B> extends BaseFx<R, E, B> {
   }
 
   run(sink: Sink<E, B>) {
-    return this.fx.run(Sink(
-      (a) => sink.event(this.f(a)),
-      sink.error,
-      sink.end
-    ))
+    return this.fx.run(
+      Sink((a) => sink.event(this.f(a)), sink.error, sink.end)
+    )
   }
 
   static make<R, E, A, B>(fx: Fx<R, E, A>, f: (a: A) => B): Fx<R, E, B> {

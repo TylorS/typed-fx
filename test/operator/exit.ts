@@ -1,6 +1,7 @@
 import { fail, succeed } from "@typed/fx"
 import { Exit } from "@typed/fx/internal/_externals"
-import { exit, map, mergeAll } from "@typed/fx/internal/operator"
+import { exit } from "@typed/fx/internal/error/exit"
+import { map, mergeAll } from "@typed/fx/internal/operator"
 import { testCollectAll } from "@typed/fx/test/util"
 
 describe(__filename, () => {

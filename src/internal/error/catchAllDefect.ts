@@ -1,27 +1,26 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import { Sink } from "@typed/fx/Fx"
 import type { Fx } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { Cause, Chunk, Option, pipe } from "@typed/fx/internal/_externals"
+import { failCause } from "@typed/fx/internal/constructor/failCause"
+import { catchAllCause } from "@typed/fx/internal/error/catchAllCause"
 
-export const catchAllDefect = dualWithTrace(
+export const catchAllDefect: {
+  <R, E, A, R2, E2, B>(self: Fx<R, E, A>, f: (defect: unknown) => Fx<R2, E2, B>): Fx<R | R2, E | E2, A | B>
+  <R2, E2, B>(f: (defect: unknown) => Fx<R2, E2, B>): <R, E, A>(self: Fx<R, E, A>) => Fx<R | R2, E | E2, A | B>
+} = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A, R2, E2, B>(self: Fx<R, E, A>, f: (defect: unknown) => Fx<R2, E2, B>): Fx<R | R2, E | E2, A | B> =>
-      new CatchAllDefectFx(self, f).traced(trace)
+    <R, E, A, R2, E2, B>(
+      self: Fx<R, E, A>,
+      f: (defect: unknown) => Fx<R2, E2, B>
+    ): Fx<R | R2, E | E2, A | B> =>
+      catchAllCause(self, (cause): Fx<R2, E | E2, B> =>
+        pipe(
+          Cause.defects(cause),
+          Chunk.head,
+          Option.match(
+            () => failCause(cause),
+            f
+          )
+        )).traced(trace)
 )
-
-class CatchAllDefectFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, A | B> {
-  readonly name = "CatchAllDefect" as const
-
-  constructor(readonly self: Fx<R, E, A>, readonly f: (defect: unknown) => Fx<R2, E2, B>) {
-    super()
-  }
-
-  run(sink: Sink<E | E2, A | B>) {
-    return this.self.run(Sink(
-      sink.event,
-      (cause) => sink.error(cause),
-      sink.end
-    ))
-  }
-}

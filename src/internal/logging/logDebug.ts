@@ -3,9 +3,6 @@ import type { Fx } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 
-export const tryPromise: <A>(
-  f: () => Promise<A>
-) => Fx<never, unknown, A> = methodWithTrace((
-  trace,
-  restore
-) => <A>(f: () => Promise<A>) => fromEffect(Effect.tryPromise(restore(f))).traced(trace))
+export const logDebug: (message: string) => Fx<never, never, void> = methodWithTrace(
+  (trace) => (message: string) => fromEffect(Effect.logDebug(message)).traced(trace)
+)

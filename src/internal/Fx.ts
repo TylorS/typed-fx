@@ -1,6 +1,7 @@
 import * as Equal from "@effect/data/Equal"
 import * as Hash from "@effect/data/Hash"
 import type { Trace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 import * as fx from "@typed/fx/Fx"
@@ -24,10 +25,14 @@ export abstract class BaseFx<R, E, A> implements fx.Fx<R, E, A> {
   abstract run(sink: fx.Sink<E, A>): Effect.Effect<R | Scope, never, unknown>
 
   readonly traced: fx.Fx<R, E, A>["traced"] = (trace) => trace ? new TracedFx(this, trace) : this
-  readonly transform: fx.Fx<R, E, A>["transform"] = (f) => new TransformedFx(this, f)
+  readonly transform: fx.Fx<R, E, A>["transform"] = methodWithTrace((trace) =>
+    (f) => new TransformedFx(this, f).traced(trace)
+  )
 
-  readonly observe: fx.Fx<R, E, A>["observe"] = (f) => run.observe(this, f)
-  readonly forkObserve: fx.Fx<R, E, A>["forkObserve"] = (f) => Effect.forkScoped(this.observe(f))
+  readonly observe: fx.Fx<R, E, A>["observe"] = methodWithTrace((trace) => (f) => run.observe(this, f).traced(trace))
+  readonly forkObserve: fx.Fx<R, E, A>["forkObserve"] = methodWithTrace((trace) =>
+    (f) => Effect.forkScoped(this.observe(f)).traced(trace)
+  )
 
   readonly drain: fx.Fx<R, E, A>["drain"] = run.drain(this)
   readonly forkDrain: fx.Fx<R, E, A>["forkDrain"] = Effect.forkScoped(this.drain)

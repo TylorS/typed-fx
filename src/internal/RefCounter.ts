@@ -48,7 +48,7 @@ export class RefCounter {
       ))
     )
 
-  private checkShouldClose = Effect.suspendSucceed(() => {
+  private checkShouldClose = Effect.suspend(() => {
     const interrupt = this.fiber ? Fiber.interrupt(this.fiber) : Effect.unit()
 
     this.fiber = undefined
