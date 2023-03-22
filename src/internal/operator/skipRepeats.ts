@@ -22,12 +22,12 @@ class SkipRepeatsWithFx<R, E, A> extends BaseFx<R, E, A> {
   }
 
   run(sink: Sink<E, A>) {
-    return Effect.suspendSucceed(() => {
+    return Effect.suspend(() => {
       const previous = MutableRef.make(Option.none<A>())
 
       return this.fx.run(Sink(
         (a) =>
-          Effect.suspendSucceed(() => {
+          Effect.suspend(() => {
             const prev = MutableRef.get(previous)
 
             if (Option.isSome(prev) && this.eq(prev.value, a)) {

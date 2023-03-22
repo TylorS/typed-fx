@@ -156,7 +156,7 @@ export {
    *
    * assert.deepStrictEqual(result, [42])
    */
-  suspendSucceed
+  suspend as suspendSucceed
 } from "./internal/constructor/index"
 
 export {

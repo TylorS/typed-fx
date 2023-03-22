@@ -32,7 +32,7 @@ export class CollectAllFx<R, E, A> extends BaseFx<R, E, Chunk.Chunk<A>> {
             fx[i].run(
               Sink(
                 (a) =>
-                  Effect.suspendSucceed(() => {
+                  Effect.suspend(() => {
                     if (!(i in values)) {
                       remaining--
                     }

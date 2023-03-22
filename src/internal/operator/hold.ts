@@ -43,7 +43,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
   }
 
   run(sink: Sink<E, A>): Effect.Effect<Scope | R, never, void> {
-    return Effect.suspendSucceed(() => {
+    return Effect.suspend(() => {
       if (Option.isSome(MutableRef.get(this.current))) {
         return pipe(
           this.scheduleFlush(sink),
@@ -56,7 +56,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
   }
 
   event(a: A) {
-    return Effect.suspendSucceed(() => {
+    return Effect.suspend(() => {
       this.addValue(a)
 
       return pipe(
@@ -67,7 +67,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
   }
 
   error(cause: Cause.Cause<E>) {
-    return Effect.suspendSucceed(() =>
+    return Effect.suspend(() =>
       pipe(
         this.flushPending(),
         Effect.flatMap(() => super.error(cause))
@@ -76,7 +76,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
   }
 
   end() {
-    return Effect.suspendSucceed(() =>
+    return Effect.suspend(() =>
       pipe(
         this.flushPending(),
         Effect.flatMap(() => super.end())
@@ -85,7 +85,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
   }
 
   protected scheduleFlush(sink: Sink<E, A>) {
-    return Effect.suspendSucceed(() => {
+    return Effect.suspend(() => {
       this.pendingSinks.push([
         sink,
         pipe(

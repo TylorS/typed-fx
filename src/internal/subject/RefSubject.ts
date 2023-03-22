@@ -243,8 +243,6 @@ export namespace RefSubject {
       readonly current: MutableRef.MutableRef<Option.Option<A>>
     ) {
       super(current, "RefSubject")
-
-      this.setAndSend = this.setAndSend.bind(this)
     }
 
     run(sink: Sink<E, A>) {
@@ -259,11 +257,11 @@ export namespace RefSubject {
       return this.set(a)
     }
 
-    readonly get: Effect.Effect<never, E, A> = Effect.suspendSucceed(() => {
-      const value = MutableRef.get(this.current)
+    readonly get: Effect.Effect<never, E, A> = Effect.suspend(() => {
+      const current = MutableRef.get(this.current)
 
-      if (Option.isSome(value)) {
-        return Effect.succeed(value.value)
+      if (Option.isSome(current)) {
+        return Effect.succeed(current.value)
       }
 
       const fiberOrNull = MutableRef.get(this.initFiber)
@@ -337,8 +335,8 @@ export namespace RefSubject {
       return this.mapEffect((a) => Effect.sync(() => f(a)))
     }
 
-    protected setAndSend(a: A) {
-      return Effect.suspendSucceed(() => {
+    protected setAndSend(a: A): Effect.Effect<never, never, A> {
+      return Effect.suspend(() => {
         const current = MutableRef.get(this.current)
 
         if (Option.isSome(current) && this.eq(current.value, a)) {
@@ -349,11 +347,6 @@ export namespace RefSubject {
 
         return Effect.as(super.event(a), a)
       })
-    }
-
-    // Ensure the current value is deleted when the subject is ended
-    protected cleanup() {
-      return Effect.flatMap(super.cleanup(), () => Effect.sync(() => MutableRef.set(this.current, Option.none<A>())))
     }
   }
 }

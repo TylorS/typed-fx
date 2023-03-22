@@ -29,7 +29,7 @@ export class CollectAllDiscardFx<R, E, A> extends BaseFx<R, E, void> {
         for (let i = 0; i < length; i++) {
           yield* $(Effect.forkScoped(fx[i].run(Sink(
             (a) =>
-              Effect.suspendSucceed(() => {
+              Effect.suspend(() => {
                 if (!(i in values)) {
                   remaining--
                 }
