@@ -15,7 +15,7 @@ import type { Trace } from "@effect/io/Debug"
 import { methodWithTrace } from "@effect/io/Debug"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
-import type { Chunk, Fiber } from "@typed/fx/internal/_externals"
+import type { Fiber } from "@typed/fx/internal/_externals"
 
 /**
  * A `Fx` is a push-based reactive data structure that declaratively represents a multi-shot Effects.
@@ -67,30 +67,6 @@ export interface Fx<out Services, out Errors, out Output> extends Equal {
   readonly forkObserve: <R2, E2, B>(
     f: (o: Output) => Effect<R2, E2, B>
   ) => Effect<Services | R2 | Scope, never, Fiber.RuntimeFiber<Errors | E2, unknown>>
-
-  /**
-   * Consume all events of an Fx.
-   */
-  readonly drain: Effect<Services, Errors, unknown>
-
-  /**
-   * Drain and Fork the Fx.
-   */
-  readonly forkDrain: Effect<Services | Scope, never, Fiber.RuntimeFiber<Errors, unknown>>
-
-  /**
-   * Collect all events of an Fx in a Chunk.
-   */
-  readonly collectAll: Effect<Services, Errors, Chunk.Chunk<Output>>
-
-  /**
-   * Collect all events of an Fx in a Chunk and fork the resulting Effect.
-   */
-  readonly forkCollectAll: Effect<
-    Services | Scope,
-    never,
-    Fiber.RuntimeFiber<Errors, Chunk.Chunk<Output>>
-  >
 }
 
 export namespace Fx {

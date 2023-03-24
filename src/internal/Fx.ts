@@ -19,26 +19,19 @@ const hasRunFunction = (value: object): value is fx.Fx<unknown, unknown, unknown
 export abstract class BaseFx<R, E, A> implements fx.Fx<R, E, A> {
   abstract readonly name: string
 
-  /**
-   * @macro traced
-   */
   abstract run(sink: fx.Sink<E, A>): Effect.Effect<R | Scope, never, unknown>
 
   readonly traced: fx.Fx<R, E, A>["traced"] = (trace) => trace ? new TracedFx(this, trace) : this
+
   readonly transform: fx.Fx<R, E, A>["transform"] = methodWithTrace((trace) =>
     (f) => new TransformedFx(this, f).traced(trace)
   )
 
   readonly observe: fx.Fx<R, E, A>["observe"] = methodWithTrace((trace) => (f) => run.observe(this, f).traced(trace))
+
   readonly forkObserve: fx.Fx<R, E, A>["forkObserve"] = methodWithTrace((trace) =>
     (f) => Effect.forkScoped(this.observe(f)).traced(trace)
-  )
-
-  readonly drain: fx.Fx<R, E, A>["drain"] = run.drain(this)
-  readonly forkDrain: fx.Fx<R, E, A>["forkDrain"] = Effect.forkScoped(this.drain)
-
-  readonly collectAll: fx.Fx<R, E, A>["collectAll"] = run.runCollectAll(this)
-  readonly forkCollectAll: fx.Fx<R, E, A>["forkCollectAll"] = Effect.forkScoped(this.collectAll);
+  );
 
   [Hash.symbol]() {
     return Hash.random(this)

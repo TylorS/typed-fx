@@ -2,11 +2,9 @@
 
 ## Most.js API
 
-- [ ] scan
-- [ ] loop
 - [ ] zipItems
 - [ ] withItems
-- [ ] snapshot + sample
+- [ ] sample
 - [ ] until
 - [ ] since
 - [ ] during
