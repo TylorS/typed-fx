@@ -18,7 +18,7 @@ describe(__filename, () => {
 
           return succeed(1)
         }),
-        Cause.fail(error)
+        Cause.die(error)
       )
     })
   })
