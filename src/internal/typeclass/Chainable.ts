@@ -1,5 +1,5 @@
 import * as C from "@effect/data/typeclass/Chainable"
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import type { Fx, FxTypeLambda } from "@typed/fx/internal/Fx"
 import { Covariant } from "@typed/fx/internal/typeclass/Covariant"
 import { FlatMap } from "@typed/fx/internal/typeclass/FlatMap"
 

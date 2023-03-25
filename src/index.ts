@@ -1,9 +1,3 @@
-/**
- * Fx is a push-based reactive data structure that declaratively represents multi-shot Effects.
- * @since 1.0.0
- */
-export * from "./Fx"
-
 export {
   /**
    * Construct an Fx which will run with a value at a specific delay from the time of subscription.
@@ -251,7 +245,7 @@ export {
    * @since 1.0.0
    * @category Run
    */
-  runCollectAll
+  toChunk as runCollectAll
 } from "./internal/run/index"
 
 export {

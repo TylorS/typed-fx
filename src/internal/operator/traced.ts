@@ -1,6 +1,6 @@
 import { dual } from "@effect/data/Function"
 import type { Trace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const traced: {
   <R, E, A>(fx: Fx<R, E, A>, trace: Trace): Fx<R, E, A>

@@ -1,7 +1,7 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const ensuring: {
   <R, E, A, R2, E2, B>(self: Fx<R, E, A>, finalizer: Effect.Effect<R2, E2, B>): Fx<R | R2, E | E2, A>

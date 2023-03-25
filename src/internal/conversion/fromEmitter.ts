@@ -1,8 +1,8 @@
 import * as Runtime from "@effect/io/Runtime"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import type { Cause, Scope } from "@typed/fx/internal/_externals"
 import { Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export interface Emitter<E, A> {

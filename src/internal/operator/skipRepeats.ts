@@ -1,10 +1,10 @@
 import { equals } from "@effect/data/Equal"
 import * as MutableRef from "@effect/data/MutableRef"
 import type { Equivalence } from "@effect/data/typeclass/Equivalence"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
 import { Effect, Option } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export function skipRepeatsWith<A>(eq: Equivalence<A>) {
   return <R, E>(fx: Fx<R, E, A>): Fx<R, E, A> => new SkipRepeatsWithFx(fx, eq)

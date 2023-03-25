@@ -1,8 +1,8 @@
 import { methodWithTrace } from "@effect/io/Debug"
 import { type Effect, matchCauseEffect, uninterruptible } from "@effect/io/Effect"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import type { Scope } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const fromFxEffect: <R, E, R2 = never, E2 = never, A = unknown>(
   effect: Effect<R, E, Fx<R2, E2, A>>

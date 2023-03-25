@@ -1,6 +1,6 @@
 import { not } from "@effect/data/Predicate"
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { takeWhile } from "@typed/fx/internal/slicing/takeWhile"
 
 export const takeUntil: {

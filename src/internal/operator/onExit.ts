@@ -1,9 +1,9 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
 import { Effect, Exit } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const onExit: {
   <R, E, A, R2, B>(self: Fx<R, E, A>, f: (exit: Exit.Exit<E, unknown>) => Effect.Effect<R2, never, B>): Fx<R | R2, E, A>
@@ -25,7 +25,7 @@ export class OnExitFx<R, E, A, R2, B> extends BaseFx<R | R2, E, A> {
   }
 
   run(sink: Sink<E, A>) {
-    return Effect.contextWith((ctx: Context.Context<R | R2 | Scope.Scope>) =>
+    return Effect.contextWithEffect((ctx: Context.Context<R | R2 | Scope.Scope>) =>
       this.self.run(
         Sink(
           sink.event,

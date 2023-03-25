@@ -2,9 +2,9 @@ import { pipe } from "@effect/data/Function"
 import * as Option from "@effect/data/Option"
 import type { Cause } from "@effect/io/Cause"
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { failCause } from "@typed/fx/internal/constructor/failCause"
 import { catchAllCause } from "@typed/fx/internal/error/catchAllCause"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const catchSomeCause: {
   <R, E, A, R2, E2, B>(

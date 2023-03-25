@@ -1,9 +1,9 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
 import type { Cause, Context, Scope } from "@typed/fx/internal/_externals"
 import { Effect, pipe } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const catchAllCause: {

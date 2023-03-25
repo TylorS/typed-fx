@@ -4,10 +4,10 @@ import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
 import { fromEffect } from "@typed/fx/internal/conversion"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const flatMap: {

@@ -5,10 +5,9 @@ import * as RR from "@effect/data/ReadonlyRecord"
 import * as Equivalence from "@effect/data/typeclass/Equivalence"
 import { dualWithTrace } from "@effect/io/Debug"
 import type { RuntimeFiber } from "@effect/io/Fiber"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
 import { Effect, Fiber, Option, pipe } from "@typed/fx/internal/_externals"
-import { observe_ } from "@typed/fx/internal/run"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 import { HoldSubjectImpl } from "@typed/fx/internal/subject/HoldSubject"
 import type { Subject } from "@typed/fx/internal/subject/Subject"
 
@@ -398,7 +397,7 @@ export const makeComputed: {
         yield* $(
           Effect.forkScoped(
             Effect.matchCauseEffect(
-              observe_(ref, (a) => computed.updateEffect(() => f(a))),
+              ref.observe((a) => computed.updateEffect(() => f(a))),
               computed.error,
               computed.end
             )

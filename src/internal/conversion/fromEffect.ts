@@ -1,8 +1,9 @@
 import { pipe } from "@effect/data/Function"
 import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
-import type { Fx, Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import type { Scope } from "@effect/io/Scope"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 /**
  * Construct a Fx from an Effect.
@@ -11,13 +12,13 @@ import { BaseFx } from "@typed/fx/internal/Fx"
  */
 export const fromEffect: <Services = never, Errors = never, Output = unknown>(
   effect: Effect.Effect<Services, Errors, Output>
-) => Fx<Services, Errors, Output> = methodWithTrace((trace) =>
+) => Fx<Exclude<Services, Scope>, Errors, Output> = methodWithTrace((trace) =>
   <Services, Errors, Output>(
     effect: Effect.Effect<Services, Errors, Output>
-  ): Fx<Services, Errors, Output> => new FromEffect(effect).traced(trace)
+  ): Fx<Exclude<Services, Scope>, Errors, Output> => new FromEffect(effect).traced(trace)
 )
 
-export class FromEffect<Services, Errors, Output> extends BaseFx<Services, Errors, Output> {
+export class FromEffect<Services, Errors, Output> extends BaseFx<Exclude<Services, Scope>, Errors, Output> {
   readonly name = "FromEffect" as const
 
   constructor(readonly effect: Effect.Effect<Services, Errors, Output>) {
@@ -25,7 +26,7 @@ export class FromEffect<Services, Errors, Output> extends BaseFx<Services, Error
   }
 
   run(sink: Sink<Errors, Output>) {
-    return Effect.matchCauseEffect(this.effect, sink.error, (a) => pipe(sink.event(a), Effect.flatMap(sink.end)))
+    return Effect.matchCauseEffect(this.effect, sink.error, (a) => pipe(sink.event(a), Effect.flatMap(sink.end))) as any
   }
 }
 

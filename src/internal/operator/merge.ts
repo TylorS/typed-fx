@@ -1,16 +1,16 @@
 import { pipe } from "@effect/data/Function"
 import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import { Scope } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
-export const mergeAll: <Streams extends ReadonlyArray<Fx<any, any, any>>>(
+export const mergeAll: <const Streams extends ReadonlyArray<Fx<any, any, any>>>(
   ...streams: Streams
 ) => Fx<
-  Fx.ServicesOf<Streams[number]>,
+  Fx.ResourcesOf<Streams[number]>,
   Fx.ErrorsOf<Streams[number]>,
   Fx.OutputOf<Streams[number]>
 > = methodWithTrace(
@@ -39,7 +39,7 @@ export const merge: {
 export class MergeAllFx<
   Streams extends ReadonlyArray<Fx<any, any, any>>
 > extends BaseFx<
-  Fx.ServicesOf<Streams[number]>,
+  Fx.ResourcesOf<Streams[number]>,
   Fx.ErrorsOf<Streams[number]>,
   Fx.OutputOf<Streams[number]>
 > {

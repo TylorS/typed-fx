@@ -1,5 +1,5 @@
 import * as F from "@effect/data/typeclass/FlatMap"
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import type { Fx, FxTypeLambda } from "@typed/fx/internal/Fx"
 import { flatMap } from "@typed/fx/internal/operator/flatMap"
 
 export const FlatMap: F.FlatMap<FxTypeLambda> = {

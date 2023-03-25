@@ -1,6 +1,6 @@
 import type { Kind, TypeLambda } from "@effect/data/HKT"
 import * as C from "@effect/data/typeclass/Covariant"
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import type { Fx, FxTypeLambda } from "@typed/fx/internal/Fx"
 import { map } from "@typed/fx/internal/operator/map"
 
 export const imap = C.imap<FxTypeLambda>(map)

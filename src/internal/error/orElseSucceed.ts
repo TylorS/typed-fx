@@ -1,7 +1,7 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const orElseSucceed: {
   <R, E, A, A2>(fx: Fx<R, E, A>, orFail: () => A2): Fx<R, E, A | A2>

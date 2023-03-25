@@ -1,10 +1,10 @@
 import { pipe } from "@effect/data/Function"
 import { dualWithTrace } from "@effect/io/Debug"
 import type { Semaphore } from "@effect/io/Effect"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const withPermits: {
   <R, E, A>(fx: Fx<R, E, A>, semaphore: Semaphore, permits: number): Fx<R, E, A>

@@ -1,6 +1,6 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const withParallelism: {
   <R, E, A>(self: Fx<R, E, A>, concurrency: number): Fx<R, E, A>

@@ -1,8 +1,8 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import { Cause } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const orDieWith: {
   <R, E, A>(self: Fx<R, E, A>, f: (error: E) => unknown): Fx<R, never, A>

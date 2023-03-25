@@ -4,11 +4,11 @@ import * as Effect from "@effect/io/Effect"
 
 import * as RS from "@effect/io/Ref/Synchronized"
 import type { Scope } from "@effect/io/Scope"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import type { Context } from "@typed/fx/internal/_externals"
 import { Fiber } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const switchMap: {

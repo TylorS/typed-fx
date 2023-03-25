@@ -7,7 +7,7 @@ import * as Fiber from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 
 import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 import { asap } from "@typed/fx/internal/RefCounter"
 import { MulticastFx } from "./multicast"
 

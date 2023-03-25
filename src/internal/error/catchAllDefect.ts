@@ -1,8 +1,8 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { Cause, Chunk, Option, pipe } from "@typed/fx/internal/_externals"
 import { failCause } from "@typed/fx/internal/constructor/failCause"
 import { catchAllCause } from "@typed/fx/internal/error/catchAllCause"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const catchAllDefect: {
   <R, E, A, R2, E2, B>(self: Fx<R, E, A>, f: (defect: unknown) => Fx<R2, E2, B>): Fx<R | R2, E | E2, A | B>

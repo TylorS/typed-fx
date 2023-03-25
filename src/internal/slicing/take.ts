@@ -1,5 +1,5 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { slice } from "@typed/fx/internal/slicing/slice"
 
 export const take: {

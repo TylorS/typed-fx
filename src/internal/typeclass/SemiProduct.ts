@@ -1,5 +1,5 @@
 import * as SP from "@effect/data/typeclass/SemiProduct"
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import type { Fx, FxTypeLambda } from "@typed/fx/internal/Fx"
 import { flatMap, map } from "@typed/fx/internal/operator"
 import { imap } from "@typed/fx/internal/typeclass/Covariant"
 
@@ -37,8 +37,8 @@ export const andThenBind: {
 export const appendElement: {
   <R2, E2, B>(
     that: Fx<R2, E2, B>
-  ): <R1, E1, A extends ReadonlyArray<any>>(self: Fx<R1, E1, A>) => Fx<R2 | R1, E2 | E1, [...A, B]>
-  <R1, E1, A extends ReadonlyArray<any>, O2, E2, B>(
+  ): <R1, E1, const A extends ReadonlyArray<any>>(self: Fx<R1, E1, A>) => Fx<R2 | R1, E2 | E1, [...A, B]>
+  <R1, E1, const A extends ReadonlyArray<any>, O2, E2, B>(
     self: Fx<R1, E1, A>,
     that: Fx<O2, E2, B>
   ): Fx<R1 | O2, E1 | E2, [...A, B]>
@@ -47,7 +47,7 @@ export const appendElement: {
 export const nonEmptyStruct: <R extends Readonly<Record<string, Fx<any, any, any>>>>(
   fields: keyof R extends never ? never : R
 ) => Fx<
-  Fx.ServicesOf<R[string]>,
+  Fx.ResourcesOf<R[string]>,
   Fx.ErrorsOf<R[string]>,
   { readonly [K in keyof R]: Fx.OutputOf<R[K]> }
 > = SP.nonEmptyStruct(SemiProduct) as any
@@ -55,7 +55,7 @@ export const nonEmptyStruct: <R extends Readonly<Record<string, Fx<any, any, any
 export const nonEmptyTuple: <T extends readonly [Fx<any, any, any>, ...Array<Fx<any, any, any>>]>(
   ...elements: T
 ) => Fx<
-  Fx.ServicesOf<T[number]>,
+  Fx.ResourcesOf<T[number]>,
   Fx.ErrorsOf<T[number]>,
   { [I in keyof T]: Fx.OutputOf<T[I]> }
 > = SP.nonEmptyTuple(SemiProduct) as any

@@ -1,6 +1,6 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { catchTags } from "@typed/fx/internal/error/catchTags"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const catchTag: {
   <R, E extends { readonly _tag: string }, A, K extends E["_tag"] & string, R1, E1, A1>(

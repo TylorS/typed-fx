@@ -4,7 +4,7 @@ import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
 import { at, hold, mergeAll } from "@typed/fx"
 import { Chunk } from "@typed/fx/internal/_externals"
-import { runCollectAll } from "@typed/fx/internal/run"
+import { toChunk } from "@typed/fx/internal/run"
 import { describe, it } from "vitest"
 
 describe(__filename, () => {
@@ -17,15 +17,15 @@ describe(__filename, () => {
           )
         )
 
-        const fiber1 = yield* $(Effect.fork(runCollectAll(stream)))
+        const fiber1 = yield* $(Effect.fork(toChunk(stream)))
 
         yield* $(Effect.sleep(millis(75)))
 
-        const fiber2 = yield* $(Effect.fork(runCollectAll(stream)))
+        const fiber2 = yield* $(Effect.fork(toChunk(stream)))
 
         yield* $(Effect.sleep(millis(75)))
 
-        const fiber3 = yield* $(Effect.fork(runCollectAll(stream)))
+        const fiber3 = yield* $(Effect.fork(toChunk(stream)))
 
         expect(Chunk.toReadonlyArray(yield* $(Fiber.join(fiber1)))).toEqual([1, 2, 3, 4, 5, 6])
         expect(Chunk.toReadonlyArray(yield* $(Fiber.join(fiber2)))).toEqual([1, 2, 3, 4, 5, 6])

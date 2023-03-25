@@ -1,6 +1,6 @@
 import * as SA from "@effect/data/typeclass/SemiApplicative"
 import type { Semigroup } from "@effect/data/typeclass/Semigroup"
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
+import type { Fx, FxTypeLambda } from "@typed/fx/internal/Fx"
 import { Covariant } from "@typed/fx/internal/typeclass/Covariant"
 import { SemiProduct } from "@typed/fx/internal/typeclass/SemiProduct"
 

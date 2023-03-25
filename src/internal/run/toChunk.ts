@@ -1,10 +1,10 @@
 import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
-import type { Fx } from "@typed/fx/Fx"
 import { Chunk } from "@typed/fx/internal/_externals"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { observe } from "./observe"
 
-export const runCollectAll = methodWithTrace((trace) =>
+export const toChunk: <R, E, A>(fx: Fx<R, E, A>) => Effect.Effect<R, E, Chunk.Chunk<A>> = methodWithTrace((trace) =>
   <R, E, A>(fx: Fx<R, E, A>): Effect.Effect<R, E, Chunk.Chunk<A>> =>
     Effect.gen(function*($) {
       let values: Chunk.Chunk<A> = Chunk.empty()

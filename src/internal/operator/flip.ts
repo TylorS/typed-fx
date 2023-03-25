@@ -1,11 +1,11 @@
 import { pipe } from "@effect/data/Function"
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import { Cause, Either } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
-export const flip = methodWithTrace(
+export const flip: <R, E, A>(self: Fx<R, E, A>) => Fx<R, A, E> = methodWithTrace(
   (trace) => <R, E, A>(self: Fx<R, E, A>) => new FlipFx(self).traced(trace)
 )
 

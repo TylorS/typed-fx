@@ -1,8 +1,8 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
 import { Effect, pipe } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const scanEffect: {
   <R, E, A, B, R2, E2>(

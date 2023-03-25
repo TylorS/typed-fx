@@ -1,7 +1,7 @@
 import type { ConfigProvider } from "@effect/io/Config/Provider"
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const withConfigProvider: {
   <R, E, A>(fx: Fx<R, E, A>, provider: ConfigProvider): Fx<R, E, A>

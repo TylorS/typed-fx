@@ -1,7 +1,7 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { Option } from "@typed/fx/internal/_externals"
 import { fail } from "@typed/fx/internal/constructor/fail"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { unit } from "@typed/fx/internal/typeclass/Of"
 
 export const noneOrFailWith: {

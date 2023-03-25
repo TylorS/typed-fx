@@ -1,9 +1,9 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
 import { Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const orElse: {
   <R, E, A, R1, E1, A1>(self: Fx<R, E, A>, that: () => Fx<R1, E1, A1>): Fx<R | R1, E | E1, A | A1>
@@ -22,7 +22,7 @@ class OrElseFx<R, E, A, R1, E1, A1> extends BaseFx<R | R1, E | E1, A | A1> {
   }
 
   run(sink: Sink<E | E1, A | A1>) {
-    return Effect.contextWith((ctx: Context.Context<R1 | Scope.Scope>) =>
+    return Effect.contextWithEffect((ctx: Context.Context<R1 | Scope.Scope>) =>
       this.self.run(
         Sink(
           sink.event,

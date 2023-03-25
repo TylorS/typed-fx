@@ -1,16 +1,16 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { fail } from "@typed/fx/internal/constructor/fail"
 import { catchAll } from "@typed/fx/internal/error/catchAll"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const catchTags: {
-  <R, E extends { readonly _tag: string }, A, K extends ReadonlyArray<E["_tag"] & string>, R1, E1, A1>(
+  <R, E extends { readonly _tag: string }, A, const K extends ReadonlyArray<E["_tag"] & string>, R1, E1, A1>(
     self: Fx<R, E, A>,
     k: K,
     f: (e: Extract<E, { readonly _tag: K[number] }>) => Fx<R1, E1, A1>
   ): Fx<R | R1, E1 | Exclude<E, { readonly _tag: K[number] }>, A | A1>
 
-  <E extends { readonly _tag: string }, K extends ReadonlyArray<E["_tag"] & string>, R1, E1, A1>(
+  <E extends { readonly _tag: string }, const K extends ReadonlyArray<E["_tag"] & string>, R1, E1, A1>(
     k: K,
     f: (e: Extract<E, { readonly _tag: K[number] }>) => Fx<R1, E1, A1>
   ): <R, A>(self: Fx<R, E, A>) => Fx<R | R1, E1 | Exclude<E, { readonly _tag: K[number] }>, A | A1>
@@ -21,7 +21,7 @@ export const catchTags: {
       R,
       E extends { readonly _tag: string },
       A,
-      K extends ReadonlyArray<E["_tag"] & string>,
+      const K extends ReadonlyArray<E["_tag"] & string>,
       R1,
       E1,
       A1

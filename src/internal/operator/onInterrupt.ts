@@ -1,11 +1,11 @@
 import * as HashSet from "@effect/data/HashSet"
 import { dualWithTrace } from "@effect/io/Debug"
 import type * as FiberId from "@effect/io/Fiber/Id"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
 import { Cause, Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const onInterrupt: {
   <R, E, A, R2, B>(

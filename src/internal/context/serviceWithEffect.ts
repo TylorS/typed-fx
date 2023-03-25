@@ -1,7 +1,7 @@
-import type { Fx } from "@typed/fx/Fx"
 import type { Context } from "@typed/fx/internal/_externals"
 import { Debug, Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const serviceWithEffect: {
   <A, R2, E2, B>(tag: Context.Tag<A>, f: (a: A) => Effect.Effect<R2, E2, B>): Fx<R2 | A, E2, B>

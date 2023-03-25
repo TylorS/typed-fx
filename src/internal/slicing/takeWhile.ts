@@ -1,6 +1,7 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { Effect } from "@typed/fx/internal/_externals"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const takeWhile: {
   <R, E, A>(self: Fx<R, E, A>, predicate: (value: A) => boolean): Fx<R, E, A>
@@ -19,7 +20,7 @@ export class TakeWhileFx<R, E, A> extends BaseFx<R, E, A> {
   }
 
   run(sink: Sink<E, A>) {
-    return this.self.run(new TakeWhileSink(sink, this.predicate))
+    return Effect.suspend(() => this.self.run(new TakeWhileSink(sink, this.predicate)))
   }
 }
 

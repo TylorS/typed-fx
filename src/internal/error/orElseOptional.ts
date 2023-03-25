@@ -1,9 +1,9 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
 import type { Context, Option, Scope } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const orElseOptional = dualWithTrace(
   2,
@@ -20,7 +20,7 @@ export class OrElseOptionalFx<R, E, A, R1, E1, A1> extends BaseFx<R | R1, Option
   }
 
   run(sink: Sink<Option.Option<E | E1>, A | A1>) {
-    return Effect.contextWith((ctx: Context.Context<R1 | Scope.Scope>) =>
+    return Effect.contextWithEffect((ctx: Context.Context<R1 | Scope.Scope>) =>
       this.self.run(
         Sink(
           (a) => sink.event(a),

@@ -1,8 +1,8 @@
 import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Exit } from "@effect/io/Exit"
-import type { Fx, Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const acquireUseRelease: {
   <R, E, A, R2, E2, B, R3, C>(

@@ -7,8 +7,8 @@ import type { RuntimeFiber } from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 import { asap } from "@typed/fx/internal/RefCounter"
 
 export const multicast: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>

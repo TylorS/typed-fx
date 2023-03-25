@@ -1,8 +1,8 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
 import { Cause, Either, flow } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const absolveWith: {
   <R, E, A, E2, B>(fx: Fx<R, E, A>, f: (e: A) => Either.Either<E2, B>): Fx<R, E | E2, B>

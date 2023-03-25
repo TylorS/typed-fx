@@ -1,10 +1,9 @@
 import type { Predicate, Refinement } from "@effect/data/Predicate"
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import { Effect, Option } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
-import { isMap } from "@typed/fx/internal/operator"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const filterMap: {
   <R, E, A, B>(self: Fx<R, E, A>, f: (a: A) => Option.Option<B>): Fx<R, E, B>
@@ -17,7 +16,7 @@ export const filterMap: {
     <R, E, A, B>(
       self: Fx<R, E, A>,
       f: (a: A) => Option.Option<B>
-    ): Fx<R, E, B> => FilterMapFx.make(self, f).traced(trace)
+    ): Fx<R, E, B> => new FilterMapFx(self, f).traced(trace)
 )
 
 export const filter: {
@@ -46,6 +45,8 @@ export const filterNot: {
       filterMap(self, (a) => !predicate(a) ? Option.some(a) : Option.none()).traced(trace)
 )
 
+export const compact = <R, E, A>(self: Fx<R, E, Option.Option<A>>): Fx<R, E, A> => filterMap(self, (x) => x)
+
 export class FilterMapFx<R, E, A, B> extends BaseFx<R, E, B> {
   readonly name = "FilterMap" as const
 
@@ -64,21 +65,6 @@ export class FilterMapFx<R, E, A, B> extends BaseFx<R, E, B> {
         sink.end
       )
     )
-  }
-
-  static make<R, E, A, B>(
-    self: Fx<R, E, A>,
-    f: (a: A) => Option.Option<B>
-  ): Fx<R, E, B> {
-    if (isFilterMap(self)) {
-      return new FilterMapFx(self.self, (a) => Option.flatMap(self.f(a), f))
-    }
-
-    if (isMap(self)) {
-      return new FilterMapFx(self.fx, (a) => f(self.f(a)))
-    }
-
-    return new FilterMapFx(self, f)
   }
 }
 

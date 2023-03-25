@@ -2,7 +2,7 @@ import type { Duration } from "@effect/data/Duration"
 import * as Effect from "@effect/io/Effect"
 
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { fromEffect } from "../conversion/fromEffect"
 
 export const at: {

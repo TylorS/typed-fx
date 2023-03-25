@@ -1,5 +1,5 @@
 import { Chunk, Effect, Fiber } from "@typed/fx/internal/_externals"
-import { runCollectAll } from "@typed/fx/internal/run/runCollectAll"
+import { toChunk } from "@typed/fx/internal/run/toChunk"
 import { makeSubject } from "@typed/fx/internal/subject/Subject"
 import { deepStrictEqual } from "assert"
 import { describe, it } from "vitest"
@@ -9,7 +9,7 @@ describe(__filename, () => {
     it("is a imperatively used Fx", async () => {
       const test = Effect.gen(function*($) {
         const subject = yield* $(makeSubject<never, number>())
-        const fiber = yield* $(Effect.fork(runCollectAll(subject)))
+        const fiber = yield* $(Effect.fork(toChunk(subject)))
 
         // Allow fiber to start
         yield* $(Effect.yieldNow())

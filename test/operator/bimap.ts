@@ -4,8 +4,8 @@ import * as operator from "@typed/fx/internal/operator"
 import { testCause, testCollectAll } from "@typed/fx/test/util"
 
 describe(__filename, () => {
-  describe(operator.bimap.name, () => {
-    const bimap_ = operator.bimap((x: number) => x * 2, (x: number) => x + 1)
+  describe(operator.mapBoth.name, () => {
+    const bimap_ = operator.mapBoth((x: number) => x * 2, (x: number) => x + 1)
 
     describe("given an Fx that succeeds", () => {
       testCollectAll("transforms the value", bimap_(constructor.succeed(1)), [2])

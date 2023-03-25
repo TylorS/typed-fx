@@ -1,9 +1,9 @@
 import { dualWithTrace } from "@effect/io/Debug"
 import * as Ref from "@effect/io/Ref"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import { Effect, Option } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 /**
  * Runs two Fx in parallel. Events are emitted when `self` emits "sampling" the latest value of `snapshot`.
@@ -21,6 +21,15 @@ export const snapshot: {
   ): Fx<R | R2, E | E2, C> {
     return new SnapshotFx(self, snapshot, f).traced(trace)
   })
+
+export const sample: {
+  <R, E, A, R2, E2, B>(self: Fx<R, E, A>, that: Fx<R2, E2, B>): Fx<R | R2, E | E2, B>
+  <R2, E2, B>(that: Fx<R2, E2, B>): <R, E, A>(self: Fx<R, E, A>) => Fx<R | R2, E | E2, B>
+} = dualWithTrace(
+  2,
+  (trace) =>
+    <R, E, A, R2, E2, B>(self: Fx<R, E, A>, that: Fx<R2, E2, B>) => snapshot(self, that, (_, b) => b).traced(trace)
+)
 
 export class SnapshotFx<R, E, A, R2, E2, B, C> extends BaseFx<
   R | R2,

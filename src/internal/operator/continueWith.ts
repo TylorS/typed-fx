@@ -1,10 +1,10 @@
 import { dual } from "@effect/data/Function"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import type { Context } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const continueWith: {
   <R, E, A, R2, E2, B>(

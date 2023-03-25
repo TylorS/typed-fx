@@ -1,5 +1,5 @@
 import { pipe } from "@effect/data/Function"
-import type { Fx } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { switchMap } from "@typed/fx/internal/operator/switchMap"
 
 export const ifFx = <R, E, R2, E2, B, R3, E3, C>(

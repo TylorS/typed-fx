@@ -1,8 +1,8 @@
 import * as Cause from "@effect/io/Cause"
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const sandbox: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, Cause.Cause<E>, A> = methodWithTrace((trace) =>
   <R, E, A>(fx: Fx<R, E, A>): Fx<R, Cause.Cause<E>, A> => new SandboxFx(fx).traced(trace)

@@ -1,7 +1,7 @@
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { Option } from "@typed/fx/internal/_externals"
 import { fail } from "@typed/fx/internal/constructor/fail"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { flatMap } from "@typed/fx/internal/operator/flatMap"
 import { unit } from "@typed/fx/internal/typeclass/Of"
 

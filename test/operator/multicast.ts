@@ -4,7 +4,7 @@ import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
 import { delay, flatMap, fromArray, merge, multicast, suspendSucceed } from "@typed/fx"
 import { Chunk } from "@typed/fx/internal/_externals"
-import { runCollectAll } from "@typed/fx/internal/run"
+import { toChunk } from "@typed/fx/internal/run"
 import { describe, it } from "vitest"
 
 describe(__filename, () => {
@@ -30,8 +30,8 @@ describe(__filename, () => {
           })
         )
 
-        const fiber1 = yield* $(Effect.fork(runCollectAll(stream)))
-        const fiber2 = yield* $(Effect.fork(runCollectAll(stream)))
+        const fiber1 = yield* $(Effect.fork(toChunk(stream)))
+        const fiber2 = yield* $(Effect.fork(toChunk(stream)))
 
         const events1 = Chunk.toReadonlyArray(yield* $(Fiber.join(fiber1)))
         const events2 = Chunk.toReadonlyArray(yield* $(Fiber.join(fiber2)))

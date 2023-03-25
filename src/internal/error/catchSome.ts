@@ -1,8 +1,8 @@
 import * as Option from "@effect/data/Option"
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { fail } from "@typed/fx/internal/constructor/fail"
 import { catchAll } from "@typed/fx/internal/error/catchAll"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const catchSome: {
   <R, E, A, R2, E2, B>(

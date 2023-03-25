@@ -1,6 +1,6 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 import { flatMap } from "@typed/fx/internal/operator/flatMap"
 import { map } from "@typed/fx/internal/operator/map"
 

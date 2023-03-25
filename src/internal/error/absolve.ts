@@ -1,9 +1,9 @@
 import * as Either from "@effect/data/Either"
 import * as Cause from "@effect/io/Cause"
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const absolve = methodWithTrace((trace) =>
   <R, E, E2, A>(fx: Fx<R, E, Either.Either<E2, A>>) => new AbsolveFx(fx).traced(trace)

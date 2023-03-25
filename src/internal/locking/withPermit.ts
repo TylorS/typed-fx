@@ -1,6 +1,6 @@
 import { dualWithTrace } from "@effect/io/Debug"
 import type { Semaphore } from "@effect/io/Effect"
-import type { Fx } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { WithPermitsFx } from "@typed/fx/internal/locking/withPermits"
 
 export const withPermit: {

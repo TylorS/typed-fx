@@ -1,9 +1,9 @@
 import { pipe } from "@effect/data/Function"
 import { methodWithTrace } from "@effect/io/Debug"
 import * as Exit from "@effect/io/Exit"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const exit: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, never, Exit.Exit<E, A>> = methodWithTrace((trace) =>
   (fx) => new ExitFx(fx).traced(trace)

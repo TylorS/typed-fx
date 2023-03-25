@@ -1,6 +1,6 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { succeed } from "@typed/fx/internal/constructor/succeed"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { continueWith } from "@typed/fx/internal/operator/continueWith"
 
 export const startWith: {

@@ -1,11 +1,11 @@
 import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
-import type { Fx, Sink } from "@typed/fx/Fx"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
-export const fromArray: <T extends ReadonlyArray<any>>(array: readonly [...T]) => Fx<never, never, T[number]> =
+export const fromArray: <const T extends ReadonlyArray<any>>(array: T) => Fx<never, never, T[number]> =
   methodWithTrace((trace) =>
-    <T extends ReadonlyArray<any>>(array: readonly [...T]): Fx<never, never, T[number]> =>
+    <const T extends ReadonlyArray<any>>(array: T): Fx<never, never, T[number]> =>
       new FromArrayFx(array).traced(trace)
   )
 

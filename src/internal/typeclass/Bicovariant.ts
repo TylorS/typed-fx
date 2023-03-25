@@ -1,9 +1,9 @@
 import * as BC from "@effect/data/typeclass/Bicovariant"
-import type { Fx, FxTypeLambda } from "@typed/fx/Fx"
-import { bimap } from "@typed/fx/internal/operator/bimap"
+import type { Fx, FxTypeLambda } from "@typed/fx/internal/Fx"
+import { mapBoth } from "@typed/fx/internal/operator/mapBoth"
 
 export const Bicovariant: BC.Bicovariant<FxTypeLambda> = {
-  bimap
+  bimap: mapBoth
 }
 
 export const mapError: {

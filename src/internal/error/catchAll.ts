@@ -1,9 +1,9 @@
 import { pipe } from "@effect/data/Function"
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { Cause, Either } from "@typed/fx/internal/_externals"
 import { failCause } from "@typed/fx/internal/constructor"
 import { catchAllCause } from "@typed/fx/internal/error/catchAllCause"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const catchAll: {
   <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (e: E) => Fx<R2, E2, B>): Fx<

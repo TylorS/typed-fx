@@ -5,9 +5,9 @@ import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
 import * as Ref from "@effect/io/Ref"
 import * as Schedule from "@effect/io/Schedule"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
 import { Cause, Scope } from "@typed/fx/internal/_externals"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 const zero = millis(0)
 export const asap = Schedule.delayed(Schedule.once(), () => zero)

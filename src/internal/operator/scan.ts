@@ -1,7 +1,7 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const scan: {
   <R, E, A, B>(fx: Fx<R, E, A>, initial: B, f: (acc: B, a: A) => B): Fx<R, E, B>

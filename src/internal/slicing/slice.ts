@@ -1,7 +1,7 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const slice: {
   <R, E, A>(self: Fx<R, E, A>, skip: number, take: number): Fx<R, E, A>
@@ -19,7 +19,7 @@ export class SliceFx<R, E, A> extends BaseFx<R, E, A> {
   }
 
   run(sink: Sink<E, A>) {
-    return this.self.run(new SliceSink(sink, this.skip, this.take))
+    return Effect.suspend(() => this.self.run(new SliceSink(sink, this.skip, this.take)))
   }
 }
 

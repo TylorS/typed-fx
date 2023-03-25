@@ -1,5 +1,5 @@
 import { Chunk, Effect, Fiber, Option } from "@typed/fx/internal/_externals"
-import { runCollectAll } from "@typed/fx/internal/run/runCollectAll"
+import { toChunk } from "@typed/fx/internal/run/toChunk"
 import { makeRef, RefSubject } from "@typed/fx/internal/subject/RefSubject"
 import { deepStrictEqual } from "assert"
 import { describe, it } from "vitest"
@@ -118,7 +118,7 @@ describe("RefSubject", () => {
     it("is can be observed", async () => {
       const test = Effect.gen(function*($) {
         const ref = yield* $(makeRef(Effect.succeed(1)))
-        const fiber = yield* $(Effect.fork(runCollectAll(ref)))
+        const fiber = yield* $(Effect.fork(toChunk(ref)))
 
         yield* $(Effect.yieldNow())
 

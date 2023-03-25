@@ -1,9 +1,9 @@
 import { unannotate } from "@effect/io/Cause"
 import { isFailure } from "@effect/io/Exit"
-import type { Fx } from "@typed/fx/Fx"
 import type { Cause } from "@typed/fx/internal/_externals"
 import { Chunk, Effect } from "@typed/fx/internal/_externals"
-import { runCollectAll } from "@typed/fx/internal/run"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { toChunk } from "@typed/fx/internal/run"
 
 export function testCollectAll<E, A>(
   name: string,
@@ -21,7 +21,7 @@ export function testCause<E, A>(
   expected: Cause.Cause<E>
 ) {
   it(name, async () => {
-    const test = runCollectAll(fx)
+    const test = toChunk(fx)
     const exit = await Effect.runPromiseExit(test)
 
     assert(isFailure(exit))

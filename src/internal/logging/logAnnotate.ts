@@ -1,6 +1,6 @@
 import { dualWithTrace } from "@effect/io/Debug"
-import type { Fx } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
+import type { Fx } from "@typed/fx/internal/Fx"
 
 export const logAnnotate: {
   <R, E, A>(fx: Fx<R, E, A>, k: string, value: string): Fx<R, E, A>

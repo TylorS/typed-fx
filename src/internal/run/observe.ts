@@ -5,8 +5,8 @@ import { dualWithTrace } from "@effect/io/Debug"
 import * as Deferred from "@effect/io/Deferred"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
-import type { Fx } from "@typed/fx/Fx"
-import { Sink } from "@typed/fx/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
 
 export const observe: {
   <R, E, A, R2, E2>(
@@ -25,7 +25,7 @@ export const observe: {
     ): Effect.Effect<R | R2, E | E2, void> => Effect.scoped(observe_(fx, f)).traced(trace)
 )
 
-export const observe_ = <R, E, A, R2, E2>(
+const observe_ = <R, E, A, R2, E2>(
   fx: Fx<R, E, A>,
   f: (a: A) => Effect.Effect<R2, E2, unknown>
 ): Effect.Effect<R | R2 | Scope, E | E2, void> =>

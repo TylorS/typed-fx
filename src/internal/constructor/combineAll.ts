@@ -1,19 +1,19 @@
 import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
-import { Sink } from "@typed/fx/Fx"
-import type { Fx } from "@typed/fx/Fx"
+import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx } from "@typed/fx/internal/Fx"
 import { Scope } from "@typed/fx/internal/_externals"
 import { succeed } from "@typed/fx/internal/constructor/succeed"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
 import { withRefCounter } from "@typed/fx/internal/RefCounter"
 
 export const combineAll: <const F extends ReadonlyArray<Fx<any, any, any>>>(
   fx: F
-) => Fx<Fx.ServicesOf<F[number]>, Fx.ErrorsOf<F[number]>, { readonly [K in keyof F]: Fx.OutputOf<F[K]> }> =
+) => Fx<Fx.ResourcesOf<F[number]>, Fx.ErrorsOf<F[number]>, { readonly [K in keyof F]: Fx.OutputOf<F[K]> }> =
   methodWithTrace((trace) =>
     <const F extends ReadonlyArray<Fx<any, any, any>>>(
       fx: F
-    ): Fx<Fx.ServicesOf<F[number]>, Fx.ErrorsOf<F[number]>, { readonly [K in keyof F]: Fx.OutputOf<F[K]> }> =>
+    ): Fx<Fx.ResourcesOf<F[number]>, Fx.ErrorsOf<F[number]>, { readonly [K in keyof F]: Fx.OutputOf<F[K]> }> =>
       fx.length === 0 ? succeed([] as any).traced(trace) : new CombineAllFx(fx).traced(trace)
   )
 
@@ -27,7 +27,7 @@ export const combine: {
 )
 
 export class CombineAllFx<F extends ReadonlyArray<Fx<any, any, any>>>
-  extends BaseFx<Fx.ServicesOf<F[number]>, Fx.ErrorsOf<F[number]>, { readonly [K in keyof F]: Fx.OutputOf<F[K]> }>
+  extends BaseFx<Fx.ResourcesOf<F[number]>, Fx.ErrorsOf<F[number]>, { readonly [K in keyof F]: Fx.OutputOf<F[K]> }>
 {
   readonly name = "CombineAll" as const
 
@@ -37,7 +37,7 @@ export class CombineAllFx<F extends ReadonlyArray<Fx<any, any, any>>>
 
   run(
     sink: Sink<Fx.ErrorsOf<F[number]>, { readonly [K in keyof F]: Fx.OutputOf<F[K]> }>
-  ): Effect.Effect<Fx.ServicesOf<F[number]>, never, unknown> {
+  ): Effect.Effect<Fx.ResourcesOf<F[number]>, never, unknown> {
     const fx = Array.from(this.fx)
     const length = fx.length
 

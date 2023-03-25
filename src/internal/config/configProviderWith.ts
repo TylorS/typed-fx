@@ -1,8 +1,8 @@
 import type { ConfigProvider } from "@effect/io/Config/Provider"
 import { methodWithTrace } from "@effect/io/Debug"
-import type { Fx, Sink } from "@typed/fx/Fx"
 import { Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/Fx"
+import { BaseFx } from "@typed/fx/internal/BaseFx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 export const configProviderWith: <R, E, A>(f: (config: ConfigProvider) => Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace(
   (
