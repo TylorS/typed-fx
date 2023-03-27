@@ -1,18 +1,20 @@
+import type { Trace } from "@effect/io/Debug"
 import type { Context } from "@typed/fx/internal/_externals"
 import { Debug, Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 import type { Fx } from "@typed/fx/internal/Fx"
 
 export const serviceWith: {
-  <A, B>(
-    tag: Context.Tag<A>,
+  <I, A, B>(
+    tag: Context.Tag<I, A>,
     f: (a: A) => B
-  ): Fx<A, never, B>
+  ): Fx<I, never, B>
 
   <A, B>(
     f: (a: A) => B
-  ): (tag: Context.Tag<A>) => Fx<A, never, B>
+  ): <I>(tag: Context.Tag<I, A>) => Fx<I, never, B>
 } = Debug.dualWithTrace(
   2,
-  (trace) => <A, B>(tag: Context.Tag<A>, f: (a: A) => B) => fromEffect(Effect.serviceWith(tag, f)).traced(trace)
+  (trace: Trace) =>
+    <I, A, B>(tag: Context.Tag<I, A>, f: (a: A) => B) => fromEffect(Effect.serviceWith(tag, f)).traced(trace)
 )

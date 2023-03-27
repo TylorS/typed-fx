@@ -4,22 +4,22 @@ import { Effect } from "@typed/fx/internal/_externals"
 import type { Fx } from "@typed/fx/internal/Fx"
 
 export const provideServiceEffect: {
-  <R, S, E, A, R2, E2>(
-    fx: Fx<R | S, E, A>,
-    service: Tag<S>,
+  <R, I, E, A, S, R2, E2>(
+    fx: Fx<R | I, E, A>,
+    service: Tag<I, S>,
     implementation: Effect.Effect<R2, E2, S>
-  ): Fx<R2 | Exclude<R, S>, E | E2, A>
-  <R2, E2, S>(
-    service: Tag<S>,
+  ): Fx<R2 | Exclude<R, I>, E | E2, A>
+  <I, S, R2, E2>(
+    service: Tag<I, S>,
     implementation: Effect.Effect<R2, E2, S>
-  ): <R, E, A>(fx: Fx<R | S, E, A>) => Fx<R2 | Exclude<R, S>, E | E2, A>
+  ): <R, E, A>(fx: Fx<R | I, E, A>) => Fx<R2 | Exclude<R, I>, E | E2, A>
 } = dualWithTrace(
   3,
   (trace) =>
-    <R, S, E, A, R2, E2>(
-      fx: Fx<R | S, E, A>,
-      service: Tag<S>,
+    <R, I, E, A, S, R2, E2>(
+      fx: Fx<R | I, E, A>,
+      service: Tag<I, S>,
       implementation: Effect.Effect<R2, E2, S>
-    ): Fx<R2 | Exclude<R, S>, E | E2, A> =>
+    ): Fx<R2 | Exclude<R, I>, E | E2, A> =>
       fx.transform(Effect.provideServiceEffect(service, implementation)).traced(trace)
 )

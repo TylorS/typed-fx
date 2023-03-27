@@ -4,11 +4,11 @@ import { Effect } from "@typed/fx/internal/_externals"
 import type { Fx } from "@typed/fx/internal/Fx"
 
 export const updateService: {
-  <R, E, A, S>(fx: Fx<R | S, E, A>, service: Tag<S>, f: (service: S) => S): Fx<R | S, E, A>
-  <S>(service: Tag<S>, f: (service: S) => S): <R, E, A>(fx: Fx<R | S, E, A>) => Fx<R | S, E, A>
+  <R, I, E, A, S>(fx: Fx<R | I, E, A>, service: Tag<I, S>, f: (service: S) => S): Fx<R | I, E, A>
+  <I, S>(service: Tag<I, S>, f: (service: S) => S): <R, E, A>(fx: Fx<R | I, E, A>) => Fx<R | I, E, A>
 } = dualWithTrace(
   3,
   (trace) =>
-    <R, E, A, S>(fx: Fx<R | S, E, A>, service: Tag<S>, f: (service: S) => S): Fx<R | S, E, A> =>
+    <R, I, E, A, S>(fx: Fx<R | I, E, A>, service: Tag<I, S>, f: (service: S) => S): Fx<R | I, E, A> =>
       fx.transform(Effect.updateService(service, f)).traced(trace)
 )
