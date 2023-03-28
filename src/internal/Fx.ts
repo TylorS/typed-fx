@@ -34,7 +34,6 @@ export interface Fx<out Services, out Errors, out Output> extends Equal {
 
   /**
    * The main API for running an Fx.
-   * @macro traced
    */
   run(
     sink: Sink<Errors, Output>
@@ -91,9 +90,24 @@ export namespace Fx {
    */
   export type OutputOf<T> = T extends Fx<any, any, infer Output> ? Output : never
 
+  /**
+   * An Fx which will always succeed with the given value.
+   */
   export type Succeed<A> = Fx<never, never, A>
+
+  /**
+   * An Fx which will always fail with the given value.
+   */
   export type Fail<E> = Fx<never, E, never>
+
+  /**
+   * An Fx which has an error and a value but not resources.
+   */
   export type WithError<E, A> = Fx<never, E, A>
+
+  /**
+   * An Fx which has a resource and a value but not an error.
+   */
   export type WithService<R, A> = Fx<R, never, A>
 }
 

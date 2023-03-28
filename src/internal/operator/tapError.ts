@@ -5,14 +5,14 @@ import type { Fx } from "@typed/fx/internal/Fx"
 import { tapCause } from "@typed/fx/internal/operator/tapCause"
 
 export const tapError: {
+  <E, R2, E2, B>(f: (error: E) => Effect.Effect<R2, E2, B>): <R, A>(
+    self: Fx<R, E, A>
+  ) => Fx<R | R2, E | E2, A>
+
   <R, E, A, R2, E2, B>(
     self: Fx<R, E, A>,
     f: (error: E) => Effect.Effect<R2, E2, B>
   ): Fx<R | R2, E | E2, A>
-
-  <E, R2, E2, B>(f: (error: E) => Effect.Effect<R2, E2, B>): <R, A>(
-    self: Fx<R, E, A>
-  ) => Fx<R | R2, E | E2, A>
 } = dualWithTrace(
   2,
   (trace) =>

@@ -30,8 +30,9 @@ export class MergeRaceFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, A | 
       let interrupted = false
       const racedFiber = yield* $(
         pipe(
-          raced.run(Sink(sink.event, sink.error, Effect.unit)),
-          Effect.onError((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
+          raced.run(
+            Sink(sink.event, (cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause), Effect.unit)
+          ),
           Effect.forkScoped
         )
       )

@@ -9,8 +9,8 @@ import type { Fx } from "@typed/fx/internal/Fx"
 import { Sink } from "@typed/fx/internal/Fx"
 
 export const tap: {
-  <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Effect.Effect<R2, E2, B>): Fx<R | R2, E | E2, A>
   <A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>): <R, E>(fx: Fx<R, E, A>) => Fx<R | R2, E | E2, A>
+  <R, E, A, R2, E2, B>(fx: Fx<R, E, A>, f: (a: A) => Effect.Effect<R2, E2, B>): Fx<R | R2, E | E2, A>
 } = dualWithTrace(
   2,
   (trace) =>
@@ -27,7 +27,7 @@ export const tapSync: {
 )
 
 class TapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, A> {
-  readonly name = "FlatMap" as const
+  readonly name = "Tap" as const
 
   constructor(readonly fx: Fx<R, E, A>, readonly f: (a: A) => Effect.Effect<R2, E2, B>) {
     super()
