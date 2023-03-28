@@ -1,6 +1,5 @@
 import { equals } from "@effect/data/Equal"
-import * as MutableRef from "@effect/data/MutableRef"
-import * as RA from "@effect/data/ReadonlyArray"
+import type * as RA from "@effect/data/ReadonlyArray"
 import * as RR from "@effect/data/ReadonlyRecord"
 import * as Equivalence from "@effect/data/typeclass/Equivalence"
 import { dualWithTrace } from "@effect/io/Debug"
@@ -8,14 +7,15 @@ import type { RuntimeFiber } from "@effect/io/Fiber"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
 import { Effect, Fiber, Option, pipe } from "@typed/fx/internal/_externals"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"
+import { Mutable } from "@typed/fx/internal/Mutable"
+import type { HoldSubject } from "@typed/fx/internal/subject/HoldSubject"
 import { HoldSubjectImpl } from "@typed/fx/internal/subject/HoldSubject"
-import type { Subject } from "@typed/fx/internal/subject/Subject"
 
 /**
  * A RefSubject is a lazily-instantiated Reference to a value. It also
  * implements
  */
-export interface RefSubject<in out E, in out A> extends Subject<E, A> {
+export interface RefSubject<in out E, in out A> extends HoldSubject<E, A> {
   readonly [RefSubject.TypeId]: RefSubject.TypeId
 
   readonly eq: Equivalence.Equivalence<A>
@@ -123,109 +123,48 @@ export namespace RefSubject {
     return new RefSubjectImpl<E, A>(
       initialize,
       eq,
-      MutableRef.make(Option.none<A>())
+      Mutable(Option.none<A>())
     )
+  }
+
+  export function all<const P extends RA.NonEmptyReadonlyArray<Any>>(
+    properties: P
+  ): RefSubject<
+    Fx.ErrorsOf<P[number]>,
+    { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
+  >
+  
+  export function all<const P extends Readonly<Record<string, Any>>>(
+    properties: P
+  ): RefSubject<
+    Fx.ErrorsOf<P[string]>,
+    { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
+  >
+
+  export function all<const P extends Readonly<Record<string, Any>> | RA.NonEmptyReadonlyArray<Any>>(
+    properties: P 
+  ) {
+    return Array.isArray(properties)
+      ? tuple(...properties as any)
+      : struct(properties as any)
   }
 
   export function struct<P extends Readonly<Record<string, Any>>>(
     properties: P
-  ): Effect.Effect<
-    Scope.Scope,
-    never,
-    RefSubject<
-      Fx.ErrorsOf<P[string]>,
-      { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
-    >
+  ): RefSubject<
+    Fx.ErrorsOf<P[string]>,
+    { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
   > {
-    type Val = { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
-
-    return Effect.gen(function*($) {
-      const ref = yield* $(
-        makeRef(
-          Effect.allPar(
-            RR.map(properties, (property) => property.get)
-          ) as Effect.Effect<never, Fx.ErrorsOf<P[string]>, Val>,
-          Equivalence.struct(RR.map(properties, (property) => property.eq))
-        )
-      )
-
-      yield* $(
-        ref.forkObserve((a) => Effect.allPar(RR.map(a, (x, i) => properties[i].set(x))))
-      )
-
-      yield* $(
-        Effect.forkScoped(
-          Effect.allPar(
-            RR.map(properties, (property, k) =>
-              Effect.catchAllCause(
-                property.observe((x) => ref.update((y) => ({ ...y, [k]: x }))),
-                ref.error
-              ))
-          )
-        )
-      )
-
-      yield* $(Effect.yieldNow())
-
-      return ref
-    })
+    return new StructRefSubject(properties)
   }
 
   export function tuple<P extends RA.NonEmptyReadonlyArray<Any>>(
     ...properties: P
-  ): Effect.Effect<
-    Scope.Scope,
-    never,
-    RefSubject<
-      Fx.ErrorsOf<P[number]>,
-      { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
-    >
+  ): RefSubject<
+    Fx.ErrorsOf<P[number]>,
+    { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
   > {
-    type Val = { readonly [K in keyof P]: Fx.OutputOf<P[K]> }
-
-    return Effect.gen(function*($) {
-      const ref = yield* $(
-        makeRef(
-          Effect.allPar(
-            RA.map(properties, (property) => property.get)
-          ) as Effect.Effect<never, Fx.ErrorsOf<P[number]>, Val>,
-          Equivalence.tuple(
-            ...RA.mapNonEmpty(properties, (property) => property.eq)
-          )
-        )
-      )
-
-      yield* $(
-        ref.forkObserve(
-          (a) =>
-            Effect.allPar(
-              RA.map(a, (x, i) => properties[i].set(x))
-            ) as Effect.Effect<never, never, Val>
-        )
-      )
-
-      yield* $(
-        Effect.forkScoped(
-          Effect.allPar(
-            RA.map(properties, (property, k) =>
-              Effect.catchAllCause(
-                property.observe((x) =>
-                  ref.update((y) => {
-                    const next = y.slice(0)
-                    next[k] = x
-                    return next as Val
-                  })
-                ),
-                ref.error
-              ))
-          )
-        )
-      )
-
-      yield* $(Effect.yieldNow())
-
-      return ref
-    })
+    return new TupleRefSubject(properties)
   }
 
   class RefSubjectImpl<E, A> extends HoldSubjectImpl<E, A, "RefSubject"> implements RefSubject<E, A> {
@@ -234,12 +173,12 @@ export namespace RefSubject {
     // Ensure all modifications happen in FIFO order
     protected lock = Effect.unsafeMakeSemaphore(1).withPermits(1)
     // Ensure only one fiber is initializing the value
-    protected initFiber = MutableRef.make<RuntimeFiber<E, A> | null>(null)
+    protected initFiber = Mutable<RuntimeFiber<E, A> | null>(null)
 
     constructor(
       readonly initialize: Effect.Effect<never, E, A>,
       readonly eq: Equivalence.Equivalence<A>,
-      readonly current: MutableRef.MutableRef<Option.Option<A>>
+      readonly current: Mutable<Option.Option<A>>
     ) {
       super(current, "RefSubject")
     }
@@ -257,13 +196,13 @@ export namespace RefSubject {
     }
 
     readonly get: Effect.Effect<never, E, A> = Effect.suspend(() => {
-      const current = MutableRef.get(this.current)
+      const current = this.current.get()
 
       if (Option.isSome(current)) {
         return Effect.succeed(current.value)
       }
 
-      const fiberOrNull = MutableRef.get(this.initFiber)
+      const fiberOrNull = this.initFiber.get()
 
       if (fiberOrNull) {
         return Fiber.join<E, A>(fiberOrNull)
@@ -271,14 +210,14 @@ export namespace RefSubject {
 
       return this.lock(
         Effect.flatMap(Effect.fork(this.initialize), (actualFiber) => {
-          MutableRef.set(this.initFiber, actualFiber)
+          this.initFiber.set(actualFiber)
 
           return pipe(
             Fiber.join(actualFiber),
             Effect.ensuring(
-              Effect.sync(() => MutableRef.set(this.initFiber, null))
+              Effect.sync(() => this.initFiber.set(null))
             ),
-            Effect.tap((a) => Effect.sync(() => MutableRef.set(this.current, Option.some(a))))
+            Effect.tap((a) => Effect.sync(() => this.current.set(Option.some(a))))
           )
         })
       )
@@ -289,7 +228,7 @@ export namespace RefSubject {
     ): Effect.Effect<R2, E | E2, B> {
       return Effect.flatMap(
         this.get,
-        (currentValue) => Effect.flatMap(f(currentValue), ([b, a]) => Effect.as(this.setAndSend(a), b))
+        (currentValue) => this.lock(Effect.flatMap(f(currentValue), ([b, a]) => Effect.as(this.setAndSend(a), b)))
       )
     }
 
@@ -298,7 +237,7 @@ export namespace RefSubject {
     }
 
     set(a: A): Effect.Effect<never, never, A> {
-      return this.lock(this.setAndSend(a))
+      return Effect.flatMap(this.lock(this.setValue(a)), (a) => Effect.as(super.event(a), a))
     }
 
     updateEffect<R2, E2>(
@@ -314,10 +253,9 @@ export namespace RefSubject {
     get delete() {
       return this.lock(
         Effect.sync(() => {
-          const { current } = this
-          const option = MutableRef.get(current)
+          const option = this.current.get()
 
-          MutableRef.set(current, Option.none<A>())
+          this.current.set(Option.none<A>())
 
           return option
         })
@@ -334,18 +272,96 @@ export namespace RefSubject {
       return this.mapEffect((a) => Effect.sync(() => f(a)))
     }
 
-    protected setAndSend(a: A): Effect.Effect<never, never, A> {
-      return Effect.suspend(() => {
-        const current = MutableRef.get(this.current)
+    protected setValue(a: A): Effect.Effect<never, never, A> {
+      return Effect.sync(() => {
+        const current = this.current.get()
 
         if (Option.isSome(current) && this.eq(current.value, a)) {
-          return Effect.succeed(a)
+          return current.value
         }
 
-        MutableRef.set(this.current, Option.some(a))
+        this.current.set(Option.some(a))
 
-        return Effect.as(super.event(a), a)
+        return a
       })
+    }
+
+    protected setAndSend(a: A) {
+      return Effect.flatMap(this.setValue(a), (a) => Effect.as(super.event(a), a))
+    }
+  }
+
+  type TupleErrors<Members extends ReadonlyArray<Any>> = Fx.ErrorsOf<Members[number]>
+  type TupleOutput<Members extends ReadonlyArray<Any>> = { readonly [_ in keyof Members]: Fx.OutputOf<Members[_]> }
+
+  class TupleRefSubject<Members extends ReadonlyArray<Any>> extends RefSubjectImpl<
+    TupleErrors<Members>,
+    TupleOutput<Members>
+  > implements RefSubject<TupleErrors<Members>, TupleOutput<Members>> {
+    constructor(
+      readonly members: Members
+    ) {
+      const current: Mutable<Option.Option<TupleOutput<Members>>> = {
+        get: () => Option.all(members.map((m) => m.current.get())) as Option.Option<TupleOutput<Members>>,
+        set: (a) =>
+          pipe(
+            a,
+            Option.match(
+              () => {
+                members.forEach((m) => m.current.set(Option.none()))
+                return Option.none()
+              },
+              (a) => Option.all(a.map((a, i) => members[i].current.set(Option.some(a))))
+            )
+          ) as Option.Option<TupleOutput<Members>>
+      }
+
+      super(
+        Effect.allPar(members.map((m) => m.get)) as Effect.Effect<never, TupleErrors<Members>, TupleOutput<Members>>,
+        Equivalence.tuple(...members.map((m) => m.eq)) as Equivalence.Equivalence<TupleOutput<Members>>,
+        current
+      )
+    }
+  }
+
+  type StructErrors<Members extends Readonly<Record<string, Any>>> = Fx.ErrorsOf<Members[string]>
+  type StructOutput<Members extends Readonly<Record<string, Any>>> = {
+    readonly [_ in keyof Members]: Fx.OutputOf<Members[_]>
+  }
+
+  class StructRefSubject<Members extends Readonly<Record<string, Any>>> extends RefSubjectImpl<
+    StructErrors<Members>,
+    StructOutput<Members>
+  > implements RefSubject<StructErrors<Members>, StructOutput<Members>> {
+    constructor(
+      readonly members: Members
+    ) {
+      const keys = Object.keys(members) as ReadonlyArray<keyof Members>
+
+      const current: Mutable<Option.Option<StructOutput<Members>>> = {
+        get: () => Option.struct(RR.map(members, (m) => m.current.get())) as Option.Option<StructOutput<Members>>,
+        set: (a) =>
+          pipe(
+            a,
+            Option.match(
+              () => {
+                keys.forEach((k) => members[k].current.set(Option.none()))
+                return Option.none()
+              },
+              (a) => Option.struct(RR.map(a, (a, i) => members[i].current.set(Option.some(a))))
+            )
+          ) as Option.Option<StructOutput<Members>>
+      }
+
+      super(
+        Effect.allPar(RR.map(members, (m) => m.get)) as Effect.Effect<
+          never,
+          StructErrors<Members>,
+          StructOutput<Members>
+        >,
+        Equivalence.struct(RR.map(members, (m) => m.eq)) as Equivalence.Equivalence<StructOutput<Members>>,
+        current
+      )
     }
   }
 }

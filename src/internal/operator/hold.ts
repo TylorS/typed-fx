@@ -1,5 +1,4 @@
 import { pipe } from "@effect/data/Function"
-import * as MutableRef from "@effect/data/MutableRef"
 import * as Option from "@effect/data/Option"
 import type * as Cause from "@effect/io/Cause"
 import * as Effect from "@effect/io/Effect"
@@ -8,20 +7,21 @@ import type { Scope } from "@effect/io/Scope"
 
 import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"
+import { Mutable } from "@typed/fx/internal/Mutable"
 import { asap } from "@typed/fx/internal/RefCounter"
 import { MulticastFx } from "./multicast"
 
 export const hold: <R, E, A>(fx: Fx<R, E, A>) => Fx<R, E, A> = methodWithTrace((trace) =>
-  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, MutableRef.make(Option.none()), "Hold", false).traced(trace)
+  <R, E, A>(fx: Fx<R, E, A>) => new HoldFx(fx, Mutable(Option.none()), "Hold", false).traced(trace)
 )
 
 export const hold_: {
-  <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>): Fx<R, E, A>
-  <A>(value: MutableRef.MutableRef<Option.Option<A>>): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, A>
+  <R, E, A>(fx: Fx<R, E, A>, value: Mutable<Option.Option<A>>): Fx<R, E, A>
+  <A>(value: Mutable<Option.Option<A>>): <R, E>(fx: Fx<R, E, A>) => Fx<R, E, A>
 } = dualWithTrace(
   2,
   (trace) =>
-    <R, E, A>(fx: Fx<R, E, A>, value: MutableRef.MutableRef<Option.Option<A>>): Fx<R, E, A> =>
+    <R, E, A>(fx: Fx<R, E, A>, value: Mutable<Option.Option<A>>): Fx<R, E, A> =>
       new HoldFx(fx, value, "Hold", false).traced(trace)
 )
 
@@ -31,7 +31,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
 
   constructor(
     readonly fx: Fx<R, E, A>,
-    readonly current: MutableRef.MutableRef<Option.Option<A>>,
+    readonly current: Mutable<Option.Option<A>>,
     readonly tag: Tag,
     readonly sync: boolean
   ) {
@@ -44,7 +44,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
 
   run(sink: Sink<E, A>): Effect.Effect<Scope | R, never, void> {
     return Effect.suspend(() => {
-      if (Option.isSome(MutableRef.get(this.current))) {
+      if (Option.isSome(this.current.get())) {
         return pipe(
           this.scheduleFlush(sink),
           Effect.flatMap(() => super.run(sink))
@@ -89,8 +89,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
       this.pendingSinks.push([
         sink,
         pipe(
-          this.current,
-          MutableRef.get,
+          this.current.get(),
           Option.match(
             () => [],
             (a) => [a]
@@ -147,7 +146,7 @@ export class HoldFx<R, E, A, Tag extends string> extends MulticastFx<R, E, A, Ta
   }
 
   protected addValue(a: A) {
-    MutableRef.set(this.current, Option.some(a))
+    this.current.set(Option.some(a))
     this.pendingSinks.forEach(([, events]) => events.push(a))
   }
 }

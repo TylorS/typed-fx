@@ -115,7 +115,7 @@ describe("RefSubject", () => {
   })
 
   describe("Fx", () => {
-    it("is can be observed", async () => {
+    it("can be observed", async () => {
       const test = Effect.gen(function*($) {
         const ref = yield* $(makeRef(Effect.succeed(1)))
         const fiber = yield* $(Effect.fork(toChunk(ref)))
@@ -141,7 +141,7 @@ describe("RefSubject", () => {
         const a = yield* $(makeRef(Effect.succeed(1)))
         const b = yield* $(makeRef(Effect.succeed(2)))
         const c = yield* $(makeRef(Effect.succeed(3)))
-        const ref = yield* $(RefSubject.tuple(a, b, c))
+        const ref = RefSubject.tuple(a, b, c)
 
         deepStrictEqual(yield* $(ref.get), [1, 2, 3])
 
@@ -158,11 +158,11 @@ describe("RefSubject", () => {
 
   describe("struct", () => {
     it("bidirectionally maps a struct of refs", async () => {
-      const test = Effect.scoped(Effect.gen(function*($) {
+      const test = Effect.gen(function*($) {
         const a = yield* $(makeRef(Effect.succeed(1)))
         const b = yield* $(makeRef(Effect.succeed(2)))
         const c = yield* $(makeRef(Effect.succeed(3)))
-        const ref = yield* $(RefSubject.struct({ a, b, c }))
+        const ref = RefSubject.struct({ a, b, c })
 
         deepStrictEqual(yield* $(ref.get), { a: 1, b: 2, c: 3 })
 
@@ -171,7 +171,47 @@ describe("RefSubject", () => {
         deepStrictEqual(yield* $(a.get), 2)
         deepStrictEqual(yield* $(b.get), 3)
         deepStrictEqual(yield* $(c.get), 4)
+      })
+
+      await Effect.runPromise(test)
+    })
+  })
+
+  describe("all", () => {
+    it("bidirectionally maps a tuple of refs", async () => {
+      const test = Effect.scoped(Effect.gen(function*($) {
+        const a = yield* $(makeRef(Effect.succeed(1)))
+        const b = yield* $(makeRef(Effect.succeed(2)))
+        const c = yield* $(makeRef(Effect.succeed(3)))
+        const ref = RefSubject.all([a, b, c])
+
+        deepStrictEqual(yield* $(ref.get), [1, 2, 3])
+
+        yield* $(ref.set([2, 3, 4]))
+
+        deepStrictEqual(yield* $(a.get), 2)
+        deepStrictEqual(yield* $(b.get), 3)
+        deepStrictEqual(yield* $(c.get), 4)
       }))
+
+      await Effect.runPromise(test)
+    })
+
+    it("bidirectionally maps a struct of refs", async () => {
+      const test = Effect.gen(function*($) {
+        const a = yield* $(makeRef(Effect.succeed(1)))
+        const b = yield* $(makeRef(Effect.succeed(2)))
+        const c = yield* $(makeRef(Effect.succeed(3)))
+        const ref = RefSubject.all({ a, b, c })
+
+        deepStrictEqual(yield* $(ref.get), { a: 1, b: 2, c: 3 })
+
+        yield* $(ref.set({ a: 2, b: 3, c: 4 }))
+
+        deepStrictEqual(yield* $(a.get), 2)
+        deepStrictEqual(yield* $(b.get), 3)
+        deepStrictEqual(yield* $(c.get), 4)
+      })
 
       await Effect.runPromise(test)
     })
