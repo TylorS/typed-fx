@@ -77,14 +77,16 @@ export interface RefSubject<in out E, in out A> extends HoldSubject<E, A> {
    * Compute a value from the current value of the Ref with an Effect.
    */
   readonly mapEffect: <R2, E2, B>(
-    f: (a: A) => Effect.Effect<R2, E2, B>
+    f: (a: A) => Effect.Effect<R2, E2, B>,
+    eq?: Equivalence.Equivalence<B>
   ) => Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
 
   /**
    * Compute a value from the current value of the Ref.
    */
   readonly map: <B>(
-    f: (a: A) => B
+    f: (a: A) => B,
+    eq?: Equivalence.Equivalence<B>
   ) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
 }
 
@@ -114,7 +116,7 @@ export namespace RefSubject {
   export const TypeId = Symbol.for("@typed/fx/RefSubject")
   export type TypeId = typeof TypeId
 
-  export type Any = RefSubject<any, any> | RefSubject<never, any>
+  export type Any = RefSubject<any, any> | RefSubject<never, any>| Computed<any, any> | Computed<never, any>
 
   export function unsafeMake<E, A>(
     initialize: Effect.Effect<never, E, A>,
@@ -237,7 +239,7 @@ export namespace RefSubject {
     }
 
     set(a: A): Effect.Effect<never, never, A> {
-      return Effect.flatMap(this.lock(this.setValue(a)), (a) => Effect.as(super.event(a), a))
+      return this.lock(Effect.flatMap(this.setValue(a), (a) => Effect.as(super.event(a), a)))
     }
 
     updateEffect<R2, E2>(
@@ -263,13 +265,15 @@ export namespace RefSubject {
     }
 
     mapEffect<R2, E2, B>(
-      f: (a: A) => Effect.Effect<R2, E2, B>
+      f: (a: A) => Effect.Effect<R2, E2, B>,
+      eq?: Equivalence.Equivalence<B>
     ): Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>> {
-      return makeComputed(this, f)
+      return makeComputed(this, f, eq)
     }
 
-    map<B>(f: (a: A) => B): Effect.Effect<Scope.Scope, never, Computed<E, B>> {
-      return this.mapEffect((a) => Effect.sync(() => f(a)))
+    map<B>(f: (a: A) => B,      eq?: Equivalence.Equivalence<B>
+): Effect.Effect<Scope.Scope, never, Computed<E, B>> {
+      return this.mapEffect((a) => Effect.sync(() => f(a)), eq)
     }
 
     protected setValue(a: A): Effect.Effect<never, never, A> {
@@ -389,26 +393,39 @@ export interface Computed<E, A> extends Fx<never, E, A> {
   readonly map: <B>(
     f: (a: A) => B
   ) => Effect.Effect<Scope.Scope, never, Computed<E, B>>
+
+  /**
+   * @internal
+   */
+  readonly current: Mutable<Option.Option<A>>
+
+  /**
+   * @internal
+   */
+  readonly eq: Equivalence.Equivalence<A>
 }
 
 export const makeComputed: {
   <E, A, R2, E2, B>(
     ref: RefSubject<E, A>,
-    f: (a: A) => Effect.Effect<R2, E2, B>
+    f: (a: A) => Effect.Effect<R2, E2, B>,
+    eq?: Equivalence.Equivalence<B>
   ): Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
 
-  <A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>): <E>(
+  <A, R2, E2, B>(f: (a: A) => Effect.Effect<R2, E2, B>,    eq?: Equivalence.Equivalence<B>
+): <E>(
     ref: RefSubject<E, A>
   ) => Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>>
 } = dualWithTrace(
-  2,
+  3,
   (trace) =>
     function makeComputed<E, A, R2, E2, B>(
       ref: RefSubject<E, A>,
-      f: (a: A) => Effect.Effect<R2, E2, B>
+      f: (a: A) => Effect.Effect<R2, E2, B>,
+      eq?: Equivalence.Equivalence<B>
     ): Effect.Effect<R2 | Scope.Scope, never, Computed<E | E2, B>> {
       return Effect.gen(function*($) {
-        const computed = yield* $(makeRef(Effect.flatMap(ref.get, f)))
+        const computed = yield* $(makeRef(Effect.flatMap(ref.get, f), eq))
 
         yield* $(
           Effect.forkScoped(

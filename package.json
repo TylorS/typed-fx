@@ -74,6 +74,7 @@
     "@effect-ts/core": "^0.60.5",
     "@effect/babel-plugin": "^0.2.0",
     "@effect/language-service": "^0.0.19",
+    "@effect/test": "^0.1.0",
     "@repo-tooling/eslint-plugin-dprint": "^0.0.4",
     "@rollup/pluginutils": "^5.0.2",
     "@types/benchmark": "^2.1.2",
