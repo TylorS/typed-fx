@@ -1,23 +1,37 @@
-import { pipe } from "@effect/data/Function"
-import type { Context, Scope } from "@typed/fx/internal/_externals"
-import { Cause, Effect } from "@typed/fx/internal/_externals"
-import { BaseFx } from "@typed/fx/internal/BaseFx"
-import type { Fx } from "@typed/fx/internal/Fx"
-import { Sink } from "@typed/fx/internal/Fx"
-import { withRefCounter } from "@typed/fx/internal/RefCounter"
+import { dualWithTrace } from "@effect/data/Debug";
+import { pipe } from "@effect/data/Function";
+import type { Context, Scope } from "@typed/fx/internal/_externals";
+import { Cause, Effect } from "@typed/fx/internal/_externals";
+import { BaseFx } from "@typed/fx/internal/BaseFx";
+import type { Fx } from "@typed/fx/internal/Fx";
+import { Sink } from "@typed/fx/internal/Fx";
+import { withRefCounter } from "@typed/fx/internal/RefCounter";
+
+export const flatMapCause: {
+  <E, R2, E2, B>(f: (e: Cause.Cause<E>) => Fx<R2, E2, B>): <R, A>(self: Fx<R, E, A>) => Fx<R | R2, E | E2, A | B>;
+  <R, E, A, R2, E2, B>(self: Fx<R, E, A>, f: (e: Cause.Cause<E>) => Fx<R2, E2, B>): Fx<R | R2, E | E2, A | B>;
+} = dualWithTrace(
+  2,
+  (trace) =>
+    <R, E, A, R2, E2, B>(
+      self: Fx<R, E, A>,
+      f: (e: Cause.Cause<E>) => Fx<R2, E2, B>
+    ) =>
+      new FlatMapCauseFx(self, f).traced(trace)
+);
 
 export class FlatMapCauseFx<R, E, A, R2, E2, B> extends BaseFx<
   R | R2,
   E | E2,
   A | B
 > {
-  readonly name = "FlatMapCause" as const
+  readonly name = "FlatMapCause" as const;
 
   constructor(
     readonly self: Fx<R, E, A>,
     readonly f: (e: Cause.Cause<E>) => Fx<R2, E2, B>
   ) {
-    super()
+    super();
   }
 
   run(sink: Sink<E | E2, A | B>) {
@@ -34,7 +48,9 @@ export class FlatMapCauseFx<R, E, A, R2, E2, B> extends BaseFx<
                     counter.increment,
                     Effect.flatMap(() =>
                       this.f(cause).run(
-                        Sink(sink.event, sink.error, () => Effect.provideContext(counter.decrement, ctx))
+                        Sink(sink.event, sink.error, () =>
+                          Effect.provideContext(counter.decrement, ctx)
+                        )
                       )
                     ),
                     Effect.onError((cause) =>
@@ -50,6 +66,6 @@ export class FlatMapCauseFx<R, E, A, R2, E2, B> extends BaseFx<
             ),
           sink.end
         )
-    )
+    );
   }
 }

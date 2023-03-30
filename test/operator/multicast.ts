@@ -2,7 +2,7 @@ import { millis } from "@effect/data/Duration"
 import { pipe } from "@effect/data/Function"
 import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
-import { delay, flatMap, fromArray, merge, multicast, suspendSucceed } from "@typed/fx"
+import { delay, flatMap, fromArray, merge, multicast, suspend } from "@typed/fx"
 import { Chunk } from "@typed/fx/internal/_externals"
 import { toChunk } from "@typed/fx/internal/run"
 import { describe, it } from "vitest"
@@ -15,7 +15,7 @@ describe(__filename, () => {
 
       const test = Effect.gen(function*($) {
         const stream = multicast(
-          suspendSucceed(() => {
+          suspend(() => {
             started++
 
             return pipe(
