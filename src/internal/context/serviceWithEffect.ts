@@ -1,4 +1,4 @@
-import type { Trace } from "@effect/io/Debug"
+import type { Trace } from "@effect/data/Debug"
 import type { Context } from "@typed/fx/internal/_externals"
 import { Debug, Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
@@ -11,5 +11,5 @@ export const serviceWithEffect: {
   2,
   (trace: Trace) =>
     <I, A, R2, E2, B>(tag: Context.Tag<I, A>, f: (a: A) => Effect.Effect<R2, E2, B>) =>
-      fromEffect(Effect.serviceWithEffect(tag, f)).traced(trace)
+      fromEffect(Effect.flatMap(tag, f)).traced(trace)
 )

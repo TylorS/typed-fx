@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import type { ConfigProvider } from "@effect/io/Config/Provider"
-import { dualWithTrace } from "@effect/io/Debug"
 import { Effect } from "@typed/fx/internal/_externals"
 import type { Fx } from "@typed/fx/internal/Fx"
 

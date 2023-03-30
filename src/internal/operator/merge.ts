@@ -1,5 +1,5 @@
 import { pipe } from "@effect/data/Function"
-import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
+import { dualWithTrace, methodWithTrace } from "@effect/data/Debug"
 import * as Effect from "@effect/io/Effect"
 import { Scope } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
@@ -53,7 +53,7 @@ export class MergeAllFx<
     return withRefCounter(
       this.streams.length,
       (counter, scope) => {
-        const end = Effect.provideService(counter.decrement, Scope.Tag, scope)
+        const end = Effect.provideService(counter.decrement, Scope.Scope, scope)
 
         return pipe(
           this.streams,

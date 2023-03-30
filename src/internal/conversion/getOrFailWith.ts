@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import type { Option } from "@typed/fx/internal/_externals"
 import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"

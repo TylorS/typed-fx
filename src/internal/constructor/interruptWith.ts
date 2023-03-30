@@ -1,4 +1,4 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/data/Debug"
 import type { FiberId } from "@effect/io/Fiber/Id"
 import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"

@@ -1,4 +1,4 @@
-import { bodyWithTrace } from "@effect/io/Debug"
+import { bodyWithTrace } from "@effect/data/Debug"
 import type { Context } from "@typed/fx/internal/_externals"
 import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"

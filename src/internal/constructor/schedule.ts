@@ -1,24 +1,7 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import { Effect, pipe, Schedule } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"
-
-export const scheduleFrom: {
-  <R, E, A, R2, B>(
-    self: Effect.Effect<R, E, A>,
-    schedule: Schedule.Schedule<R2, A, B>
-  ): Fx<R | R2, E, A>
-  <R2, A, B>(schedule: Schedule.Schedule<R2, A, B>): <R, E>(
-    self: Effect.Effect<R, E, A>
-  ) => Fx<R | R2, E, A>
-} = dualWithTrace(
-  2,
-  (trace) =>
-    <R, E, A, R2, B>(
-      self: Effect.Effect<R, E, A>,
-      schedule: Schedule.Schedule<R2, A, B>
-    ): Fx<R | R2, E, A> => new ScheduleFromFx(self, schedule).traced(trace)
-)
 
 export const schedule: {
   <R, E, A, R2, B>(self: Effect.Effect<R, E, A>, schedule: Schedule.Schedule<R2, any, B>): Fx<R | R2, E, A>
@@ -29,7 +12,7 @@ export const schedule: {
     <R, E, A, R2, B>(
       self: Effect.Effect<R, E, A>,
       schedule: Schedule.Schedule<R2, any, B>
-    ) => scheduleFrom(self, schedule).traced(trace)
+    ) => new ScheduleFromFx(self, schedule).traced(trace)
 )
 
 export class ScheduleFromFx<R, E, A, R2, B> extends BaseFx<R | R2, E, A> {
@@ -47,8 +30,8 @@ export class ScheduleFromFx<R, E, A, R2, B> extends BaseFx<R | R2, E, A> {
 
     return Effect.matchCauseEffect(
       Effect.flatMap(
-        Effect.zipPar(Schedule.driver(this.schedule), effect),
-        ([driver, initial]) => scheduleFromLoop(effect, initial, driver)
+        Schedule.driver(this.schedule),
+        (driver) => scheduleFromLoop(effect, this.schedule.initial, driver)
       ),
       sink.error,
       sink.end

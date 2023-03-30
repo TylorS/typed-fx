@@ -1,5 +1,5 @@
+import { methodWithTrace } from "@effect/data/Debug"
 import { pipe } from "@effect/data/Function"
-import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 import { BaseFx } from "@typed/fx/internal/BaseFx"

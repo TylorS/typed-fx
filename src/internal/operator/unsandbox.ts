@@ -1,4 +1,4 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/data/Debug"
 import { Cause, Either, pipe } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx } from "@typed/fx/internal/Fx"

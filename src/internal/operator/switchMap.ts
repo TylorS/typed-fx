@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import { identity, pipe } from "@effect/data/Function"
-import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 
 import * as RS from "@effect/io/Ref/Synchronized"

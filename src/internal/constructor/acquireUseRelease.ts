@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Exit } from "@effect/io/Exit"
 import { BaseFx } from "@typed/fx/internal/BaseFx"

@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import { pipe } from "@effect/data/Function"
-import { dualWithTrace } from "@effect/io/Debug"
 import type { Scope } from "@effect/io/Scope"
 import type { Context, Fiber } from "@typed/fx/internal/_externals"
 import { Cause, Effect, Synchronized as Ref } from "@typed/fx/internal/_externals"

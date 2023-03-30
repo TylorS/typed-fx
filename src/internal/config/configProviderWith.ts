@@ -1,5 +1,5 @@
+import { methodWithTrace } from "@effect/data/Debug"
 import type { ConfigProvider } from "@effect/io/Config/Provider"
-import { methodWithTrace } from "@effect/io/Debug"
 import { Effect } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"

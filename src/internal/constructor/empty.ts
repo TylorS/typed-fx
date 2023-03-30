@@ -1,4 +1,4 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/data/Debug"
 import type * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 import { BaseFx } from "@typed/fx/internal/BaseFx"

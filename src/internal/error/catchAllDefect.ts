@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import { Cause, Chunk, Option, pipe } from "@typed/fx/internal/_externals"
 import { failCause } from "@typed/fx/internal/constructor/failCause"
 import { catchAllCause } from "@typed/fx/internal/error/catchAllCause"

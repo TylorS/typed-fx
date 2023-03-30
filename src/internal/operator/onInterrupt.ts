@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import * as HashSet from "@effect/data/HashSet"
-import { dualWithTrace } from "@effect/io/Debug"
 import type * as FiberId from "@effect/io/Fiber/Id"
 import type { Context, Scope } from "@typed/fx/internal/_externals"
 import { Cause, Effect } from "@typed/fx/internal/_externals"

@@ -8,11 +8,11 @@
  * @since 1.0.0
  */
 
+import type { Trace } from "@effect/data/Debug"
+import { methodWithTrace } from "@effect/data/Debug"
 import type { Equal } from "@effect/data/Equal"
 import type { TypeLambda } from "@effect/data/HKT"
 import type { Cause } from "@effect/io/Cause"
-import type { Trace } from "@effect/io/Debug"
-import { methodWithTrace } from "@effect/io/Debug"
 import type { Effect } from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 import type { Fiber } from "@typed/fx/internal/_externals"

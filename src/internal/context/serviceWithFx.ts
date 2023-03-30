@@ -20,6 +20,6 @@ export class ServiceWithFx<I, A, R, E, B> extends BaseFx<R | I, E, B> {
   }
 
   run(sink: Sink<E, B>) {
-    return Effect.serviceWithEffect(this.tag, (a) => this.f(a).run(sink))
+    return Effect.flatMap(this.tag, (a) => this.f(a).run(sink))
   }
 }

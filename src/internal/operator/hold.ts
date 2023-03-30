@@ -5,7 +5,7 @@ import * as Effect from "@effect/io/Effect"
 import * as Fiber from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 
-import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
+import { dualWithTrace, methodWithTrace } from "@effect/data/Debug"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"
 import { Mutable } from "@typed/fx/internal/Mutable"
 import { asap } from "@typed/fx/internal/RefCounter"

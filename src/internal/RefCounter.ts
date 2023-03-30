@@ -42,9 +42,9 @@ export class RefCounter {
         sink.event,
         (cause) =>
           Cause.isInterruptedOnly(cause) ?
-            Effect.provideService(this.decrement, Scope.Tag, scope) :
+            Effect.provideService(this.decrement, Scope.Scope, scope) :
             sink.error(cause),
-        () => Effect.provideService(this.decrement, Scope.Tag, scope)
+        () => Effect.provideService(this.decrement, Scope.Scope, scope)
       ))
     )
 

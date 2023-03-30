@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import * as Cause from "@effect/io/Cause"
-import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Context } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"

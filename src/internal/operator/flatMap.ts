@@ -1,6 +1,6 @@
 import type { Context } from "@effect/data/Context"
+import { dualWithTrace } from "@effect/data/Debug"
 import { identity, pipe } from "@effect/data/Function"
-import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"
 

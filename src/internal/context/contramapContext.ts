@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import { Context, Effect, Option, Scope } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"
@@ -34,11 +34,11 @@ export class ContramapContextFx<R1, R2, E, A> extends BaseFx<R1, E, A> {
         (r1: Context.Context<R1>) => {
           const r2 = f(r1)
 
-          if (Option.isSome(Context.getOption(r2, Scope.Tag))) {
+          if (Option.isSome(Context.getOption(r2, Scope.Scope))) {
             return r2 as Context.Context<R2 | Scope.Scope>
           }
 
-          return Context.add(Scope.Tag, scope)(r2)
+          return Context.add(Scope.Scope, scope)(r2)
         }
       )
     )

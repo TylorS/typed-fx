@@ -1,5 +1,5 @@
+import type { Trace } from "@effect/data/Debug"
 import { dual } from "@effect/data/Function"
-import type { Trace } from "@effect/io/Debug"
 import type { Fx } from "@typed/fx/internal/Fx"
 
 export const traced: {

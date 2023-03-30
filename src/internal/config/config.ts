@@ -1,6 +1,6 @@
+import { methodWithTrace } from "@effect/data/Debug"
 import type { Config } from "@effect/io/Config"
 import type { ConfigError } from "@effect/io/Config/Error"
-import { methodWithTrace } from "@effect/io/Debug"
 import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 import type { Fx } from "@typed/fx/internal/Fx"

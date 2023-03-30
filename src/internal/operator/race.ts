@@ -1,5 +1,5 @@
 import { interrupt } from "@effect/io/Cause";
-import { dualWithTrace, methodWithTrace } from "@effect/io/Debug";
+import { dualWithTrace, methodWithTrace } from "@effect/data/Debug";
 import * as ExecutionStrategy from "@effect/io/ExecutionStrategy";
 import type { Chunk } from "@typed/fx/internal/_externals";
 import {
@@ -109,7 +109,7 @@ export class RaceAllFx<
                 (x) => x.run(sink),
                 Effect.scheduleForked(asap), // Schedule starts so that all Scopes can be returned *before* attempting to cleanup
                 Effect.as(scope),
-                Effect.provideService(Scope.Tag, scope)
+                Effect.provideService(Scope.Scope, scope)
               )
             )
           )

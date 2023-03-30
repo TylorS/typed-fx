@@ -1,8 +1,8 @@
 import type { Duration } from "@typed/fx/internal/_externals"
 import { Effect, Schedule } from "@typed/fx/internal/_externals"
-import { scheduleFrom } from "@typed/fx/internal/constructor/scheduleFrom"
+import { schedule } from "@typed/fx/internal/constructor/schedule"
 import type { Fx } from "@typed/fx/internal/Fx"
 
 export function periodic(duration: Duration.Duration): Fx<never, never, void> {
-  return scheduleFrom(Effect.unit(), Schedule.fromDelay(duration))
+  return schedule(Effect.unit(), Schedule.union(Schedule.repeatForever(), Schedule.fromDelay(duration)))
 }

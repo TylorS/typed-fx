@@ -5,9 +5,9 @@ import { serviceWithEffect } from "@typed/fx/internal/context/serviceWithEffect"
 import { serviceWithFx } from "@typed/fx/internal/context/serviceWithFx"
 import type { Fx } from "@typed/fx/internal/Fx"
 
-export const clockWith = <A>(f: (a: Clock.Clock) => A) => serviceWith(Clock.Tag, f)
+export const clockWith = <A>(f: (a: Clock.Clock) => A) => serviceWith(Clock.Clock, f)
 
 export const clockWithEffect = <R, E, A>(f: (a: Clock.Clock) => Effect.Effect<R, E, A>) =>
-  serviceWithEffect(Clock.Tag, f)
+  serviceWithEffect(Clock.Clock, f)
 
-export const clockWithFx = <R, E, A>(f: (a: Clock.Clock) => Fx<R, E, A>) => serviceWithFx(Clock.Tag, f)
+export const clockWithFx = <R, E, A>(f: (a: Clock.Clock) => Fx<R, E, A>) => serviceWithFx(Clock.Clock, f)

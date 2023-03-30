@@ -1,6 +1,6 @@
+import { methodWithTrace } from "@effect/data/Debug"
 import * as Either from "@effect/data/Either"
 import * as Cause from "@effect/io/Cause"
-import { methodWithTrace } from "@effect/io/Debug"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx } from "@typed/fx/internal/Fx"
 import { Sink } from "@typed/fx/internal/Fx"

@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import { not } from "@effect/data/Predicate"
-import { dualWithTrace } from "@effect/io/Debug"
 import type { Fx } from "@typed/fx/internal/Fx"
 import { skipWhile } from "@typed/fx/internal/slicing/skipWhile"
 

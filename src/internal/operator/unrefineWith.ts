@@ -1,6 +1,6 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import type { Option } from "@typed/fx/internal/_externals"
-import { Effect, Either, identity, pipe } from "@typed/fx/internal/_externals"
+import { Effect, identity, pipe } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import { Sink } from "@typed/fx/internal/Fx"
 import type { Fx } from "@typed/fx/internal/Fx"
@@ -50,7 +50,7 @@ class UnrefineWithFx<R, E, A, E2, E3> extends BaseFx<R, E2 | E3, A> {
         sink.event,
         (cause) =>
           pipe(
-            Effect.fromEitherCause(Either.left(cause)),
+            Effect.failCause(cause),
             Effect.unrefineWith(this.f, this.g),
             Effect.catchAllCause(sink.error)
           ),

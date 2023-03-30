@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import { pipe } from "@effect/data/Function"
-import { dualWithTrace } from "@effect/io/Debug"
 import { Cause, Effect, Either } from "@typed/fx/internal/_externals"
 import type { Fx } from "@typed/fx/internal/Fx"
 import { tapCause } from "@typed/fx/internal/operator/tapCause"

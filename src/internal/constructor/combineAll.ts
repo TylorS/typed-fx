@@ -1,4 +1,4 @@
-import { dualWithTrace, methodWithTrace } from "@effect/io/Debug"
+import { dualWithTrace, methodWithTrace } from "@effect/data/Debug"
 import * as Effect from "@effect/io/Effect"
 import { Sink } from "@typed/fx/internal/Fx"
 import type { Fx } from "@typed/fx/internal/Fx"
@@ -65,7 +65,7 @@ export class CombineAllFx<F extends ReadonlyArray<Fx<any, any, any>>>
                     return Effect.unit()
                   }),
                 sink.error,
-                () => Effect.provideService(counter.decrement, Scope.Tag, scope)
+                () => Effect.provideService(counter.decrement, Scope.Scope, scope)
               )
             )
           ))

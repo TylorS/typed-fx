@@ -1,7 +1,7 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import { pipe } from "@effect/data/Function"
 import * as Option from "@effect/data/Option"
 import type { Cause } from "@effect/io/Cause"
-import { dualWithTrace } from "@effect/io/Debug"
 import { failCause } from "@typed/fx/internal/constructor/failCause"
 import { catchAllCause } from "@typed/fx/internal/error/catchAllCause"
 import type { Fx } from "@typed/fx/internal/Fx"

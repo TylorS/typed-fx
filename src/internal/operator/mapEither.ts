@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import { Either } from "@typed/fx/internal/_externals"
 import type { Fx } from "@typed/fx/internal/Fx"
 import { map } from "@typed/fx/internal/operator/map"

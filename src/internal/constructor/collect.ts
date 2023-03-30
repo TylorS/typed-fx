@@ -1,6 +1,6 @@
 import type { Chunk } from "@effect/data/Chunk"
+import { dualWithTrace } from "@effect/data/Debug"
 import type { Option } from "@effect/data/Option"
-import { dualWithTrace } from "@effect/io/Debug"
 import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 import type { Fx } from "@typed/fx/internal/Fx"

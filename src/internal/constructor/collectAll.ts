@@ -1,5 +1,5 @@
 import * as Chunk from "@effect/data/Chunk"
-import { methodWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/data/Debug"
 import * as Effect from "@effect/io/Effect"
 import { Scope } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
@@ -46,7 +46,7 @@ export class CollectAllFx<R, E, A> extends BaseFx<R, E, Chunk.Chunk<A>> {
                     return Effect.unit()
                   }),
                 sink.error,
-                () => Effect.provideService(counter.decrement, Scope.Tag, scope)
+                () => Effect.provideService(counter.decrement, Scope.Scope, scope)
               )
             )
           ))

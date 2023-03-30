@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import type { Duration } from "@typed/fx/internal/_externals"
 import { Cause, Effect, Fiber, pipe, Scope } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
@@ -50,13 +50,13 @@ export class DebounceFx<R, E, A> extends BaseFx<R, E, A> {
                           scheduledFiber = fiber
                         })
                       ),
-                      Effect.provideService(Scope.Tag, scope)
+                      Effect.provideService(Scope.Scope, scope)
                     )
                   )
                 )
               ),
             sink.error,
-            () => Effect.provideService(counter.decrement, Scope.Tag, scope)
+            () => Effect.provideService(counter.decrement, Scope.Scope, scope)
           )
         )
       },

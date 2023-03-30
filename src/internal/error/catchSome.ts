@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import * as Option from "@effect/data/Option"
-import { dualWithTrace } from "@effect/io/Debug"
 import { fail } from "@typed/fx/internal/constructor/fail"
 import { catchAll } from "@typed/fx/internal/error/catchAll"
 import type { Fx } from "@typed/fx/internal/Fx"

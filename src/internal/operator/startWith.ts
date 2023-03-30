@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import { succeed } from "@typed/fx/internal/constructor/succeed"
 import type { Fx } from "@typed/fx/internal/Fx"
 import { continueWith } from "@typed/fx/internal/operator/continueWith"

@@ -6,7 +6,7 @@ import * as Fiber from "@effect/io/Fiber"
 import type { RuntimeFiber } from "@effect/io/Fiber"
 import type { Scope } from "@effect/io/Scope"
 
-import { methodWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/data/Debug"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"
 import { asap } from "@typed/fx/internal/RefCounter"

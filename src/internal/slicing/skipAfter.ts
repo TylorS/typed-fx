@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import type { Predicate } from "@effect/data/Predicate"
-import { dualWithTrace } from "@effect/io/Debug"
 import { Effect } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx, Sink } from "@typed/fx/internal/Fx"

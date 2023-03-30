@@ -1,5 +1,5 @@
+import { methodWithTrace } from "@effect/data/Debug"
 import type * as Option from "@effect/data/Option"
-import { methodWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import type * as FiberId from "@effect/io/Fiber/Id"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"

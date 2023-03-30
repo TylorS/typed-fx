@@ -1,5 +1,5 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import type { Duration } from "@effect/data/Duration"
-import { dualWithTrace } from "@effect/io/Debug"
 import * as Effect from "@effect/io/Effect"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import type { Fx } from "@typed/fx/internal/Fx"

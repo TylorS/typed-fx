@@ -1,4 +1,4 @@
-import { methodWithTrace } from "@effect/io/Debug"
+import { methodWithTrace } from "@effect/data/Debug"
 import { Option } from "@typed/fx/internal/_externals"
 import type { Fx } from "@typed/fx/internal/Fx"
 import { map } from "@typed/fx/internal/operator/map"

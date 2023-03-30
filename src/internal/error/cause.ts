@@ -1,5 +1,5 @@
+import { methodWithTrace } from "@effect/data/Debug"
 import * as Cause from "@effect/io/Cause"
-import { methodWithTrace } from "@effect/io/Debug"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import { Sink } from "@typed/fx/internal/Fx"
 import type { Fx } from "@typed/fx/internal/Fx"

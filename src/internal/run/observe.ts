@@ -1,7 +1,7 @@
+import { dualWithTrace } from "@effect/data/Debug"
 import { pipe } from "@effect/data/Function"
 import type { Cause } from "@effect/io/Cause"
 import { isInterruptedOnly } from "@effect/io/Cause"
-import { dualWithTrace } from "@effect/io/Debug"
 import * as Deferred from "@effect/io/Deferred"
 import * as Effect from "@effect/io/Effect"
 import type { Scope } from "@effect/io/Scope"

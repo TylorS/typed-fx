@@ -1,5 +1,5 @@
+import { methodWithTrace } from "@effect/data/Debug"
 import type { NoSuchElementException } from "@effect/io/Cause"
-import { methodWithTrace } from "@effect/io/Debug"
 import type { Option } from "@typed/fx/internal/_externals"
 import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"

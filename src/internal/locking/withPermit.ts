@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import type { Semaphore } from "@effect/io/Effect"
 import type { Fx } from "@typed/fx/internal/Fx"
 import { WithPermitsFx } from "@typed/fx/internal/locking/withPermits"

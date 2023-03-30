@@ -1,4 +1,4 @@
-import { dualWithTrace } from "@effect/io/Debug"
+import { dualWithTrace } from "@effect/data/Debug"
 import { catchTags } from "@typed/fx/internal/error/catchTags"
 import type { Fx } from "@typed/fx/internal/Fx"
 
