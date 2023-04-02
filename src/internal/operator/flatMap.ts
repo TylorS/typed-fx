@@ -47,7 +47,7 @@ class FlatMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
               (a) =>
                 pipe(
                   counter.increment,
-                  Effect.zipRight(counter.refCounted(this.f(a), sink)),
+                  Effect.zipRight(counter.refCounted(this.f(a), sink, Effect.unit)),
                   Effect.forkScoped,
                   Effect.provideContext(context)
                 ),

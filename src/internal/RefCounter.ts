@@ -6,8 +6,7 @@ import * as Fiber from "@effect/io/Fiber"
 import * as Ref from "@effect/io/Ref"
 import * as Schedule from "@effect/io/Schedule"
 import { Cause, Scope } from "@typed/fx/internal/_externals"
-import type { Fx } from "@typed/fx/internal/Fx"
-import { Sink } from "@typed/fx/internal/Fx"
+import type { Fx, Sink } from "@typed/fx/internal/Fx"
 
 const zero = millis(0)
 export const asap = Schedule.delayed(Schedule.once(), () => zero)
@@ -33,19 +32,20 @@ export class RefCounter {
 
   readonly wait = Deferred.await(this.deferred)
 
-  readonly refCounted = <R, E, A>(
+  readonly refCounted = <R, E, A, R2, B>(
     fx: Fx<R, E, A>,
-    sink: Sink<E, A>
-  ): Effect.Effect<R | Scope.Scope, never, unknown> =>
+    sink: Sink<E, A>,
+    onComplete: () => Effect.Effect<R2, never, B>
+  ): Effect.Effect<R | R2 | Scope.Scope, never, unknown> =>
     Effect.scopeWith((scope) =>
-      fx.run(Sink(
-        sink.event,
-        (cause) =>
+      pipe(
+        fx.observe(sink.event),
+        Effect.matchCauseEffect((cause) => (
           Cause.isInterruptedOnly(cause) ?
-            Effect.provideService(this.decrement, Scope.Scope, scope) :
-            sink.error(cause),
-        () => Effect.provideService(this.decrement, Scope.Scope, scope)
-      ))
+            Effect.provideService(Effect.zipRight(onComplete(), this.decrement), Scope.Scope, scope) :
+            sink.error(cause)
+        ), () => Effect.provideService(Effect.zipRight(onComplete(), this.decrement), Scope.Scope, scope))
+      )
     )
 
   private checkShouldClose = Effect.suspend(() => {

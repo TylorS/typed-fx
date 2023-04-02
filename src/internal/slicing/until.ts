@@ -11,7 +11,6 @@ export const until: {
   (trace) => <R, E, A, R2, E2, B>(self: Fx<R, E, A>, signal: Fx<R2, E2, B>) => new UntilFx(self, signal).traced(trace)
 )
 
-
 export class UntilFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, A> {
   readonly name = "Until" as const
 

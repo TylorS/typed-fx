@@ -1,7 +1,7 @@
 import { dualWithTrace } from "@effect/data/Debug"
 import { pipe } from "@effect/data/Function"
 import type { Context, Fiber, Scope } from "@typed/fx/internal/_externals"
-import { Cause, Effect, Synchronized } from "@typed/fx/internal/_externals"
+import { Effect, Synchronized } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 import type { Fx } from "@typed/fx/internal/Fx"
@@ -65,25 +65,7 @@ export class ExhaustMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> 
                           ? Effect.succeed(fiber)
                           : pipe(
                             counter.increment,
-                            Effect.flatMap(() =>
-                              Effect.forkScoped(
-                                pipe(
-                                  this.f(a).run(
-                                    Sink(
-                                      sink.event,
-                                      (cause) => pipe(resetRef, Effect.zipRight(sink.error(cause))),
-                                      () =>
-                                        pipe(resetRef, Effect.zipRight(counter.decrement), Effect.provideContext(ctx))
-                                    )
-                                  ),
-                                  Effect.onError((cause) =>
-                                    Cause.isInterruptedOnly(cause)
-                                      ? Effect.unit()
-                                      : sink.error(cause)
-                                  )
-                                )
-                              )
-                            )
+                            Effect.flatMap(() => Effect.forkScoped(counter.refCounted(this.f(a), sink, () => resetRef)))
                           )
                       ),
                       Effect.provideContext(ctx)

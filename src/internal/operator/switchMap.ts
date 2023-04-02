@@ -56,8 +56,7 @@ class SwitchMapFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E2, B> {
                         : Effect.asUnit(counter.increment),
                       () =>
                         pipe(
-                          counter.refCounted(f(a), sink),
-                          Effect.zipLeft(resetRef),
+                          counter.refCounted(f(a), sink, () => resetRef),
                           Effect.forkScoped,
                           Effect.provideContext(context)
                         )

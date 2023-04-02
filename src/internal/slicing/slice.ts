@@ -43,7 +43,7 @@ export class SliceSink<E, A> implements Sink<E, A> {
         return Effect.flatMap(this.sink.event(value), () => this.toTake === 0 ? this.sink.end() : Effect.unit())
       }
 
-      return Effect.unit()
+      return this.sink.end()
     })
   }
 

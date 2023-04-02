@@ -2,7 +2,7 @@ import { dualWithTrace } from "@effect/data/Debug"
 import { pipe } from "@effect/data/Function"
 import type { Scope } from "@effect/io/Scope"
 import type { Context, Fiber } from "@typed/fx/internal/_externals"
-import { Cause, Effect, Synchronized as Ref } from "@typed/fx/internal/_externals"
+import { Effect, Synchronized as Ref } from "@typed/fx/internal/_externals"
 import { BaseFx } from "@typed/fx/internal/BaseFx"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 import type { Fx } from "@typed/fx/internal/Fx"
@@ -74,21 +74,10 @@ export class ExhaustMapLatestFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E | E
               const runFx = (
                 fx: Fx<R2, E2, B>
               ): Effect.Effect<R2 | Scope, never, Fiber.RuntimeFiber<never, unknown> | null> =>
-                Effect.forkScoped(
-                  pipe(
-                    fx.run(
-                      Sink(
-                        sink.event,
-                        (e) => pipe(resetRef, Effect.zipRight(sink.error(e))),
-                        () => pipe(resetRef, Effect.zipRight(runNextFx), Effect.provideContext(ctx))
-                      )
-                    ),
-                    Effect.onError((e) =>
-                      Cause.isInterruptedOnly(e)
-                        ? resetRef
-                        : pipe(resetRef, Effect.zipRight(sink.error(e)))
-                    )
-                  )
+                pipe(
+                  counter.refCounted(fx, sink, () => resetRef),
+                  Effect.zipLeft(runNextFx),
+                  Effect.forkScoped
                 )
 
               return this.fx.run(
