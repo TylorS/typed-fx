@@ -8,7 +8,7 @@ export const Chainable: C.Chainable<FxTypeLambda> = {
   ...FlatMap
 }
 
-export const andThenDiscard: {
+export const zipLeft: {
   <R2, E2, _>(
     that: Fx<R2, E2, _>
   ): <R1, E1, A>(
@@ -19,7 +19,7 @@ export const andThenDiscard: {
     self: Fx<R1, E1, A>,
     that: Fx<R2, E2, _>
   ): Fx<R2 | R1, E2 | E1, A>
-} = C.andThenDiscard(Chainable)
+} = C.zipLeft(Chainable)
 
 export const bind: {
   <N extends string, A extends object, R2, E2, B>(

@@ -6,7 +6,7 @@ export const FlatMap: F.FlatMap<FxTypeLambda> = {
   flatMap
 }
 
-export const andThen: {
+export const zipRight: {
   <R2, E2, B>(
     that: Fx<R2, E2, B>
   ): <R1, E1, _>(
@@ -16,7 +16,7 @@ export const andThen: {
     self: Fx<R1, E1, A>,
     that: Fx<R2, E2, B>
   ): Fx<R1 | R2, E1 | E2, B>
-} = F.andThen(FlatMap)
+} = F.zipRight(FlatMap)
 
 export const composeK: {
   <B, R2, E2, C>(

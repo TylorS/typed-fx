@@ -3,7 +3,7 @@ import { Effect } from "@typed/fx/internal/_externals"
 import { fromEffect } from "@typed/fx/internal/conversion/fromEffect"
 import type { Fx } from "@typed/fx/internal/Fx"
 
-export const attemptCatchPromiseInterrupt: <A, E>(
+export const tryCatchPromiseInterrupt: <A, E>(
   f: (signal: AbortSignal) => Promise<A>,
   onFail: (error: unknown) => E
 ) => Fx<never, E, A> = methodWithTrace((
@@ -11,5 +11,5 @@ export const attemptCatchPromiseInterrupt: <A, E>(
   restore
 ) =>
   <A, E>(f: (signal: AbortSignal) => Promise<A>, onFail: (error: unknown) => E) =>
-    fromEffect(Effect.attemptCatchPromiseInterrupt(restore(f), restore(onFail))).traced(trace)
+    fromEffect(Effect.tryCatchPromiseInterrupt(restore(f), restore(onFail))).traced(trace)
 )

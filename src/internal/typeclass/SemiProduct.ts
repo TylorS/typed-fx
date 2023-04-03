@@ -12,7 +12,7 @@ export const SemiProduct: SP.SemiProduct<FxTypeLambda> = {
   imap
 }
 
-export const andThenBind: {
+export const bindDiscard: {
   <N extends string, A extends object, R2, E2, B>(
     name: Exclude<N, keyof A>,
     that: Fx<R2, E2, B>
@@ -32,7 +32,7 @@ export const andThenBind: {
     E1 | E2,
     { [K in N | keyof A]: K extends keyof A ? A[K] : B }
   >
-} = SP.andThenBind(SemiProduct)
+} = SP.bindDiscard(SemiProduct)
 
 export const appendElement: {
   <R2, E2, B>(

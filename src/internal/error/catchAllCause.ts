@@ -37,7 +37,7 @@ export class CatchAllCauseFx<R, E, A, R2, E2, B> extends BaseFx<R | R2, E2, A | 
               (cause) =>
                 pipe(
                   counter.increment,
-                  Effect.zipRight(counter.refCounted(this.f(cause), sink)),
+                  Effect.zipRight(counter.refCounted(this.f(cause), sink, Effect.unit)),
                   Effect.forkScoped,
                   Effect.provideContext(context)
                 ),

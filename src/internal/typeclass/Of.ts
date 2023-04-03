@@ -6,4 +6,4 @@ export const Of: O.Of<FxTypeLambda> = {
   of: succeed
 }
 
-export const unit: Fx.Succeed<void> = O.unit(Of)
+export const unit: Fx.Succeed<void> = O.unit(Of)<never, never, void>()
