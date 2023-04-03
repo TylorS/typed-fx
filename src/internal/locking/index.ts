@@ -1,2 +1,2 @@
-export * from './withPermit'
-export * from './withPermits'
+export * from "./withPermit"
+export * from "./withPermits"
