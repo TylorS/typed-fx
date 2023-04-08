@@ -1,9 +1,0 @@
-- [] Update to the latest Effect libs
-- [] Context tests
-- [] Do tests
-- [] error tests
-- [] getters tests
-- [] metric tests
-- [] remaining operator tests
-- [] run tests
-- [] typeclass tests?
