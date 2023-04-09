@@ -119,9 +119,8 @@ describe("RefSubject", () => {
           const multiplyTwo = addOne.map((a) => a * 2)
           const fiber = yield* $(Effect.fork(toChunk(multiplyTwo)))
 
-          // Allow the fibers to start
-          yield* $(Effect.yieldNow())
-          yield* $(Effect.yieldNow())
+          // Allow fiber and inner streams to begin
+          yield* $(Effect.sleep(Duration.millis(0)))
 
           // Update ref value
           deepStrictEqual(yield* $(ref.set(2)), 2)
@@ -144,7 +143,7 @@ describe("RefSubject", () => {
         const ref = yield* $(makeRef(Effect.succeed(1)))
         const fiber = yield* $(Effect.fork(toChunk(ref)))
 
-        yield* $(Effect.yieldNow())
+        yield* $(Effect.sleep(Duration.millis(0)))
 
         yield* $(ref.set(2))
         yield* $(ref.set(3))
