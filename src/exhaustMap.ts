@@ -57,13 +57,13 @@ export function exhaustMapEffect<R, E, A, R2, E2, B>(
   return exhaustMap(fx, (a) => fromEffect(f(a)))
 }
 
-export function switchLatest<R, E, R2, E2, B>(
+export function exhaust<R, E, R2, E2, B>(
   fx: Fx<R, E, Fx<R2, E2, B>>
 ): Fx<R | R2, E | E2, B> {
   return exhaustMap(fx, (a) => a)
 }
 
-export function switchLatestEffect<R, E, R2, E2, B>(
+export function exhaustEffect<R, E, R2, E2, B>(
   fx: Fx<R, E, Effect.Effect<R2, E2, B>>
 ): Fx<R | R2, E | E2, B> {
   return exhaustMapEffect(fx, (a) => a)

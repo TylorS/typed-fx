@@ -1,6 +1,7 @@
 import { pipe } from "@effect/data/Function"
 import * as Option from "@effect/data/Option"
 import type { Scope } from "@effect/io/Scope"
+import { fromEffect } from "@typed/fx/fromEffect"
 import { Fx, Sink } from "@typed/fx/Fx"
 import { Cause, Effect, Fiber, Ref } from "./externals.js"
 
@@ -79,4 +80,23 @@ export function exhaustMapLatest<R, E, A, R2, E2, B>(
       yield* $(awaitNext)
     }))
   )
+}
+
+export function exhaustMapLatestEffect<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  f: (a: A) => Effect.Effect<R2, E2, B>
+): Fx<R | R2, E | E2, B> {
+  return exhaustMapLatest(fx, (a) => fromEffect(f(a)))
+}
+
+export function exhaustLatest<R, E, R2, E2, B>(
+  fx: Fx<R, E, Fx<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return exhaustMapLatest(fx, (a) => a)
+}
+
+export function exhaustLatestEffect<R, E, R2, E2, B>(
+  fx: Fx<R, E, Effect.Effect<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return exhaustMapLatestEffect(fx, (a) => a)
 }
