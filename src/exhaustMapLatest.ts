@@ -61,6 +61,7 @@ export function exhaustMapLatest<R, E, A, R2, E2, B>(
             Effect.zipRight(reset),
             // See if there's another value to replay
             Effect.zipRight(runNext),
+            Effect.catchAllCause((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
             Effect.forkScoped
           ))
 

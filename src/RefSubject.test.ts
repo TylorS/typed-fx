@@ -1,4 +1,4 @@
-import { Chunk, Effect, Fiber, Option } from "@typed/fx/externals"
+import { Chunk, Duration, Effect, Fiber, Option } from "@typed/fx/externals"
 import { makeRef, RefSubject } from "@typed/fx/RefSubject"
 import { toChunk } from "@typed/fx/toChunk"
 import { deepStrictEqual } from "assert"
@@ -190,8 +190,7 @@ describe("RefSubject", () => {
         const fiber = yield* $(Effect.fork(toChunk(ref)))
 
         // Allow fiber and inner streams to begin
-        yield* $(Effect.yieldNow())
-        yield* $(Effect.yieldNow())
+        yield* $(Effect.sleep(Duration.millis(0)))
 
         yield* $(a.set(2))
         yield* $(b.set(3))
@@ -201,6 +200,31 @@ describe("RefSubject", () => {
         const results = yield* $(Fiber.join(fiber))
 
         deepStrictEqual(Chunk.toReadonlyArray(results), [[1, 2, 3], [2, 2, 3], [2, 3, 3], [2, 3, 4]])
+      })
+
+      await Effect.runPromise(Effect.scoped(test))
+    })
+
+    it("can be computed", async () => {
+      const test = Effect.gen(function*($) {
+        const a = yield* $(makeRef(Effect.succeed(1)))
+        const b = yield* $(makeRef(Effect.succeed(2)))
+        const c = yield* $(makeRef(Effect.succeed(3)))
+        const ref = RefSubject.tuple(a, b, c)
+        const computed = ref.map(([a, b, c]) => [a + 1, b + 1, c + 1])
+        const fiber = yield* $(Effect.fork(toChunk(computed)))
+
+        // Allow fiber and inner streams to begin
+        yield* $(Effect.sleep(Duration.millis(0)))
+
+        yield* $(a.set(2))
+        yield* $(b.set(3))
+        yield* $(c.set(4))
+        yield* $(ref.end())
+
+        const results = yield* $(Fiber.join(fiber))
+
+        deepStrictEqual(Chunk.toReadonlyArray(results), [[2, 3, 4], [3, 3, 4], [3, 4, 4], [3, 4, 5]])
       })
 
       await Effect.runPromise(Effect.scoped(test))
@@ -238,8 +262,7 @@ describe("RefSubject", () => {
         const fiber = yield* $(Effect.fork(toChunk(ref)))
 
         // Allow fiber and inner streams to begin
-        yield* $(Effect.yieldNow())
-        yield* $(Effect.yieldNow())
+        yield* $(Effect.sleep(Duration.millis(0)))
 
         yield* $(a.set(2))
         yield* $(b.set(3))

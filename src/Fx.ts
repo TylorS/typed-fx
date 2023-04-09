@@ -1,3 +1,4 @@
+import type { Trace } from "@effect/data/Debug"
 import { methodWithTrace } from "@effect/data/Debug"
 import { identity } from "@effect/data/Function"
 import type { Cause } from "@effect/io/Cause"
@@ -15,19 +16,46 @@ export interface Fx<R, E, A> {
   }
 
   readonly run: <R2>(sink: Sink<R2, E, A>) => Effect<R | R2, never, void>
+
+  readonly traced: (trace: Trace) => Fx<R, E, A>
 }
 
 export function Fx<R, E, A>(
   run: Fx<R, E, A>["run"]
 ): Fx<R, E, A> {
-  return {
+  const fx: Fx<R, E, A> = {
     [FxTypeId]: {
       _R: identity,
       _E: identity,
       _A: identity
     },
-    run: methodWithTrace((trace) => (sink) => run(sink).traced(trace))
+    run: methodWithTrace((trace) => (sink) => run(sink).traced(trace)),
+    traced: (trace) => Traced(fx, trace)
   }
+
+  return fx
+}
+
+export function Traced<R, E, A>(
+  fx: Fx<R, E, A>,
+  trace: Trace
+): Fx<R, E, A> {
+  const traced: Fx<R, E, A> = {
+    [FxTypeId]: {
+      _R: identity,
+      _E: identity,
+      _A: identity
+    },
+    run: (sink) =>
+      fx.run(
+        Sink((a: A) => sink.event(a).traced(trace), (cause: Cause<E>) => sink.error(cause).traced(trace))
+      ).traced(
+        trace
+      ),
+    traced: (trace) => Traced(traced, trace)
+  }
+
+  return traced
 }
 
 export namespace Fx {

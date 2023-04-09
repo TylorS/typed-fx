@@ -1,8 +1,9 @@
+import type { Trace } from "@effect/data/Debug"
 import { identity } from "@effect/data/Function"
 import type { Cause, Context } from "@typed/fx/externals"
-import { Effect, Fiber, Runtime } from "@typed/fx/externals"
+import { Effect, Fiber } from "@typed/fx/externals"
 import type { Fx, Sink } from "@typed/fx/Fx"
-import { FxTypeId } from "@typed/fx/Fx"
+import { FxTypeId, Traced } from "@typed/fx/Fx"
 
 export function multicast<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
   return new MulticastFx(fx)
@@ -41,8 +42,7 @@ export class MulticastFx<R, E, A> implements Fx<R, E, A>, Sink<never, E, A> {
         const observer: MulticastObserver<R2, E, A> = { sink, context }
 
         if (observers.push(observer) === 1) {
-          const runFork = Runtime.runFork(yield* $(Effect.runtime<R | R2>()))
-          that.fiber = runFork(that.fx.run(that))
+          that.fiber = yield* $(Effect.forkDaemon(that.fx.run(that)))
         }
 
         yield* $(Fiber.join(that.fiber!))
@@ -52,6 +52,10 @@ export class MulticastFx<R, E, A> implements Fx<R, E, A>, Sink<never, E, A> {
       }),
       () => this.removeSink(sink)
     )
+  }
+
+  traced(trace: Trace): Fx<R, E, A> {
+    return multicast(Traced<R, E, A>(this.fx, trace))
   }
 
   event(a: A) {

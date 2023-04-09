@@ -23,6 +23,7 @@ export function switchMap<R, E, A, R2, E2, B>(
                   (cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)
                 )),
                 Effect.zipLeft(reset),
+                Effect.catchAllCause((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
                 Effect.forkScoped
               )
             )
@@ -48,6 +49,18 @@ export function switchMap<R, E, A, R2, E2, B>(
 export function switchMapEffect<R, E, A, R2, E2, B>(
   fx: Fx<R, E, A>,
   f: (a: A) => Effect.Effect<R2, E2, B>
-) {
+): Fx<R | R2, E | E2, B> {
   return switchMap(fx, (a) => fromEffect(f(a)))
+}
+
+export function switchLatest<R, E, R2, E2, B>(
+  fx: Fx<R, E, Fx<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return switchMap(fx, (a) => a)
+}
+
+export function switchLatestEffect<R, E, R2, E2, B>(
+  fx: Fx<R, E, Effect.Effect<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return switchMapEffect(fx, (a) => a)
 }

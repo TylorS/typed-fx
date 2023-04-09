@@ -1,5 +1,6 @@
 import { pipe } from "@effect/data/Function"
 import { failCause } from "@typed/fx/failCause"
+import { fromEffect } from "@typed/fx/fromEffect"
 import { Fx, Sink } from "@typed/fx/Fx"
 import { Cause, Effect, Either, Fiber, Ref } from "./externals.js"
 
@@ -56,7 +57,7 @@ export function catchAllCause<R, E, A, R2, E2, B>(
 export function catchAll<R, E, A, R2, E2, B>(
   fx: Fx<R, E, A>,
   f: (e: E) => Fx<R2, E2, B>
-) {
+): Fx<R | R2, E2, A | B> {
   return catchAllCause(fx, (cause) =>
     pipe(
       cause,
@@ -66,4 +67,18 @@ export function catchAll<R, E, A, R2, E2, B>(
         failCause
       )
     ))
+}
+
+export function catchAllCauseEffect<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  f: (e: Cause.Cause<E>) => Effect.Effect<R2, E2, B>
+): Fx<R | R2, E2, A | B> {
+  return catchAllCause(fx, (e) => fromEffect(f(e)))
+}
+
+export function catchAllEffect<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  f: (e: E) => Effect.Effect<R2, E2, B>
+): Fx<R | R2, E2, A | B> {
+  return catchAll(fx, (e) => fromEffect(f(e)))
 }

@@ -1,3 +1,4 @@
+import type { Trace } from "@effect/data/Debug"
 import { methodWithTrace } from "@effect/data/Debug"
 import { equals } from "@effect/data/Equal"
 import { identity, pipe } from "@effect/data/Function"
@@ -5,9 +6,9 @@ import * as RR from "@effect/data/ReadonlyRecord"
 import * as Equivalence from "@effect/data/typeclass/Equivalence"
 import { combineAll } from "@typed/fx/combineAll"
 import type { Context } from "@typed/fx/externals"
-import { Effect, Fiber, MutableRef, Option, Ref, Runtime } from "@typed/fx/externals"
+import { Effect, Fiber, MutableRef, Option, Ref } from "@typed/fx/externals"
 import type { Fx, Sink } from "@typed/fx/Fx"
-import { FxTypeId } from "@typed/fx/Fx"
+import { FxTypeId, Traced } from "@typed/fx/Fx"
 import { hold, HoldFx } from "@typed/fx/hold"
 import { map } from "@typed/fx/map"
 import { never } from "@typed/fx/never"
@@ -156,8 +157,7 @@ class RefSubjectImpl<E, A> extends HoldFx<never, E, A> implements RefSubject<E, 
               () =>
                 this.lock(
                   pipe(
-                    Effect.runtime<never>(),
-                    Effect.map((runtime) => Runtime.runFork(runtime)(this.initialize)),
+                    Effect.forkDaemon(this.initialize),
                     Effect.tap((fiber) => Ref.set(this.initializeFiber, Option.some(fiber))),
                     Effect.flatMap(Fiber.join),
                     Effect.tap((a) => super.event(a))
@@ -569,6 +569,10 @@ class ComputedImpl<R, E, A, R2, E2, B> implements Computed<R | R2, E | E2, B> {
 
   run<R3>(sink: Sink<R3, E | E2, B>) {
     return switchMapEffect(this.computed, this.f).run(sink)
+  }
+
+  traced(trace: Trace): Fx<R | R2, E | E2, B> {
+    return Traced<R | R2, E | E2, B>(this, trace)
   }
 
   readonly get = Effect.flatMap(this.computed.get, this.f)

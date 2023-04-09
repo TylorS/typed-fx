@@ -1,4 +1,4 @@
-import { Cause, Effect, Fiber, Runtime } from "@typed/fx/externals"
+import { Effect } from "@typed/fx/externals"
 import { Fx, Sink } from "@typed/fx/Fx"
 
 export function combineAll<FX extends ReadonlyArray<Fx<any, any, any>>>(
@@ -14,7 +14,6 @@ export function combineAll<FX extends ReadonlyArray<Fx<any, any, any>>>(
     Effect.gen(function*($) {
       const length = fx.length
       const values = new Map<number, any>()
-      const runFork = Runtime.runFork(yield* $(Effect.runtime<Fx.ResourcesOf<FX[number]>>()))
 
       const emitIfReady = Effect.suspend(() =>
         values.size === length ?
@@ -26,23 +25,24 @@ export function combineAll<FX extends ReadonlyArray<Fx<any, any, any>>>(
           Effect.unit()
       )
 
-      const fibers = fx.map((f, i) =>
-        runFork(
+      yield* $(
+        Effect.forEachParWithIndex(fx, (f, i) =>
           f.run(Sink(
             (a) =>
               Effect.suspend(() => {
                 values.set(i, a)
-
                 return emitIfReady
               }),
-            (cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)
-          ))
-        )
-      )
-
-      yield* $(
-        Fiber.joinAll(fibers)
+            sink.error
+          )))
       )
     })
   )
+}
+
+export function combine<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  other: Fx<R2, E2, B>
+): Fx<R | R2, E | E2, readonly [A, B]> {
+  return combineAll(fx, other)
 }

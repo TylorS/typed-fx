@@ -25,6 +25,7 @@ export function exhaustMap<R, E, A, R2, E2, B>(
               (cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)
             )),
             Effect.zipLeft(reset),
+            Effect.catchAllCause((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
             Effect.forkScoped
           ))
 

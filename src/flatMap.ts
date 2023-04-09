@@ -1,4 +1,5 @@
 import { pipe } from "@effect/data/Function"
+import { fromEffect } from "@typed/fx/fromEffect"
 import { Fx, Sink } from "@typed/fx/Fx"
 import { Cause, Effect, Fiber, Ref } from "./externals.js"
 
@@ -34,6 +35,7 @@ export function flatMap<R, E, A, R2, E2, B>(
                 Effect.flatMap(
                   () => Ref.update(ref, (fs) => fs.filter((f) => f !== fiber))
                 ),
+                Effect.catchAllCause((cause) => Cause.isInterruptedOnly(cause) ? Effect.unit() : sink.error(cause)),
                 // but don't allow this to be blocking
                 Effect.forkScoped
               ))
@@ -50,4 +52,23 @@ export function flatMap<R, E, A, R2, E2, B>(
       }
     }))
   )
+}
+
+export function flatMapEffect<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  f: (a: A) => Effect.Effect<R2, E2, B>
+): Fx<R | R2, E | E2, B> {
+  return flatMap(fx, (a) => fromEffect(f(a)))
+}
+
+export function flatten<R, E, R2, E2, B>(
+  fx: Fx<R, E, Fx<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return flatMap(fx, (a) => a)
+}
+
+export function flattenEffect<R, E, R2, E2, B>(
+  fx: Fx<R, E, Effect.Effect<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return flatMapEffect(fx, (a) => a)
 }

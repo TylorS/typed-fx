@@ -1,3 +1,4 @@
+import { Effect } from "@typed/fx/externals"
 import { Fx, Sink } from "@typed/fx/Fx"
 
 export function map<R, E, A, B>(
@@ -7,7 +8,7 @@ export function map<R, E, A, B>(
   return Fx((sink) =>
     fx.run(
       Sink(
-        (a) => sink.event(f(a)),
+        (a) => Effect.suspend(() => sink.event(f(a))),
         sink.error
       )
     )

@@ -1,5 +1,7 @@
+import type { Trace } from "@effect/data/Debug"
 import { Effect, MutableRef, Option } from "@typed/fx/externals"
 import type { Fx, Sink } from "@typed/fx/Fx"
+import { Traced } from "@typed/fx/Fx"
 import { MulticastFx } from "@typed/fx/multicast"
 
 export function hold<R, E, A>(fx: Fx<R, E, A>): Fx<R, E, A> {
@@ -21,6 +23,10 @@ export class HoldFx<R, E, A> extends MulticastFx<R, E, A> {
     }
 
     return super.run(sink)
+  }
+
+  traced(trace: Trace): Fx<R, E, A> {
+    return hold(Traced<R, E, A>(this.fx, trace))
   }
 
   event(a: A) {
