@@ -1,4 +1,5 @@
 import { pipe } from "@effect/data/Function"
+import { fromEffect } from "@typed/fx/fromEffect"
 import { Fx, Sink } from "@typed/fx/Fx"
 import { Cause, Effect, Fiber, Ref } from "./externals.js"
 
@@ -47,4 +48,23 @@ export function exhaustMap<R, E, A, R2, E2, B>(
       }
     }))
   )
+}
+
+export function exhaustMapEffect<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  f: (a: A) => Effect.Effect<R2, E2, B>
+): Fx<R | R2, E | E2, B> {
+  return exhaustMap(fx, (a) => fromEffect(f(a)))
+}
+
+export function switchLatest<R, E, R2, E2, B>(
+  fx: Fx<R, E, Fx<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return exhaustMap(fx, (a) => a)
+}
+
+export function switchLatestEffect<R, E, R2, E2, B>(
+  fx: Fx<R, E, Effect.Effect<R2, E2, B>>
+): Fx<R | R2, E | E2, B> {
+  return exhaustMapEffect(fx, (a) => a)
 }
