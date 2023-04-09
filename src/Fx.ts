@@ -1,9 +1,19 @@
 import { methodWithTrace } from "@effect/data/Debug"
+import { identity } from "@effect/data/Function"
 import type { Cause } from "@effect/io/Cause"
 import type { Effect } from "@effect/io/Effect"
 import type * as Runtime from "@effect/io/Runtime"
 
+export const FxTypeId = Symbol.for("@typed/fx/Fx")
+export type FxTypeId = typeof FxTypeId
+
 export interface Fx<R, E, A> {
+  readonly [FxTypeId]: {
+    readonly _R: (_: never) => R
+    readonly _E: (_: never) => E
+    readonly _A: (_: never) => A
+  }
+
   readonly run: <R2>(sink: Sink<R2, E, A>) => Effect<R | R2, never, void>
 }
 
@@ -11,6 +21,11 @@ export function Fx<R, E, A>(
   run: Fx<R, E, A>["run"]
 ): Fx<R, E, A> {
   return {
+    [FxTypeId]: {
+      _R: identity,
+      _E: identity,
+      _A: identity
+    },
     run: methodWithTrace((trace) => (sink) => run(sink).traced(trace))
   }
 }

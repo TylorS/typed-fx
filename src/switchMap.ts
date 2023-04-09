@@ -1,4 +1,5 @@
 import { pipe } from "@effect/data/Function"
+import { fromEffect } from "@typed/fx/fromEffect"
 import { Fx, Sink } from "@typed/fx/Fx"
 import { Cause, Effect, Fiber, RefS } from "./externals.js"
 
@@ -42,4 +43,11 @@ export function switchMap<R, E, A, R2, E2, B>(
       }
     }))
   )
+}
+
+export function switchMapEffect<R, E, A, R2, E2, B>(
+  fx: Fx<R, E, A>,
+  f: (a: A) => Effect.Effect<R2, E2, B>
+) {
+  return switchMap(fx, (a) => fromEffect(f(a)))
 }
